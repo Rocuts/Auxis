@@ -48,3 +48,5 @@ logged here alongside engineering ones.
   one command in both places.
 - `.env.example` documents every required variable per anti-goal #10; `.env` is
   gitignored and never enters the repo.
+- **Gate result:** `make check` clean locally on the first run, and green in CI
+  on the first push (run 32911320432, 16s). Repo: github.com/Rocuts/Auxis.
