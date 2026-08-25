@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(uv *)",
+      "Bash(pytest *)",
+      "Bash(ruff *)",
+      "Bash(mypy *)",
+      "Bash(docker *)",
+      "Bash(psql *)",
+      "Bash(git *)",
+      "Bash(curl *)",
+      "Bash(node *)",
+      "Bash(make *)"
+    ],
+    "ask": [
+      "Bash(vercel *)"
+    ],
+    "deny": [
+      "Bash(vercel deploy --prod*)",
+      "Bash(vercel promote*)",
+      "Bash(vercel rollback*)",
+      "Bash(cdk deploy*)",
+      "Bash(cdk bootstrap*)"
+    ]
+  }
+}
