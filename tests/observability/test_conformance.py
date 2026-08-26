@@ -303,3 +303,57 @@ class TestVerifierFeedsTheLedger:
             record_count=1,
         )
         assert conformance.LEDGER.snapshot()[VERIFIER].malformed_items == 1
+
+
+class TestTransportFailuresNeverFlatterTheRate:
+    """Found adversarially on document 04: 18 adjudications died on free-tier
+    429s, and the table reported `items 20, item_ok 100.0%` — because the call
+    and its item were both counted before the request, and only the role's own
+    contract error was caught. A call the model never answered is no evidence
+    about the model, and counting it as a success made the instrument lie."""
+
+    def test_a_call_that_never_answered_is_not_a_conformant_call(self) -> None:
+        ledger = ConformanceLedger()
+        for _ in range(20):
+            ledger.record_call(ADJUDICATOR)
+        for _ in range(18):
+            ledger.record_transport_failure(ADJUDICATOR, "RateLimitError")
+        ledger.record_items(ADJUDICATOR, 2)
+        counters = ledger.snapshot()[ADJUDICATOR]
+        assert counters.calls == 20
+        assert counters.responses == 2
+        assert counters.items == 2
+        # Two bodies arrived and both were well formed: 100% over what was
+        # actually observed, not over what was merely attempted.
+        assert counters.call_conformance == 1.0
+        assert counters.item_conformance == 1.0
+
+    def test_the_old_denominator_would_have_hidden_a_real_failure(self) -> None:
+        ledger = ConformanceLedger()
+        for _ in range(10):
+            ledger.record_call(MAPPER)
+        for _ in range(8):
+            ledger.record_transport_failure(MAPPER, "APITimeoutError")
+        ledger.record_schema_failure(MAPPER, "response is not valid JSON")
+        counters = ledger.snapshot()[MAPPER]
+        # One of the two bodies that arrived broke the contract: 50%.
+        # Over `calls` it would have read 90% and looked healthy.
+        assert counters.call_conformance == 0.5
+
+    def test_all_calls_failing_transport_leaves_the_rate_unknown(self) -> None:
+        """No body, no measurement. "-" is the honest answer, not 100%."""
+        ledger = ConformanceLedger()
+        ledger.record_call(VERIFIER)
+        ledger.record_transport_failure(VERIFIER, "RateLimitError")
+        counters = ledger.snapshot()[VERIFIER]
+        assert counters.responses == 0
+        assert counters.call_conformance is None
+        assert counters.residue_rate is None
+
+    def test_transport_failures_print_with_their_exception_class(self) -> None:
+        ledger = ConformanceLedger()
+        ledger.record_call(MAPPER)
+        ledger.record_transport_failure(MAPPER, "RateLimitError")
+        report = format_conformance_report(ledger)
+        assert "transport" in report.splitlines()[1]
+        assert "transport failure: RateLimitError" in report

@@ -727,6 +727,16 @@ class AnthropicSchemaMapper:
             # through, so the rate can never drift from the raise sites.
             conformance.LEDGER.record_schema_failure(conformance.MAPPER, _clip_reason(exc))
             raise
+        except Exception as exc:
+            # No body ever arrived — a throttle that outlived the retry budget,
+            # a timeout, a dropped connection. Counted apart from the
+            # conformance rates: a call the model never answered says nothing
+            # about whether the model can emit the contract, and folding it in
+            # as a success flatters the number (found adversarially on
+            # document 04, where 18 throttled adjudications were reporting as
+            # 18 well-formed items).
+            conformance.LEDGER.record_transport_failure(conformance.MAPPER, type(exc).__name__)
+            raise
 
     def _map_document(self, extracted: ExtractedDocument) -> MappingResult:
         started = time.perf_counter()

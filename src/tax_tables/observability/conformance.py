@@ -24,6 +24,15 @@ Three quantities, deliberately kept apart because they mean different things:
     NOT counted here: raising that issue is the contract working, not
     breaking.
 
+``transport_failures``
+    Calls that never produced a body at all — a rate limit that outlived the
+    retry budget, a timeout, a connection error. These are excluded from the
+    conformance denominators rather than counted as successes: a call the
+    model never answered is no evidence about whether the model can emit the
+    contract, and counting it as one flatters the rate. Found by an
+    adversarial pass over document 04, where 18 throttled adjudications were
+    being reported as 18 well-formed items.
+
 ``retries``
     Retryable HTTP responses (408/409/429/5xx) the SDK absorbed. A
     *throughput* property, not a conformance one — a 429 retried through says
@@ -87,20 +96,31 @@ class RoleCounters:
     residue_responses: int = 0
     residue_leading: int = 0
     residue_trailing: int = 0
+    transport_failures: int = 0
+
+    @property
+    def responses(self) -> int:
+        """Calls that actually returned a body — the only honest denominator
+        for a statement about the model's output."""
+        return max(0, self.calls - self.transport_failures)
 
     @property
     def residue_rate(self) -> float | None:
-        """Share of calls whose body needed fence framing removed."""
-        if self.calls == 0:
+        """Share of returned bodies that needed fence framing removed."""
+        if self.responses == 0:
             return None
-        return self.residue_responses / self.calls
+        return self.residue_responses / self.responses
 
     @property
     def call_conformance(self) -> float | None:
-        """Share of calls that returned a parseable, contract-shaped body."""
-        if self.calls == 0:
+        """Share of returned bodies that were parseable and contract-shaped.
+
+        Over ``responses``, not ``calls``: a throttled call that never
+        answered belongs in ``transport_failures``, not in this rate.
+        """
+        if self.responses == 0:
             return None
-        return 1.0 - self.schema_failures / self.calls
+        return 1.0 - self.schema_failures / self.responses
 
     @property
     def item_conformance(self) -> float | None:
@@ -152,6 +172,13 @@ class ConformanceLedger:
     def record_malformed_item(self, role: str, reason: str) -> None:
         self._bump(role, malformed_items=1)
         self._note(role, reason)
+
+    def record_transport_failure(self, role: str, reason: str) -> None:
+        """A call that never produced a body. Only the exception class is
+        recorded: an SDK error message is the server's text, and this line is
+        printed."""
+        self._bump(role, transport_failures=1)
+        self._note(role, f"transport failure: {reason}")
 
     def record_envelope_residue(self, role: str, positions: Iterable[str]) -> None:
         """One response accommodated, plus one count per end that was framed."""
@@ -219,6 +246,7 @@ _HEADER = (
     "schema_fail",
     "malformed",
     "residue",
+    "transport",
     "http_att",
     "retryable",
     "call_ok",
@@ -254,6 +282,7 @@ def format_conformance_report(ledger: ConformanceLedger = LEDGER) -> str:
                 str(counters.schema_failures),
                 str(counters.malformed_items),
                 str(counters.residue_responses),
+                str(counters.transport_failures),
                 str(counters.http_attempts),
                 str(counters.retries),
                 _pct(counters.call_conformance),
@@ -272,6 +301,14 @@ def format_conformance_report(ledger: ConformanceLedger = LEDGER) -> str:
     lines.append(
         "  call_ok = calls returning a contract-shaped body; "
         "item_ok = proposed items that were well formed."
+    )
+    lines.append(
+        "  rates are over calls that RETURNED a body: transport failures "
+        "(throttling, timeouts) are excluded,"
+    )
+    lines.append(
+        "  never counted as successes - a call the model never answered is no "
+        "evidence about the model."
     )
     lines.append(
         "  retryable counts 408/409/429/5xx responses the SDK absorbed - throughput, "

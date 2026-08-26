@@ -392,11 +392,25 @@ class AnthropicAdjudicator:
         why the token counts travel even when the model is unpriced.
         """
         conformance.LEDGER.record_call(conformance.ADJUDICATOR)
-        conformance.LEDGER.record_items(conformance.ADJUDICATOR, 1)
         try:
-            return self._adjudicate(item, extracted)
+            adjudication = self._adjudicate(item, extracted)
+            conformance.LEDGER.record_items(conformance.ADJUDICATOR, 1)
+            return adjudication
         except AdjudicatorError as exc:
+            # A contract failure means a body arrived and failed it: still an
+            # item, unlike a transport failure below.
+            conformance.LEDGER.record_items(conformance.ADJUDICATOR, 1)
             conformance.LEDGER.record_schema_failure(conformance.ADJUDICATOR, _clip_reason(exc))
+            raise
+        except Exception as exc:
+            # No body ever arrived — a throttle that outlived the retry budget,
+            # a timeout, a dropped connection. Counted apart from the
+            # conformance rates: a call the model never answered says nothing
+            # about whether the model can emit the contract, and folding it in
+            # as a success flatters the number (found adversarially on
+            # document 04, where 18 throttled adjudications were reporting as
+            # 18 well-formed items).
+            conformance.LEDGER.record_transport_failure(conformance.ADJUDICATOR, type(exc).__name__)
             raise
 
     def _adjudicate(self, item: ReviewItem, extracted: ExtractedDocument) -> Adjudication:
