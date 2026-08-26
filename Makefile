@@ -1,4 +1,4 @@
-.PHONY: check lint typecheck test fmt db-up db-down accuracy api openapi
+.PHONY: check lint typecheck test fmt db-up db-down accuracy api openapi diagrams
 
 check: lint typecheck test
 
@@ -43,3 +43,9 @@ api:
 # Regenerate docs/openapi.yaml; a stale export fails the contract tests.
 openapi:
 	uv run python -m tax_tables.tools.export_openapi
+
+# Phase 5 gate: every mermaid block in the README must parse under two
+# Mermaid majors, which brackets whatever version GitHub bundles. Needs
+# Node (mermaid-cli pulls a headless Chromium on first run).
+diagrams:
+	uv run python scripts/check_diagrams.py README.md

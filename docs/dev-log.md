@@ -863,3 +863,78 @@ the six endpoint security groups its reason names).
 Post-sweep: `make check` 469 passed + the credential skip; synth exit 0
 credential-stripped; cfn-lint clean; cdk-nag 58 compliant / 53 suppressed /
 0 non-compliant.
+
+## 2026-08-26 — Phase 5a: diagrams, README, ADR consolidation
+
+Everything in Phase 5 that does not depend on a live run. The two open gates
+(2b accuracy, 3.5 deploy) are named as open in every place a number would
+otherwise go, and marked `TBD` with the command that fills them.
+
+**The C4 diagrams do not use Mermaid's C4 syntax, and that was a finding, not
+a preference.** GitHub renders Mermaid client-side with its own bundle, and
+that bundle does not include the C4 plugin — `C4Context` / `C4Component` blocks
+render as raw text on GitHub while rendering *perfectly* in the Mermaid live
+editor and in `mermaid-cli` ([community discussion
+#197898](https://github.com/orgs/community/discussions/197898), closed
+unanswered, 2026-06-03; verified by rendering a C4 block locally, which
+succeeded and proves nothing). That asymmetry is the trap CLAUDE.md
+anticipated. So Level 1 and Level 3 are plain `flowchart`s applying C4
+semantics through subgraph boundaries and typed `[Person]` / `[Component]` /
+`[Port]` labels.
+
+"Verify they render" became a repeatable check rather than a claim:
+`scripts/check_diagrams.py` (`make diagrams`) extracts every ```mermaid block
+from the README and parses it under **two Mermaid majors, 10 and 11**, which
+brackets whichever version GitHub ships; it also fails outright on a C4 block,
+so nobody re-introduces one. Result: 2 diagrams, 0 failures, both versions.
+
+Two things the Level 1 diagram shows that are uncomfortable and are drawn
+anyway: the AWS system is dashed because it was designed and validated but
+never deployed, and the reviewer reaches the review queue **through the
+database**, because the queue has no HTTP endpoint. Drawing the second one
+honestly is what surfaced it as an honest-limitations item.
+
+**README.** Written around the four evaluation criteria with a table pointing
+at where each is answered. The bottleneck section is the one that took the
+work: it gives the arithmetic (10,000/day, 60% inside a four-hour window,
+0.42 documents/second, required concurrency = 0.42 x T) and then names what
+breaks in order — model-provider TPM first (~1.26M tokens/minute at that rate,
+above default org tiers), then fan-out concurrency and the reserved-concurrency
+fix, then connection exhaustion and why RDS Proxy and the pooled Neon endpoint
+are in the design at all, then the Step Functions 256 KB payload quota, then
+ingest volume at 100 GB/day. `T` is a `TBD` fed by the accuracy run, so the
+table is algebra with a named unknown rather than invented numbers.
+
+Also consolidated into the README: the fixture-design disclosure (the five PDFs
+and the ground truth are **self-authored**, with the traps documented as test
+engineering), the three-targets section naming both open gates, and a
+thirteen-item honest-limitations section that now includes the endpoint
+inventory, the AWS-target upload ceiling (~4.4 MB, not 10 MB — API Gateway
+base64-encodes the body into Lambda's 6 MB synchronous payload), the accepted
+IAM over-grant stated in full, and the missing review-queue endpoint.
+
+**ADRs.** Ten written, taking the set to twelve. The three rejections each
+record the threshold at which they would flip, and each rests on a primary
+source rather than recollection:
+
+- **Aurora DSQL** — its published `CREATE TABLE` grammar's `table_constraint`
+  production is `CHECK | UNIQUE | PRIMARY KEY`. No `EXCLUDE`, no `REFERENCES`.
+  And its supported-types page enumerates the subset it supports, in which
+  **range types do not appear at all** — so `bracket int8range` is
+  unrepresentable and the centrepiece constraint cannot be written.
+- **RDS Data API** — Aurora-only, so a *driver* choice would silently make a
+  *compute* choice; and it needs a second `RecordRepository` implementation
+  (not a second adapter over one driver) whose type coercion could never be
+  integration-tested here. An untestable divergent path is where silent
+  corruption lives.
+- **Aurora Serverless v2** — the decisive fact is not the latency, it is that
+  AWS documents auto-pause and RDS Proxy as mutually exclusive: "If your
+  Aurora cluster has an associated RDS Proxy... any Aurora serverless
+  instances in such a cluster won't automatically pause." The headline benefit
+  is unavailable in exactly the architecture that would use it. The latency
+  numbers ("approximately 15 seconds", "30 seconds or longer" after 24 h) and
+  the ~$43.80/month 0.5-ACU floor are the supporting arguments, not the
+  primary one.
+
+Post-5a: `make check` 469 passed + the credential skip; `make diagrams` 2/2
+under both majors; all internal doc links resolve.
