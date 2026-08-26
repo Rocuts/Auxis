@@ -4,8 +4,12 @@ check: lint typecheck test
 
 # The Phase 2 gate: end-to-end accuracy against the real mapping API.
 # Needs ANTHROPIC_API_KEY (or SCHEMA_MAPPER_*) in .env; skips without it.
+# -p loads the conformance reporter, which prints the measured schema-failure
+# and retry rates under the accuracy table. It is a print-only plugin and the
+# harness itself is untouched.
 accuracy:
-	uv run --env-file .env pytest tests/accuracy/test_harness.py::test_end_to_end_accuracy -s -v
+	uv run --env-file .env pytest -p tax_tables.observability.pytest_plugin \
+		tests/accuracy/test_harness.py::test_end_to_end_accuracy -s -v
 
 lint:
 	uv run ruff check src tests infra

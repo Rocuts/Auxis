@@ -37,6 +37,7 @@ from tax_tables.adapters.postgres import PostgresRecordRepository
 from tax_tables.adapters.tesseract_extractor import TesseractExtractor
 from tax_tables.domain.records import ReviewStatus
 from tax_tables.extraction.router import ExtractionRouter
+from tax_tables.observability.conformance import format_conformance_report
 from tax_tables.pipeline import PipelineResult, run_document
 from tax_tables.ports.mapper import MappingCost
 
@@ -224,6 +225,12 @@ def run(paths: list[Path], dsn: str | None, artifacts: Path | None) -> int:
         print("\nfailed documents:")
         for error in errors:
             print(f"  {error}")
+    # The same table the accuracy gate prints: how often the model actually
+    # honoured the response contract, measured rather than assumed.
+    conformance = format_conformance_report()
+    if conformance:
+        print()
+        print(conformance)
     return 1 if errors else 0
 
 
