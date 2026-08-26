@@ -19,8 +19,15 @@ Design rules carried over from the rest of the repo:
 - No NAT gateways: Lambdas live in isolated subnets and reach AWS services
   through VPC endpoints only — cheaper, and no path to the internet exists
   for a component that handles tax documents.
-- Tracing is Powertools Tracer over Lambda active tracing (anti-goal #6:
-  the X-Ray SDK is in maintenance; the SDK never appears in the bundle).
+- Tracing is Lambda ACTIVE tracing — a platform setting, not a library, so
+  no tracing SDK ships in the bundle. Stated carefully because the earlier
+  wording ("Powertools Tracer ... the SDK never appears in the bundle") was
+  self-contradicting: Powertools' Tracer is a wrapper over aws-xray-sdk and
+  pulls it in, which anti-goal #6 forbids. Powertools is not a dependency of
+  this project (see pyproject), so nothing here imports either one; the
+  POWERTOOLS_* variables below configure Logger for the dependency layer a
+  deploy pipeline would add. If structured tracing is ever wanted in code,
+  the anti-goal points at OpenTelemetry, not Powertools Tracer.
 - Handlers are addressed as ``tax_tables.aws.handlers.*`` inside the
   ``src/`` asset: real, unit-tested code (tests/aws pins every handler
   string in this template to a callable). The Textract and Bedrock
@@ -84,6 +91,11 @@ MAX_CONCURRENT_DOCUMENTS = 8
 #: — which is why the failure alarm below exists only because this is set.
 MAP_RUN_LABEL = "PerDocument"
 
+#: Reserved concurrency for the public read path, over its own API Gateway
+#: throttle (50 rps steady / 100 burst): enough that reads keep being served
+#: while the fan-out holds its own reservation.
+API_RESERVED_CONCURRENCY = 25
+
 #: Bedrock model family for the three semantic roles. Scoped to Anthropic
 #: foundation models; per-role overrides ride Lambda env, mirroring the
 #: SCHEMA_MAPPER_* / RECORD_VERIFIER_* / ADJUDICATOR_* chains.
@@ -130,9 +142,24 @@ class TaxTablesStack(cdk.Stack):
             destination=ec2.FlowLogDestination.to_s3(logs_bucket, "vpc-flow-logs/"),
         )
 
-        vpc.add_gateway_endpoint(
+        # Every endpoint carries a policy. Without one AWS applies full
+        # access, and the S3 gateway endpoint then satisfies a PUT to any
+        # bucket in ANY account — an egress path out of a VPC whose whole
+        # point (docstring above) is that no path out exists. The condition
+        # binds use of every endpoint to principals in this account, which
+        # is what closes that path; it deliberately does not enumerate
+        # actions, because an over-tight endpoint policy is a deploy-time
+        # failure this project cannot test (README, honest limitations).
+        same_account_only = iam.PolicyStatement(
+            principals=[iam.AnyPrincipal()],
+            actions=["*"],
+            resources=["*"],
+            conditions={"StringEquals": {"aws:PrincipalAccount": self.account}},
+        )
+        s3_endpoint = vpc.add_gateway_endpoint(
             "S3Endpoint", service=ec2.GatewayVpcEndpointAwsService.S3, subnets=[isolated]
         )
+        s3_endpoint.add_to_policy(same_account_only)
         for name, service in (
             ("SecretsEndpoint", ec2.InterfaceVpcEndpointAwsService.SECRETS_MANAGER),
             ("TextractEndpoint", ec2.InterfaceVpcEndpointAwsService.TEXTRACT),
@@ -141,7 +168,9 @@ class TaxTablesStack(cdk.Stack):
             ("StatesEndpoint", ec2.InterfaceVpcEndpointAwsService.STEP_FUNCTIONS),
             ("XRayEndpoint", ec2.InterfaceVpcEndpointAwsService.XRAY),
         ):
-            vpc.add_interface_endpoint(name, service=service, subnets=isolated)
+            vpc.add_interface_endpoint(name, service=service, subnets=isolated).add_to_policy(
+                same_account_only
+            )
         NagSuppressions.add_resource_suppressions(
             vpc,
             [
@@ -174,6 +203,22 @@ class TaxTablesStack(cdk.Stack):
                     noncurrent_version_expiration=cdk.Duration.days(30),
                 )
             ],
+        )
+
+        # Map Run exports get their own bucket rather than a prefix in the
+        # access-log bucket: ResultWriterV2 grants the state machine
+        # s3:PutObject on the WHOLE destination bucket, and pointing that at
+        # the bucket holding VPC flow logs and S3 server access logs would
+        # let the pipeline overwrite its own audit trail.
+        map_run_results = s3.Bucket(
+            self,
+            "MapRunResults",
+            encryption=s3.BucketEncryption.S3_MANAGED,
+            block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            enforce_ssl=True,
+            server_access_logs_bucket=logs_bucket,
+            server_access_logs_prefix="map-runs/",
+            lifecycle_rules=[s3.LifecycleRule(expiration=cdk.Duration.days(90))],
         )
 
         # -- Database: RDS PostgreSQL + Proxy -----------------------------
@@ -235,6 +280,36 @@ class TaxTablesStack(cdk.Stack):
             security_groups=[proxy_sg],
             require_tls=True,
             iam_auth=True,
+            # The fan-out mitigation, actually configured. Defaults left
+            # ConnectionPoolConfigurationInfo empty, so the stack's stated
+            # answer to connection exhaustion was a claim rather than a
+            # setting. MaxConcurrency 8 x four DB-touching steps is the
+            # worst-case concurrent borrower count; the pool is sized to
+            # absorb it and to hand a connection back rather than pin it.
+            max_connections_percent=90,
+            max_idle_connections_percent=50,
+            borrow_timeout=cdk.Duration.seconds(30),
+        )
+
+        # Re-assert CDK's own placeholder, and do it HERE — after the last
+        # construct that touches this group.
+        # SecurityGroup.addEgressRule calls removeNoTrafficRule() before
+        # emitting an SG-peer rule as a separate CfnSecurityGroupEgress, so
+        # every such rule (ours to DbSg, and the "IndirectPort" rule the
+        # DatabaseProxy adds itself) deletes the inline 255.255.255.255/32
+        # placeholder and puts nothing inline in its place. AWS is explicit
+        # about what that means: "The default rule is removed only when you
+        # specify one or more egress rules." Without this line the proxy
+        # gets allow-all egress despite allow_all_outbound=False — the
+        # source said one thing and the template did another. An
+        # inline-able peer/port lands in directEgressRules rather than a
+        # separate resource, so the rule survives; a test pins it, because
+        # any construct added below that touches proxy_sg would strip it
+        # again just as silently.
+        proxy_sg.add_egress_rule(
+            ec2.Peer.ipv4("255.255.255.255/32"),
+            ec2.Port.icmp_type_and_code(252, 86),
+            "Disallow all traffic",
         )
 
         # -- Lambda functions ---------------------------------------------
@@ -254,6 +329,7 @@ class TaxTablesStack(cdk.Stack):
             *,
             timeout_seconds: int,
             memory_mb: int,
+            reserved: int,
             env: dict[str, str] | None = None,
         ) -> lambda_.Function:
             log_group = logs.LogGroup(
@@ -271,14 +347,25 @@ class TaxTablesStack(cdk.Stack):
                 handler=handler,
                 timeout=cdk.Duration.seconds(timeout_seconds),
                 memory_size=memory_mb,
+                # Reserved concurrency is both a floor and a ceiling, and
+                # both directions matter here: MaxConcurrency bounds one Map
+                # Run, not the account, so without this a large batch draws
+                # the shared unreserved pool down and the public read path
+                # starts returning 429s — while a burst of reads can equally
+                # stall the pipeline. Sized in the README's bottleneck
+                # section; the pipeline steps get the fan-out width, the API
+                # gets headroom over its own gateway throttle.
+                reserved_concurrent_executions=reserved,
                 vpc=vpc,
                 vpc_subnets=isolated,
                 security_groups=[lambda_sg],
                 tracing=lambda_.Tracing.ACTIVE,
                 log_group=log_group,
                 environment={
-                    # Powertools Tracer/Logger, never the X-Ray SDK
-                    # (anti-goal #6).
+                    # Powertools Logger configuration (not Tracer — see
+                    # the module docstring: Tracer would pull in the X-Ray
+                    # SDK anti-goal #6 forbids). Tracing is the platform's,
+                    # set by `tracing=ACTIVE` below.
                     "POWERTOOLS_SERVICE_NAME": "tax-tables",
                     "POWERTOOLS_LOG_LEVEL": "INFO",
                     "DB_PROXY_ENDPOINT": proxy.endpoint,
@@ -310,12 +397,14 @@ class TaxTablesStack(cdk.Stack):
             "tax_tables.aws.handlers.api",
             timeout_seconds=29,  # under the API Gateway integration cap
             memory_mb=1024,
+            reserved=API_RESERVED_CONCURRENCY,
         )
         extract_fn = function(
             "Extract",
             "tax_tables.aws.handlers.extract_document",
             timeout_seconds=300,
             memory_mb=2048,
+            reserved=MAX_CONCURRENT_DOCUMENTS,
             env={"EXTRACTION_OCR_ENGINE": "textract"},
         )
         semantic_fn = function(
@@ -323,6 +412,7 @@ class TaxTablesStack(cdk.Stack):
             "tax_tables.aws.handlers.map_and_verify",
             timeout_seconds=900,  # document 03 maps 50+ records
             memory_mb=1024,
+            reserved=MAX_CONCURRENT_DOCUMENTS,
             env={
                 "SCHEMA_MAPPER_MODEL": BEDROCK_MODEL_ID,
                 # The verifier may run a different-family model (ADR 012's
@@ -335,12 +425,14 @@ class TaxTablesStack(cdk.Stack):
             "tax_tables.aws.handlers.persist_records",
             timeout_seconds=120,
             memory_mb=1024,
+            reserved=MAX_CONCURRENT_DOCUMENTS,
         )
         adjudicate_fn = function(
             "Adjudicate",
             "tax_tables.aws.handlers.adjudicate_queue",
             timeout_seconds=600,  # one call per open queue item
             memory_mb=1024,
+            reserved=MAX_CONCURRENT_DOCUMENTS,
             env={"ADJUDICATOR_MODEL": BEDROCK_MODEL_ID},
         )
 
@@ -352,6 +444,7 @@ class TaxTablesStack(cdk.Stack):
             "tax_tables.aws.handlers.mark_job_failed",
             timeout_seconds=30,
             memory_mb=512,
+            reserved=MAX_CONCURRENT_DOCUMENTS,
         )
 
         documents.grant_put(api_fn)
@@ -474,6 +567,16 @@ class TaxTablesStack(cdk.Stack):
             # the database the API serves, once in a metric an operator is
             # paged on.
             tolerated_failure_percentage=100,
+            # The per-batch report named in that justification. Without it,
+            # every child execution's output aggregates into the parent's
+            # 256 KiB state payload, and the record of which documents
+            # failed exists only in a Map Run the console ages out at 90
+            # days. Exported, the batch outcome is a durable object.
+            # Requires the @aws-cdk/aws-stepfunctions:useDistributedMapResultWriterV2
+            # context flag (set in cdk.json): without it CDK accepts this
+            # argument and silently emits no ResultWriter at all — verified,
+            # the ASL had none until the flag went in.
+            result_writer_v2=sfn.ResultWriterV2(bucket=map_run_results),
         )
         fan_out.item_processor(per_document)
 
@@ -670,35 +773,118 @@ class TaxTablesStack(cdk.Stack):
             [
                 {
                     "id": "AwsSolutions-IAM4",
-                    "reason": "AWSLambdaBasicExecutionRole / AWSLambdaVPCAccessExecutionRole "
-                    "on CDK-generated Lambda roles: log-write and ENI-management "
-                    "permissions only, the documented minimal baseline for VPC "
-                    "Lambdas; replacing them with inline copies duplicates "
-                    "AWS-maintained policy with no privilege reduction. Also "
-                    "covers the API Gateway account CloudWatch role "
-                    "(AmazonAPIGatewayPushToCloudWatchLogs), which is log-write "
-                    "only.",
+                    # Stated from the published policy documents, not from
+                    # their names — the previous wording ("log-write only",
+                    # "no privilege reduction") was false for all three, and
+                    # a suppression whose justification is wrong is worse
+                    # than no suppression. The API Gateway role is no longer
+                    # excused here; it has its own, accurate reason below.
+                    "reason": "The two Lambda service-role policies, quoted: "
+                    "AWSLambdaBasicExecutionRole grants logs:CreateLogGroup / "
+                    "CreateLogStream / PutLogEvents on Resource '*', and "
+                    "AWSLambdaVPCAccessExecutionRole grants those same three "
+                    "plus ec2:CreateNetworkInterface / DescribeNetworkInterfaces "
+                    "/ DescribeSubnets / DeleteNetworkInterface / "
+                    "(Un)AssignPrivateIpAddresses, also on '*'. Two honest "
+                    "consequences: (a) the ENI half genuinely cannot be "
+                    "narrowed — the ec2 Describe* calls support no "
+                    "resource-level permissions, so an inline copy would carry "
+                    "the identical wildcard; (b) the logs half COULD be "
+                    "narrowed, because every function in this stack has an "
+                    "explicit LogGroup, so '*' is wider than needed. It is "
+                    "accepted because the actions are append-only (no "
+                    "GetLogEvents, no FilterLogEvents, no Delete*): the worst "
+                    "case is writing to another log group in the same account, "
+                    "never reading or destroying one. Narrowing it means "
+                    "replacing CDK's default role on six functions; recorded "
+                    "as an open hardening item in the README rather than "
+                    "claimed as done. Note also that Basic is wholly subsumed "
+                    "by VPCAccess — CDK attaches both, and removing the "
+                    "redundant one changes no effective permission.",
                     "appliesTo": [
                         "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
                         "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole",
-                        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs",
                     ],
                 },
                 {
                     "id": "AwsSolutions-IAM5",
-                    "reason": "Three wildcard classes, each the narrowest expressible "
-                    "grant: (1) textract:AnalyzeDocument supports no "
-                    "resource-level permissions, so '*' is mandatory; (2) the "
-                    "Bedrock grant is scoped to foundation-model/anthropic.* "
-                    "with a region wildcard because cross-region inference "
-                    "profiles resolve to regional model ARNs; (3) CDK grant "
-                    "helpers emit object-suffix (<bucket-arn>/*), Lambda "
-                    "version (:*), X-Ray/log-delivery, and DistributedMap "
-                    "child-execution wildcards that are the service-documented "
-                    "shapes for those grants.",
+                    # Enumerated, not blanket. Without `appliesTo` this one
+                    # entry silences every AwsSolutions-IAM5 finding in the
+                    # stack — including wildcard grants nobody has written
+                    # yet, which is the opposite of what a reviewed
+                    # suppression is for. Listing the findings means the next
+                    # wildcard fails the synth until someone justifies it.
+                    # The list embeds CDK logical IDs, so a refactor that
+                    # renames a construct breaks CI loudly; that cost is the
+                    # feature.
+                    "reason": "Four wildcard classes, each the narrowest expressible "
+                    "grant. (1) textract:AnalyzeDocument supports no "
+                    "resource-level permissions, so Resource '*' is mandatory. "
+                    "(2) The Bedrock grant is scoped to "
+                    "foundation-model/anthropic.* with a region wildcard "
+                    "because cross-region inference profiles resolve to "
+                    "regional model ARNs. (3) CDK grant helpers emit the "
+                    "service-documented shapes: object-suffix "
+                    "(<bucket-arn>/* for the documents bucket, and the whole "
+                    "MapRunResults bucket — which is why the Map Run export got a "
+                    "bucket of its own rather than a prefix in the audit-log "
+                    "bucket), the s3 "
+                    "Action:: families behind grant_read / grant_put, and "
+                    "Lambda version suffixes (<function-arn>:*) for "
+                    "lambda:InvokeFunction. (4) The DistributedMap "
+                    "child-execution wildcards (execution:<name>:* and "
+                    "execution:<name>/PerDocument:*) are the ARN shape Step "
+                    "Functions documents for StartExecution and "
+                    "DescribeExecution against a Map Run's children.",
+                    "appliesTo": [
+                        "Action::s3:Abort*",
+                        "Action::s3:GetBucket*",
+                        "Action::s3:GetObject*",
+                        "Action::s3:List*",
+                        "Resource::*",
+                        "Resource::<AdjudicateB1101833.Arn>:*",
+                        "Resource::<Documents7E5B2978.Arn>/*",
+                        "Resource::<Extract9BA700EA.Arn>:*",
+                        "Resource::<MapAndVerifyF30EE2AA.Arn>:*",
+                        "Resource::<MarkFailed107085D9.Arn>:*",
+                        "Resource::<Persist419B710D.Arn>:*",
+                        "Resource::arn:<AWS::Partition>:bedrock:*::foundation-model/anthropic.*",
+                        "Resource::arn:<AWS::Partition>:s3:::<MapRunResults8656708D>/*",
+                        'Resource::arn:<AWS::Partition>:states:<AWS::Region>:<AWS::AccountId>:execution:{"Fn::Select":[6,{"Fn::Split":[":",{"Ref":"PipelineC660917D"}]}]}/PerDocument:*',
+                        'Resource::arn:<AWS::Partition>:states:<AWS::Region>:<AWS::AccountId>:execution:{"Fn::Select":[6,{"Fn::Split":[":",{"Ref":"PipelineC660917D"}]}]}:*',
+                    ],
                 },
             ],
         )
+        # The API Gateway account role, on its own accurate terms — it is
+        # NOT log-write only, which is what the old shared reason claimed.
+        NagSuppressions.add_resource_suppressions_by_path(
+            self,
+            "/TaxTables/Api/CloudWatchRole/Resource",
+            [
+                {
+                    "id": "AwsSolutions-IAM4",
+                    "reason": "AmazonAPIGatewayPushToCloudWatchLogs, quoted from its "
+                    "published policy document, grants logs:CreateLogGroup, "
+                    "CreateLogStream, DescribeLogGroups, DescribeLogStreams, "
+                    "PutLogEvents, GetLogEvents and FilterLogEvents on Resource "
+                    "'*'. The last two are account-wide log READ — materially "
+                    "more than the write access the policy's name and "
+                    "description suggest, and the reason this suppression is "
+                    "separate from the Lambda one. It is accepted because the "
+                    "role is assumable only by apigateway.amazonaws.com "
+                    "(service principal, single trust statement), it is the "
+                    "policy AWS requires on the account-level CloudWatch role, "
+                    "and the alternative is turning off the API access logging "
+                    "the same stack configures. The account-scoped blast radius "
+                    "is stated, not hidden.",
+                    "appliesTo": [
+                        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+                    ],
+                }
+            ],
+        )
+
         # API Gateway findings, scoped to the API construct only.
         NagSuppressions.add_resource_suppressions(
             api,

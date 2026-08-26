@@ -299,3 +299,125 @@ class TestPerDocumentFailurePath:
             and any(r["Ref"] == role for r in policy["Properties"].get("Roles", []))
         ]
         assert connects, "mark_job_failed cannot authenticate to the database"
+
+
+class TestPromotedAuditFindings:
+    """The audit named 75 findings and verified 14. This class covers the
+    ones promoted afterwards by a title-level sweep against three criteria
+    — data loss, money paths, auth — each then verified against primary
+    sources (AWS documentation, or the decompiled aws-cdk-lib) rather than
+    accepted on the finder's word. The rest stay unverified by design; the
+    dev-log records where the full list lives.
+    """
+
+    def test_proxy_egress_is_not_the_default_allow_all(self, template: Template) -> None:
+        """auth/network. `allow_all_outbound=False` did not survive synth.
+
+        aws-cdk-lib 2.266's SecurityGroup.addEgressRule calls
+        removeNoTrafficRule() BEFORE the branch that emits a peer rule as a
+        separate CfnSecurityGroupEgress — so adding an SG-peer egress rule
+        deletes the inline 255.255.255.255/32 placeholder and puts nothing
+        inline in its place. AWS then applies its own default: "When you
+        create a security group, if you do not add egress rules, we add
+        egress rules that allow all outbound IPv4 and IPv6 traffic" — "The
+        default rule is removed only when you specify one or more egress
+        rules." The proxy got allow-all egress while the source said
+        otherwise.
+        """
+        groups = _resources(template, "AWS::EC2::SecurityGroup")
+        proxy_sgs = [
+            g for name, g in groups.items() if name.startswith("ProxySg") and "Endpoint" not in name
+        ]
+        assert len(proxy_sgs) == 1
+        egress = proxy_sgs[0]["Properties"].get("SecurityGroupEgress")
+        assert egress, "no inline egress rule: AWS re-adds allow-all outbound"
+        assert not any(rule.get("CidrIp") == "0.0.0.0/0" for rule in egress)
+
+    def test_every_vpc_endpoint_restricts_who_may_use_it(self, template: Template) -> None:
+        """auth. The stack's docstring claims no path to the internet
+        exists for a component handling tax documents. A default
+        full-access S3 gateway endpoint is exactly such a path: it will
+        carry a PUT to any bucket in any account."""
+        endpoints = _resources(template, "AWS::EC2::VPCEndpoint")
+        assert len(endpoints) == 7
+        for name, endpoint in endpoints.items():
+            policy = endpoint["Properties"].get("PolicyDocument")
+            assert policy, f"{name} uses the default full-access policy"
+            conditions = json.dumps(policy)
+            assert "aws:PrincipalAccount" in conditions, name
+
+    def test_the_proxy_connection_pool_is_configured(self, template: Template) -> None:
+        """money/bottleneck. RDS Proxy pooling is the stack's stated
+        mitigation for connection exhaustion under fan-out; the target
+        group shipped with an empty ConnectionPoolConfigurationInfo, so
+        the mitigation was a claim, not a setting."""
+        (group,) = _resources(template, "AWS::RDS::DBProxyTargetGroup").values()
+        pool = group["Properties"]["ConnectionPoolConfigurationInfo"]
+        assert pool.get("MaxConnectionsPercent")
+        assert pool.get("MaxIdleConnectionsPercent") is not None
+        assert pool.get("ConnectionBorrowTimeout")
+
+    def test_the_fan_out_cannot_starve_the_read_path(self, template: Template) -> None:
+        """money/availability. MaxConcurrency bounds one Map Run, not the
+        account: without reserved concurrency the pipeline and the public
+        GET path draw from the same unreserved pool, so a large batch can
+        make the API return 429s — and a burst of reads can stall the
+        pipeline."""
+        functions = _resources(template, "AWS::Lambda::Function")
+        app = {
+            name: fn["Properties"]
+            for name, fn in functions.items()
+            if str(fn["Properties"].get("Handler", "")).startswith("tax_tables.")
+        }
+        assert len(app) == 6
+        for name, props in app.items():
+            assert props.get("ReservedConcurrentExecutions"), name
+
+    def test_map_run_results_are_exported(self, template: Template) -> None:
+        """data loss. Without a ResultWriter every child execution's output
+        aggregates into the parent's 256 KiB state payload, and the
+        per-batch record of which documents failed lives only in a Map Run
+        the console ages out after 90 days."""
+        definition = _definition(template)
+        (map_state,) = [s for s in definition["States"].values() if s["Type"] == "Map"]
+        assert "ResultWriter" in map_state
+        # ResultWriterV2 emits no IAM grant of its own; an export the state
+        # machine cannot perform is worse than none.
+        writes = [
+            policy
+            for policy in _resources(template, "AWS::IAM::Policy").values()
+            if any(
+                "s3:PutObject" in json.dumps(statement.get("Action"))
+                for statement in policy["Properties"]["PolicyDocument"]["Statement"]
+            )
+            and any("Pipeline" in json.dumps(r) for r in policy["Properties"].get("Roles", []))
+        ]
+        assert writes, "the state machine cannot write its Map Run results"
+
+    def test_the_iam4_justification_states_what_the_policies_grant(
+        self, template: Template
+    ) -> None:
+        """auth. The stack-level IAM4 reason called
+        AmazonAPIGatewayPushToCloudWatchLogs "log-write only". Its
+        published policy document grants logs:GetLogEvents and
+        logs:FilterLogEvents on Resource "*" — account-wide log READ. A
+        suppression whose justification is false is worse than none, and
+        the Phase 4 gate is precisely about written justifications."""
+        suppressions = template.to_json()["Metadata"]["cdk_nag"]["rules_to_suppress"]
+        iam4 = [s for s in suppressions if s["id"] == "AwsSolutions-IAM4"]
+        assert len(iam4) == 1
+        applies = iam4[0]["applies_to"]
+        assert not any("APIGatewayPushToCloudWatchLogs" in entry for entry in applies), (
+            "the API Gateway role is still excused by a reason written about Lambda policies"
+        )
+        assert "log-write only" not in iam4[0]["reason"]
+
+    def test_the_iam5_suppression_is_scoped(self, template: Template) -> None:
+        """auth. An `appliesTo`-less stack suppression silences every
+        AwsSolutions-IAM5 finding in the stack forever — including
+        wildcard grants nobody has written yet. Enumerating the findings
+        turns the next one into a failed synth instead of a silent pass."""
+        suppressions = template.to_json()["Metadata"]["cdk_nag"]["rules_to_suppress"]
+        iam5 = [s for s in suppressions if s["id"] == "AwsSolutions-IAM5"]
+        assert len(iam5) == 1
+        assert iam5[0].get("applies_to"), "unscoped: any future wildcard is pre-excused"

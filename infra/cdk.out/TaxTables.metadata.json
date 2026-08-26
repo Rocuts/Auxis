@@ -192,6 +192,19 @@
       ]
     }
   ],
+  "/TaxTables/MapRunResults/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "MapRunResults8656708D"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib, jsii runtime, node internals...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
   "/TaxTables/DbSg/Resource": [
     {
       "type": "aws:cdk:logicalId",
@@ -668,7 +681,7 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        ".../var/folders/q7/vqkr6z_53zv5lwdxt31637dh0000gn/T/jsii-kernel-LQ3VvJ/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:272 in aws-cdk-lib...",
+        ".../var/folders/q7/vqkr6z_53zv5lwdxt31637dh0000gn/T/jsii-kernel-P686cO/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:272 in aws-cdk-lib...",
         "Array.forEach (:)",
         "...aws-cdk-lib..."
       ]
@@ -682,7 +695,7 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        ".../var/folders/q7/vqkr6z_53zv5lwdxt31637dh0000gn/T/jsii-kernel-LQ3VvJ/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:272 in aws-cdk-lib...",
+        ".../var/folders/q7/vqkr6z_53zv5lwdxt31637dh0000gn/T/jsii-kernel-P686cO/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:272 in aws-cdk-lib...",
         "Array.forEach (:)",
         "...aws-cdk-lib..."
       ]
@@ -696,7 +709,7 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        ".../var/folders/q7/vqkr6z_53zv5lwdxt31637dh0000gn/T/jsii-kernel-LQ3VvJ/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:272 in aws-cdk-lib...",
+        ".../var/folders/q7/vqkr6z_53zv5lwdxt31637dh0000gn/T/jsii-kernel-P686cO/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:272 in aws-cdk-lib...",
         "Array.forEach (:)",
         "...aws-cdk-lib..."
       ]
@@ -710,7 +723,7 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        ".../var/folders/q7/vqkr6z_53zv5lwdxt31637dh0000gn/T/jsii-kernel-LQ3VvJ/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:272 in aws-cdk-lib...",
+        ".../var/folders/q7/vqkr6z_53zv5lwdxt31637dh0000gn/T/jsii-kernel-P686cO/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:272 in aws-cdk-lib...",
         "Array.forEach (:)",
         "...aws-cdk-lib..."
       ]
@@ -724,7 +737,7 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        ".../var/folders/q7/vqkr6z_53zv5lwdxt31637dh0000gn/T/jsii-kernel-LQ3VvJ/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:272 in aws-cdk-lib...",
+        ".../var/folders/q7/vqkr6z_53zv5lwdxt31637dh0000gn/T/jsii-kernel-P686cO/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:272 in aws-cdk-lib...",
         "Array.forEach (:)",
         "...aws-cdk-lib..."
       ]
@@ -738,7 +751,7 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        ".../var/folders/q7/vqkr6z_53zv5lwdxt31637dh0000gn/T/jsii-kernel-LQ3VvJ/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:272 in aws-cdk-lib...",
+        ".../var/folders/q7/vqkr6z_53zv5lwdxt31637dh0000gn/T/jsii-kernel-P686cO/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:272 in aws-cdk-lib...",
         "Array.forEach (:)",
         "...aws-cdk-lib..."
       ]
@@ -878,6 +891,19 @@
     {
       "type": "aws:cdk:logicalId",
       "data": "DocumentsPolicy2E972B69"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib, jsii runtime...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/TaxTables/MapRunResults/Policy/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "MapRunResultsPolicy0A257091"
     },
     {
       "type": "aws:cdk:creationStack",

@@ -782,3 +782,84 @@ dependency-layer/secrets/role-creation deploy gaps, the endpoint inventory
 with its two deliberate omissions, and the credential-blocked accuracy
 gate. Post-everything: make check 453 passed + the credential skip; synth
 exit 0 credential-stripped; cfn-lint clean.
+
+## 2026-08-26 — Disposition of the 61 unverified audit findings
+
+The Phase 4 audit named 75 findings and verified 14. The remaining 61 were
+reported unverified. Rather than fan out again, they got a title-level
+sweep against three criteria — **data loss, money paths, auth** — and
+everything that plainly touched one was then verified *against primary
+sources*, not accepted on the finder's word. The full ledger, with every
+finding's disposition, is committed at
+[`docs/audit/2026-08-26-phase4-findings.md`](audit/2026-08-26-phase4-findings.md):
+27 confirmed-and-fixed, 21 promoted-and-fixed, 1 promoted-and-documented,
+3 refuted, **23 parked as named-but-unverified by design**. A parked row is
+not a claim about the stack; nothing in the README or this log rests on one.
+
+Promoted and fixed (each verified first):
+
+- **Lambda throttling is unretried.** Decompiled aws-cdk-lib 2.266's
+  `invoke.js`: `retryOnServiceExceptions` adds exactly
+  ClientExecutionTimeout / Service / AWSLambda / SdkClient.
+  `Lambda.TooManyRequestsException` is absent — and a throttle is the
+  *expected* failure at MaxConcurrency 8. Retry added.
+- **No job ever recorded a failure** (see the previous entry).
+- **The fan-out could starve the read path.** MaxConcurrency bounds one Map
+  Run, not the account; with nothing reserved, a batch and the public GETs
+  drew the same unreserved pool. Reserved concurrency on all six functions.
+- **The stated connection-exhaustion mitigation was unset.**
+  `ConnectionPoolConfigurationInfo` synthesized empty, so "RDS Proxy pools
+  connections" was a claim, not a setting. Pool sized to the fan-out.
+- **`allow_all_outbound=False` did not survive synth.**
+  `SecurityGroup.addEgressRule` calls `removeNoTrafficRule()` *before* the
+  branch that emits an SG-peer rule as a separate `CfnSecurityGroupEgress`
+  — so the inline `255.255.255.255/32` placeholder was deleted with nothing
+  put in its place, and AWS is explicit: "The default rule is removed only
+  when you specify one or more egress rules." The proxy had allow-all
+  egress while the source said otherwise. The placeholder is re-asserted
+  after the last construct that touches the group, and pinned by a test,
+  because anything added below would strip it again just as silently.
+- **Every VPC endpoint used the default full-access policy.** The stack's
+  docstring claims no path to the internet exists for a component handling
+  tax documents; an unrestricted S3 gateway endpoint is exactly such a path
+  — it will carry a PUT to any bucket in any account. All seven endpoints
+  now require `aws:PrincipalAccount` to be this account. Deliberately not
+  action-scoped: an over-tight endpoint policy is a deploy-time failure
+  this project cannot test, and that trade-off is in the README.
+- **The IAM4 suppression's justification was false.** Quoted from the
+  published policy documents: `AmazonAPIGatewayPushToCloudWatchLogs` grants
+  `logs:GetLogEvents` and `logs:FilterLogEvents` on `Resource "*"` —
+  account-wide log *read*, not the "log-write only" the reason claimed; and
+  both Lambda policies grant on `"*"`, not the function's own log group, so
+  "no privilege reduction" was wrong for the logs half (every function here
+  has an explicit LogGroup). The API Gateway role now has its own accurate
+  suppression; the Lambda reason states what each policy actually grants,
+  which half can be narrowed, and why it is accepted anyway.
+- **The IAM5 suppression was blanket.** No `appliesTo` meant one entry
+  pre-excused every wildcard grant nobody had written yet. Now enumerated
+  (15 findings). It proved itself immediately: enabling the Map Run export
+  produced a new S3 wildcard and *failed the synth* instead of passing
+  silently. That is the feature — and the reason the export got its own
+  bucket, since `ResultWriterV2` grants `PutObject` on the whole
+  destination and the audit-log bucket must not be writable by the pipeline.
+- **The Map Run export.** `result_writer_v2` needs the
+  `@aws-cdk/aws-stepfunctions:useDistributedMapResultWriterV2` context flag;
+  without it CDK accepts the argument and emits no `ResultWriter` at all.
+  Verified: the ASL had none until the flag went into `cdk.json`.
+- **The tracing claim contradicted anti-goal #6.** The docstring said
+  tracing was "Powertools Tracer ... the SDK never appears in the bundle" —
+  self-defeating, because Powertools' Tracer wraps `aws-xray-sdk`. Tracing
+  here is Lambda *active* tracing, a platform setting with no library; the
+  `POWERTOOLS_*` variables configure Logger. Corrected in place. This one
+  is outside the three criteria and was promoted anyway: it is a written
+  claim that contradicts a hard constraint.
+
+Refuted on verification: the Textract single-page sync limit (the adapter
+renders each page to PNG, so no PDF ever reaches that path); the cdk-nag
+`<3` pin being unrecorded (it is, in both `pyproject.toml` and ADR 007);
+and the EC23 suppression over-reach (its effective scope today is exactly
+the six endpoint security groups its reason names).
+
+Post-sweep: `make check` 469 passed + the credential skip; synth exit 0
+credential-stripped; cfn-lint clean; cdk-nag 58 compliant / 53 suppressed /
+0 non-compliant.

@@ -29,16 +29,16 @@
         }
       }
     },
-    "43d2dd20187dda1282b010348895b65e01a0ea93dcaea9d3c2049c34f72f9ee1": {
+    "58abe4490d0984fcaf26d17ad6dd60a6caa2c33bd820723464452acdc320295f": {
       "displayName": "TaxTables Template",
       "source": {
         "path": "TaxTables.template.json",
         "packaging": "file"
       },
       "destinations": {
-        "current_account-current_region-3343ec63": {
+        "current_account-current_region-30f1c037": {
           "bucketName": "cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}",
-          "objectKey": "43d2dd20187dda1282b010348895b65e01a0ea93dcaea9d3c2049c34f72f9ee1.json",
+          "objectKey": "58abe4490d0984fcaf26d17ad6dd60a6caa2c33bd820723464452acdc320295f.json",
           "assumeRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-file-publishing-role-${AWS::AccountId}-${AWS::Region}"
         }
       }

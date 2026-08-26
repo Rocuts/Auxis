@@ -5,17 +5,35 @@
   "cdk_nag": {
    "rules_to_suppress": [
     {
-     "reason": "AWSLambdaBasicExecutionRole / AWSLambdaVPCAccessExecutionRole on CDK-generated Lambda roles: log-write and ENI-management permissions only, the documented minimal baseline for VPC Lambdas; replacing them with inline copies duplicates AWS-maintained policy with no privilege reduction. Also covers the API Gateway account CloudWatch role (AmazonAPIGatewayPushToCloudWatchLogs), which is log-write only.",
+     "reason": "VGhlIHR3byBMYW1iZGEgc2VydmljZS1yb2xlIHBvbGljaWVzLCBxdW90ZWQ6IEFXU0xhbWJkYUJhc2ljRXhlY3V0aW9uUm9sZSBncmFudHMgbG9nczpDcmVhdGVMb2dHcm91cCAvIENyZWF0ZUxvZ1N0cmVhbSAvIFB1dExvZ0V2ZW50cyBvbiBSZXNvdXJjZSAnKicsIGFuZCBBV1NMYW1iZGFWUENBY2Nlc3NFeGVjdXRpb25Sb2xlIGdyYW50cyB0aG9zZSBzYW1lIHRocmVlIHBsdXMgZWMyOkNyZWF0ZU5ldHdvcmtJbnRlcmZhY2UgLyBEZXNjcmliZU5ldHdvcmtJbnRlcmZhY2VzIC8gRGVzY3JpYmVTdWJuZXRzIC8gRGVsZXRlTmV0d29ya0ludGVyZmFjZSAvIChVbilBc3NpZ25Qcml2YXRlSXBBZGRyZXNzZXMsIGFsc28gb24gJyonLiBUd28gaG9uZXN0IGNvbnNlcXVlbmNlczogKGEpIHRoZSBFTkkgaGFsZiBnZW51aW5lbHkgY2Fubm90IGJlIG5hcnJvd2VkIOKAlCB0aGUgZWMyIERlc2NyaWJlKiBjYWxscyBzdXBwb3J0IG5vIHJlc291cmNlLWxldmVsIHBlcm1pc3Npb25zLCBzbyBhbiBpbmxpbmUgY29weSB3b3VsZCBjYXJyeSB0aGUgaWRlbnRpY2FsIHdpbGRjYXJkOyAoYikgdGhlIGxvZ3MgaGFsZiBDT1VMRCBiZSBuYXJyb3dlZCwgYmVjYXVzZSBldmVyeSBmdW5jdGlvbiBpbiB0aGlzIHN0YWNrIGhhcyBhbiBleHBsaWNpdCBMb2dHcm91cCwgc28gJyonIGlzIHdpZGVyIHRoYW4gbmVlZGVkLiBJdCBpcyBhY2NlcHRlZCBiZWNhdXNlIHRoZSBhY3Rpb25zIGFyZSBhcHBlbmQtb25seSAobm8gR2V0TG9nRXZlbnRzLCBubyBGaWx0ZXJMb2dFdmVudHMsIG5vIERlbGV0ZSopOiB0aGUgd29yc3QgY2FzZSBpcyB3cml0aW5nIHRvIGFub3RoZXIgbG9nIGdyb3VwIGluIHRoZSBzYW1lIGFjY291bnQsIG5ldmVyIHJlYWRpbmcgb3IgZGVzdHJveWluZyBvbmUuIE5hcnJvd2luZyBpdCBtZWFucyByZXBsYWNpbmcgQ0RLJ3MgZGVmYXVsdCByb2xlIG9uIHNpeCBmdW5jdGlvbnM7IHJlY29yZGVkIGFzIGFuIG9wZW4gaGFyZGVuaW5nIGl0ZW0gaW4gdGhlIFJFQURNRSByYXRoZXIgdGhhbiBjbGFpbWVkIGFzIGRvbmUuIE5vdGUgYWxzbyB0aGF0IEJhc2ljIGlzIHdob2xseSBzdWJzdW1lZCBieSBWUENBY2Nlc3Mg4oCUIENESyBhdHRhY2hlcyBib3RoLCBhbmQgcmVtb3ZpbmcgdGhlIHJlZHVuZGFudCBvbmUgY2hhbmdlcyBubyBlZmZlY3RpdmUgcGVybWlzc2lvbi4=",
      "id": "AwsSolutions-IAM4",
      "applies_to": [
       "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
-      "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole",
-      "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
-     ]
+      "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+     ],
+     "is_reason_encoded": true
     },
     {
-     "reason": "Three wildcard classes, each the narrowest expressible grant: (1) textract:AnalyzeDocument supports no resource-level permissions, so '*' is mandatory; (2) the Bedrock grant is scoped to foundation-model/anthropic.* with a region wildcard because cross-region inference profiles resolve to regional model ARNs; (3) CDK grant helpers emit object-suffix (<bucket-arn>/*), Lambda version (:*), X-Ray/log-delivery, and DistributedMap child-execution wildcards that are the service-documented shapes for those grants.",
-     "id": "AwsSolutions-IAM5"
+     "reason": "Rm91ciB3aWxkY2FyZCBjbGFzc2VzLCBlYWNoIHRoZSBuYXJyb3dlc3QgZXhwcmVzc2libGUgZ3JhbnQuICgxKSB0ZXh0cmFjdDpBbmFseXplRG9jdW1lbnQgc3VwcG9ydHMgbm8gcmVzb3VyY2UtbGV2ZWwgcGVybWlzc2lvbnMsIHNvIFJlc291cmNlICcqJyBpcyBtYW5kYXRvcnkuICgyKSBUaGUgQmVkcm9jayBncmFudCBpcyBzY29wZWQgdG8gZm91bmRhdGlvbi1tb2RlbC9hbnRocm9waWMuKiB3aXRoIGEgcmVnaW9uIHdpbGRjYXJkIGJlY2F1c2UgY3Jvc3MtcmVnaW9uIGluZmVyZW5jZSBwcm9maWxlcyByZXNvbHZlIHRvIHJlZ2lvbmFsIG1vZGVsIEFSTnMuICgzKSBDREsgZ3JhbnQgaGVscGVycyBlbWl0IHRoZSBzZXJ2aWNlLWRvY3VtZW50ZWQgc2hhcGVzOiBvYmplY3Qtc3VmZml4ICg8YnVja2V0LWFybj4vKiBmb3IgdGhlIGRvY3VtZW50cyBidWNrZXQsIGFuZCB0aGUgd2hvbGUgTWFwUnVuUmVzdWx0cyBidWNrZXQg4oCUIHdoaWNoIGlzIHdoeSB0aGUgTWFwIFJ1biBleHBvcnQgZ290IGEgYnVja2V0IG9mIGl0cyBvd24gcmF0aGVyIHRoYW4gYSBwcmVmaXggaW4gdGhlIGF1ZGl0LWxvZyBidWNrZXQpLCB0aGUgczMgQWN0aW9uOjogZmFtaWxpZXMgYmVoaW5kIGdyYW50X3JlYWQgLyBncmFudF9wdXQsIGFuZCBMYW1iZGEgdmVyc2lvbiBzdWZmaXhlcyAoPGZ1bmN0aW9uLWFybj46KikgZm9yIGxhbWJkYTpJbnZva2VGdW5jdGlvbi4gKDQpIFRoZSBEaXN0cmlidXRlZE1hcCBjaGlsZC1leGVjdXRpb24gd2lsZGNhcmRzIChleGVjdXRpb246PG5hbWU+OiogYW5kIGV4ZWN1dGlvbjo8bmFtZT4vUGVyRG9jdW1lbnQ6KikgYXJlIHRoZSBBUk4gc2hhcGUgU3RlcCBGdW5jdGlvbnMgZG9jdW1lbnRzIGZvciBTdGFydEV4ZWN1dGlvbiBhbmQgRGVzY3JpYmVFeGVjdXRpb24gYWdhaW5zdCBhIE1hcCBSdW4ncyBjaGlsZHJlbi4=",
+     "id": "AwsSolutions-IAM5",
+     "applies_to": [
+      "Action::s3:Abort*",
+      "Action::s3:GetBucket*",
+      "Action::s3:GetObject*",
+      "Action::s3:List*",
+      "Resource::*",
+      "Resource::<AdjudicateB1101833.Arn>:*",
+      "Resource::<Documents7E5B2978.Arn>/*",
+      "Resource::<Extract9BA700EA.Arn>:*",
+      "Resource::<MapAndVerifyF30EE2AA.Arn>:*",
+      "Resource::<MarkFailed107085D9.Arn>:*",
+      "Resource::<Persist419B710D.Arn>:*",
+      "Resource::arn:<AWS::Partition>:bedrock:*::foundation-model/anthropic.*",
+      "Resource::arn:<AWS::Partition>:s3:::<MapRunResults8656708D>/*",
+      "Resource::arn:<AWS::Partition>:states:<AWS::Region>:<AWS::AccountId>:execution:{\"Fn::Select\":[6,{\"Fn::Split\":[\":\",{\"Ref\":\"PipelineC660917D\"}]}]}/PerDocument:*",
+      "Resource::arn:<AWS::Partition>:states:<AWS::Region>:<AWS::AccountId>:execution:{\"Fn::Select\":[6,{\"Fn::Split\":[\":\",{\"Ref\":\"PipelineC660917D\"}]}]}:*"
+     ],
+     "is_reason_encoded": true
     }
    ]
   }
@@ -344,6 +362,26 @@
   "VpcS3Endpoint4A3DE4B5": {
    "Type": "AWS::EC2::VPCEndpoint",
    "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": "*",
+       "Condition": {
+        "StringEquals": {
+         "aws:PrincipalAccount": {
+          "Ref": "AWS::AccountId"
+         }
+        }
+       },
+       "Effect": "Allow",
+       "Principal": {
+        "AWS": "*"
+       },
+       "Resource": "*"
+      }
+     ],
+     "Version": "2012-10-17"
+    },
     "RouteTableIds": [
      {
       "Ref": "VpcisolatedSubnet1RouteTableE442650B"
@@ -459,6 +497,26 @@
   "VpcSecretsEndpointFBE119FA": {
    "Type": "AWS::EC2::VPCEndpoint",
    "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": "*",
+       "Condition": {
+        "StringEquals": {
+         "aws:PrincipalAccount": {
+          "Ref": "AWS::AccountId"
+         }
+        }
+       },
+       "Effect": "Allow",
+       "Principal": {
+        "AWS": "*"
+       },
+       "Resource": "*"
+      }
+     ],
+     "Version": "2012-10-17"
+    },
     "PrivateDnsEnabled": true,
     "SecurityGroupIds": [
      {
@@ -583,6 +641,26 @@
   "VpcTextractEndpointB3DE12BB": {
    "Type": "AWS::EC2::VPCEndpoint",
    "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": "*",
+       "Condition": {
+        "StringEquals": {
+         "aws:PrincipalAccount": {
+          "Ref": "AWS::AccountId"
+         }
+        }
+       },
+       "Effect": "Allow",
+       "Principal": {
+        "AWS": "*"
+       },
+       "Resource": "*"
+      }
+     ],
+     "Version": "2012-10-17"
+    },
     "PrivateDnsEnabled": true,
     "SecurityGroupIds": [
      {
@@ -707,6 +785,26 @@
   "VpcBedrockEndpoint67430A7D": {
    "Type": "AWS::EC2::VPCEndpoint",
    "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": "*",
+       "Condition": {
+        "StringEquals": {
+         "aws:PrincipalAccount": {
+          "Ref": "AWS::AccountId"
+         }
+        }
+       },
+       "Effect": "Allow",
+       "Principal": {
+        "AWS": "*"
+       },
+       "Resource": "*"
+      }
+     ],
+     "Version": "2012-10-17"
+    },
     "PrivateDnsEnabled": true,
     "SecurityGroupIds": [
      {
@@ -831,6 +929,26 @@
   "VpcLogsEndpointDA7F7E44": {
    "Type": "AWS::EC2::VPCEndpoint",
    "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": "*",
+       "Condition": {
+        "StringEquals": {
+         "aws:PrincipalAccount": {
+          "Ref": "AWS::AccountId"
+         }
+        }
+       },
+       "Effect": "Allow",
+       "Principal": {
+        "AWS": "*"
+       },
+       "Resource": "*"
+      }
+     ],
+     "Version": "2012-10-17"
+    },
     "PrivateDnsEnabled": true,
     "SecurityGroupIds": [
      {
@@ -955,6 +1073,26 @@
   "VpcStatesEndpoint55D87CA4": {
    "Type": "AWS::EC2::VPCEndpoint",
    "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": "*",
+       "Condition": {
+        "StringEquals": {
+         "aws:PrincipalAccount": {
+          "Ref": "AWS::AccountId"
+         }
+        }
+       },
+       "Effect": "Allow",
+       "Principal": {
+        "AWS": "*"
+       },
+       "Resource": "*"
+      }
+     ],
+     "Version": "2012-10-17"
+    },
     "PrivateDnsEnabled": true,
     "SecurityGroupIds": [
      {
@@ -1079,6 +1217,26 @@
   "VpcXRayEndpoint7EEF95F3": {
    "Type": "AWS::EC2::VPCEndpoint",
    "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": "*",
+       "Condition": {
+        "StringEquals": {
+         "aws:PrincipalAccount": {
+          "Ref": "AWS::AccountId"
+         }
+        }
+       },
+       "Effect": "Allow",
+       "Principal": {
+        "AWS": "*"
+       },
+       "Resource": "*"
+      }
+     ],
+     "Version": "2012-10-17"
+    },
     "PrivateDnsEnabled": true,
     "SecurityGroupIds": [
      {
@@ -1454,6 +1612,42 @@
          ]
         ]
        }
+      },
+      {
+       "Action": "s3:PutObject",
+       "Condition": {
+        "ArnLike": {
+         "aws:SourceArn": {
+          "Fn::GetAtt": [
+           "MapRunResults8656708D",
+           "Arn"
+          ]
+         }
+        },
+        "StringEquals": {
+         "aws:SourceAccount": {
+          "Ref": "AWS::AccountId"
+         }
+        }
+       },
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "logging.s3.amazonaws.com"
+       },
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          {
+           "Fn::GetAtt": [
+            "AccessLogs8B620ECA",
+            "Arn"
+           ]
+          },
+          "/map-runs/*"
+         ]
+        ]
+       }
       }
      ],
      "Version": "2012-10-17"
@@ -1558,6 +1752,95 @@
    },
    "Metadata": {
     "aws:cdk:path": "TaxTables/Documents/Policy/Resource"
+   }
+  },
+  "MapRunResults8656708D": {
+   "Type": "AWS::S3::Bucket",
+   "Properties": {
+    "BucketEncryption": {
+     "ServerSideEncryptionConfiguration": [
+      {
+       "ServerSideEncryptionByDefault": {
+        "SSEAlgorithm": "AES256"
+       }
+      }
+     ]
+    },
+    "LifecycleConfiguration": {
+     "Rules": [
+      {
+       "ExpirationInDays": 90,
+       "Status": "Enabled"
+      }
+     ]
+    },
+    "LoggingConfiguration": {
+     "DestinationBucketName": {
+      "Ref": "AccessLogs8B620ECA"
+     },
+     "LogFilePrefix": "map-runs/"
+    },
+    "PublicAccessBlockConfiguration": {
+     "BlockPublicAcls": true,
+     "BlockPublicPolicy": true,
+     "IgnorePublicAcls": true,
+     "RestrictPublicBuckets": true
+    }
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/MapRunResults/Resource"
+   }
+  },
+  "MapRunResultsPolicy0A257091": {
+   "Type": "AWS::S3::BucketPolicy",
+   "Properties": {
+    "Bucket": {
+     "Ref": "MapRunResults8656708D"
+    },
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": "s3:*",
+       "Condition": {
+        "Bool": {
+         "aws:SecureTransport": "false"
+        }
+       },
+       "Effect": "Deny",
+       "Principal": {
+        "AWS": "*"
+       },
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "MapRunResults8656708D",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "MapRunResults8656708D",
+             "Arn"
+            ]
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      }
+     ],
+     "Version": "2012-10-17"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/MapRunResults/Policy/Resource"
    }
   },
   "DbSg495F8305": {
@@ -1667,6 +1950,15 @@
    "Type": "AWS::EC2::SecurityGroup",
    "Properties": {
     "GroupDescription": "TaxTables/ProxySg",
+    "SecurityGroupEgress": [
+     {
+      "CidrIp": "255.255.255.255/32",
+      "Description": "Disallow all traffic",
+      "FromPort": 252,
+      "IpProtocol": "icmp",
+      "ToPort": 86
+     }
+    ],
     "VpcId": {
      "Ref": "Vpc8378EB38"
     }
@@ -2076,7 +2368,11 @@
   "ProxyProxyTargetGroupB462B5C5": {
    "Type": "AWS::RDS::DBProxyTargetGroup",
    "Properties": {
-    "ConnectionPoolConfigurationInfo": {},
+    "ConnectionPoolConfigurationInfo": {
+     "ConnectionBorrowTimeout": 30,
+     "MaxConnectionsPercent": 90,
+     "MaxIdleConnectionsPercent": 50
+    },
     "DBInstanceIdentifiers": [
      {
       "Ref": "DatabaseB269D8BB"
@@ -2296,6 +2592,7 @@
      }
     },
     "MemorySize": 1024,
+    "ReservedConcurrentExecutions": 25,
     "Role": {
      "Fn::GetAtt": [
       "IngestApiServiceRole0BC49898",
@@ -2509,6 +2806,7 @@
      }
     },
     "MemorySize": 2048,
+    "ReservedConcurrentExecutions": 8,
     "Role": {
      "Fn::GetAtt": [
       "ExtractServiceRole6BDAB9D3",
@@ -2711,6 +3009,7 @@
      }
     },
     "MemorySize": 1024,
+    "ReservedConcurrentExecutions": 8,
     "Role": {
      "Fn::GetAtt": [
       "MapAndVerifyServiceRole5576DC5A",
@@ -2933,6 +3232,7 @@
      }
     },
     "MemorySize": 1024,
+    "ReservedConcurrentExecutions": 8,
     "Role": {
      "Fn::GetAtt": [
       "PersistServiceRole82E20C4A",
@@ -3175,6 +3475,7 @@
      }
     },
     "MemorySize": 1024,
+    "ReservedConcurrentExecutions": 8,
     "Role": {
      "Fn::GetAtt": [
       "AdjudicateServiceRole076708AA",
@@ -3397,6 +3698,7 @@
      }
     },
     "MemorySize": 512,
+    "ReservedConcurrentExecutions": 8,
     "Role": {
      "Fn::GetAtt": [
       "MarkFailedServiceRoleED729277",
@@ -3485,6 +3787,31 @@
    "Properties": {
     "PolicyDocument": {
      "Statement": [
+      {
+       "Action": [
+        "s3:AbortMultipartUpload",
+        "s3:GetObject",
+        "s3:ListMultipartUploadParts",
+        "s3:PutObject"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          "arn:",
+          {
+           "Ref": "AWS::Partition"
+          },
+          ":s3:::",
+          {
+           "Ref": "MapRunResults8656708D"
+          },
+          "/*"
+         ]
+        ]
+       }
+      },
       {
        "Action": "lambda:InvokeFunction",
        "Effect": "Allow",
@@ -3665,7 +3992,15 @@
          "Arn"
         ]
        },
-       "\"},\"DocumentFailed\":{\"Type\":\"Fail\",\"Error\":\"DocumentPipelineFailed\",\"Cause\":\"A pipeline step failed; jobs.error carries the reason.\"}}},\"MaxConcurrency\":8,\"ToleratedFailurePercentage\":100,\"Label\":\"PerDocument\"}}}"
+       "\"},\"DocumentFailed\":{\"Type\":\"Fail\",\"Error\":\"DocumentPipelineFailed\",\"Cause\":\"A pipeline step failed; jobs.error carries the reason.\"}}},\"MaxConcurrency\":8,\"ToleratedFailurePercentage\":100,\"Label\":\"PerDocument\",\"ResultWriter\":{\"Resource\":\"arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":states:::s3:putObject\",\"Parameters\":{\"Bucket\":\"",
+       {
+        "Ref": "MapRunResults8656708D"
+       },
+       "\"}}}}}"
       ]
      ]
     },
@@ -4013,6 +4348,14 @@
     "aws:cdk:path": "TaxTables/Api/CloudWatchRole/Resource",
     "cdk_nag": {
      "rules_to_suppress": [
+      {
+       "reason": "QW1hem9uQVBJR2F0ZXdheVB1c2hUb0Nsb3VkV2F0Y2hMb2dzLCBxdW90ZWQgZnJvbSBpdHMgcHVibGlzaGVkIHBvbGljeSBkb2N1bWVudCwgZ3JhbnRzIGxvZ3M6Q3JlYXRlTG9nR3JvdXAsIENyZWF0ZUxvZ1N0cmVhbSwgRGVzY3JpYmVMb2dHcm91cHMsIERlc2NyaWJlTG9nU3RyZWFtcywgUHV0TG9nRXZlbnRzLCBHZXRMb2dFdmVudHMgYW5kIEZpbHRlckxvZ0V2ZW50cyBvbiBSZXNvdXJjZSAnKicuIFRoZSBsYXN0IHR3byBhcmUgYWNjb3VudC13aWRlIGxvZyBSRUFEIOKAlCBtYXRlcmlhbGx5IG1vcmUgdGhhbiB0aGUgd3JpdGUgYWNjZXNzIHRoZSBwb2xpY3kncyBuYW1lIGFuZCBkZXNjcmlwdGlvbiBzdWdnZXN0LCBhbmQgdGhlIHJlYXNvbiB0aGlzIHN1cHByZXNzaW9uIGlzIHNlcGFyYXRlIGZyb20gdGhlIExhbWJkYSBvbmUuIEl0IGlzIGFjY2VwdGVkIGJlY2F1c2UgdGhlIHJvbGUgaXMgYXNzdW1hYmxlIG9ubHkgYnkgYXBpZ2F0ZXdheS5hbWF6b25hd3MuY29tIChzZXJ2aWNlIHByaW5jaXBhbCwgc2luZ2xlIHRydXN0IHN0YXRlbWVudCksIGl0IGlzIHRoZSBwb2xpY3kgQVdTIHJlcXVpcmVzIG9uIHRoZSBhY2NvdW50LWxldmVsIENsb3VkV2F0Y2ggcm9sZSwgYW5kIHRoZSBhbHRlcm5hdGl2ZSBpcyB0dXJuaW5nIG9mZiB0aGUgQVBJIGFjY2VzcyBsb2dnaW5nIHRoZSBzYW1lIHN0YWNrIGNvbmZpZ3VyZXMuIFRoZSBhY2NvdW50LXNjb3BlZCBibGFzdCByYWRpdXMgaXMgc3RhdGVkLCBub3QgaGlkZGVuLg==",
+       "id": "AwsSolutions-IAM4",
+       "applies_to": [
+        "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ],
+       "is_reason_encoded": true
+      },
       {
        "reason": "Proxy integration: every request forwards verbatim to the FastAPI app, where Pydantic validates bodies and query parameters strictly (Phase 3 contract tests). A gateway request validator on {proxy+} ANY validates nothing.",
        "id": "AwsSolutions-APIG2"
