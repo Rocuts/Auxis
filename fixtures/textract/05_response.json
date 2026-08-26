@@ -1,0 +1,6561 @@
+{
+  "DocumentMetadata": {
+    "Pages": 1
+  },
+  "Blocks": [
+    {
+      "BlockType": "PAGE",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 1.0,
+          "Height": 1.0,
+          "Left": 0.0,
+          "Top": 0.0
+        }
+      },
+      "Id": "95128386-1c61-5e05-ba8e-ed2c7edf204c",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "0f870c2b-f40c-5040-832e-ec14013bad68",
+            "00e7cb16-535f-5c47-b6df-4ddf4741b714",
+            "fee3952d-80c0-536b-b374-375e087210ec",
+            "f44b0ad5-2092-5a9f-83f7-f8ab36b93941",
+            "7b06d6bf-e7a8-53cc-971f-a58886dff133",
+            "18425f08-0b0a-5c04-b5b6-b7595e10ce0e",
+            "0ce3fe7a-6648-5c98-b822-adbd269071ce",
+            "8261d8e2-6b04-596a-8483-e6a52d5d0556",
+            "1fbb7353-f969-5f44-8d24-6bc70ab75be8",
+            "400a5c3f-13c3-5679-b632-46964cd4c0d9",
+            "41b656a0-a3db-55ce-b39d-32ec27e0e976",
+            "b965d02f-96a7-5358-9de5-c3dffa94ff26",
+            "3d3b18b1-9220-5da2-b6a7-591a0f597a99",
+            "5aa85a4f-e9f9-575a-8706-5aa4f62f6685",
+            "ca63a6be-2e42-554e-b287-92a0b7adba79",
+            "1999c376-1f13-5a99-89d4-e541faea28cc",
+            "98c317e0-2e80-5c45-a195-ca708506fe13",
+            "9b7644ee-dff6-5fa4-bf28-7a6e8d85a39c",
+            "f19e56b2-f8d3-53cf-a99a-3314c3df3bcb",
+            "8cbe49fe-337f-59a4-9eff-22b814a8ac66",
+            "5068bd4b-fc1e-5858-892a-22797e1ef803",
+            "d50dc79c-f1e5-532b-a7e1-8bcb292888bd",
+            "2ec4059d-af43-54f3-9e92-b1d18b35f313",
+            "b59a2a1a-ff91-5c1e-a33a-8f2b8d53deed",
+            "4b098ce9-3cfe-51c1-880c-4d1c29680a62",
+            "b4420513-825a-5420-bea4-5852c5e91ceb",
+            "dac1d9f4-7adf-53c2-80e7-ef6b13dd36ae",
+            "28733216-cd9e-56fd-8c22-35fabcf18e04",
+            "fb49d5c8-003e-58c8-884d-6b5107a9f5e3",
+            "58cba1d1-d68b-5135-806d-51d85129b31c",
+            "e20c38c9-a4f4-5087-b5c9-0efb2c2f7042",
+            "6d028d6e-022c-58c5-b8f6-1db9a92cd081",
+            "ac479d28-6293-5141-a1c0-ebf383e31f20",
+            "d20fda43-ac20-54cc-93e1-b5f8bdfccbc1",
+            "08e7a769-acc4-52f7-9ff6-1ae955394f59",
+            "5f32b054-327e-50ea-b416-83c5af826673",
+            "a4d62adb-c997-55bf-b099-d94f29ac88b4",
+            "765fc6e7-7d99-5299-908c-0940224bb075",
+            "a8bbbedf-aee9-514a-bd69-69ca31de34fc",
+            "2e9a5c99-b8d3-5820-b08a-04ec49030dfd",
+            "6647f972-434a-55a4-a34d-0e858c6aa290",
+            "66571666-06cf-5ff5-ab32-104d15f15c70",
+            "da882b26-dbac-56b3-9fe4-9e681d121697",
+            "8a54bd79-da2f-5f53-9614-70d253470407",
+            "677ec95c-6166-5254-829a-a71cb92f6508",
+            "fb2dc4a6-048d-5d62-9ea4-aa9ff2063302",
+            "cb20f83f-07a8-5f73-ba1a-3f5976dbafec"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "LINE",
+      "Confidence": 92.6,
+      "Text": "INTERNAL CIRCULAR \u2014 CAPITAL GAINS DIVISION",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.294118,
+          "Height": 0.010808,
+          "Left": 0.352941,
+          "Top": 0.100303
+        }
+      },
+      "Id": "0f870c2b-f40c-5040-832e-ec14013bad68",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "9cf7c8bb-b575-5708-9b01-956a9d72da4c",
+            "bbc847c0-10bc-5aa9-baaf-be1bf240c449",
+            "ca7f6019-aa72-5e33-9819-e1e0bfe584df",
+            "cf9abdeb-2520-5e7a-ae86-8cb33d817341",
+            "d892f742-0902-5a82-b612-56f7c2e1e53b",
+            "d28c55c1-8731-5ca2-ab31-b1a5c7fcb137"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.4,
+      "Text": "INTERNAL",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.056029,
+          "Height": 0.010808,
+          "Left": 0.352941,
+          "Top": 0.100303
+        }
+      },
+      "Id": "9cf7c8bb-b575-5708-9b01-956a9d72da4c"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.8,
+      "Text": "CIRCULAR",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.056029,
+          "Height": 0.010808,
+          "Left": 0.415964,
+          "Top": 0.100303
+        }
+      },
+      "Id": "bbc847c0-10bc-5aa9-baaf-be1bf240c449"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.9,
+      "Text": "\u2014",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.00701,
+          "Height": 0.010808,
+          "Left": 0.478987,
+          "Top": 0.100303
+        }
+      },
+      "Id": "ca7f6019-aa72-5e33-9819-e1e0bfe584df"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 93.2,
+      "Text": "CAPITAL",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.04902,
+          "Height": 0.010808,
+          "Left": 0.49299,
+          "Top": 0.100303
+        }
+      },
+      "Id": "cf9abdeb-2520-5e7a-ae86-8cb33d817341"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 97.1,
+      "Text": "GAINS",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.035016,
+          "Height": 0.010808,
+          "Left": 0.54902,
+          "Top": 0.100303
+        }
+      },
+      "Id": "d892f742-0902-5a82-b612-56f7c2e1e53b"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 92.6,
+      "Text": "DIVISION",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.056029,
+          "Height": 0.010808,
+          "Left": 0.591029,
+          "Top": 0.100303
+        }
+      },
+      "Id": "d28c55c1-8731-5ca2-ab31-b1a5c7fcb137"
+    },
+    {
+      "BlockType": "LINE",
+      "Confidence": 91.4,
+      "Text": "Preferential Rates on Long-Term Capital Gain and Qualified Dividend",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.691765,
+          "Height": 0.015152,
+          "Left": 0.154118,
+          "Top": 0.126263
+        }
+      },
+      "Id": "00e7cb16-535f-5c47-b6df-4ddf4741b714",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "1e5198d2-0b26-5c93-b636-23d912eebf7b",
+            "d370b31b-944c-53e3-baad-afec0b6a809f",
+            "26ef6f00-1f1c-55a0-ac84-d36421d8e352",
+            "56b5f29a-8af6-51d5-a1fe-662a61113a0e",
+            "a6312cc6-2b3d-53d3-983f-7917ecb8243f",
+            "5afe8892-5eef-54e3-b290-fe1a78217cde",
+            "a6b08981-fbf5-54d3-a2b8-73d8a248b729",
+            "59acab19-d6c2-51e0-95d3-2d5a61e1755c",
+            "f8c75193-8b31-5a9f-8dae-38a97f3733b0"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.1,
+      "Text": "Preferential",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.123905,
+          "Height": 0.015152,
+          "Left": 0.154118,
+          "Top": 0.126263
+        }
+      },
+      "Id": "1e5198d2-0b26-5c93-b636-23d912eebf7b"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.8,
+      "Text": "Rates",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.051634,
+          "Height": 0.015152,
+          "Left": 0.288333,
+          "Top": 0.126263
+        }
+      },
+      "Id": "d370b31b-944c-53e3-baad-afec0b6a809f"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 91.4,
+      "Text": "on",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.020637,
+          "Height": 0.015152,
+          "Left": 0.350294,
+          "Top": 0.126263
+        }
+      },
+      "Id": "26ef6f00-1f1c-55a0-ac84-d36421d8e352"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.2,
+      "Text": "Long-Term",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.092925,
+          "Height": 0.015152,
+          "Left": 0.381258,
+          "Top": 0.126263
+        }
+      },
+      "Id": "56b5f29a-8af6-51d5-a1fe-662a61113a0e"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.4,
+      "Text": "Capital",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.072271,
+          "Height": 0.015152,
+          "Left": 0.48451,
+          "Top": 0.126263
+        }
+      },
+      "Id": "a6312cc6-2b3d-53d3-983f-7917ecb8243f"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.8,
+      "Text": "Gain",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.041307,
+          "Height": 0.015152,
+          "Left": 0.567108,
+          "Top": 0.126263
+        }
+      },
+      "Id": "5afe8892-5eef-54e3-b290-fe1a78217cde"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.9,
+      "Text": "and",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.030964,
+          "Height": 0.015152,
+          "Left": 0.618742,
+          "Top": 0.126263
+        }
+      },
+      "Id": "a6b08981-fbf5-54d3-a2b8-73d8a248b729"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 93.2,
+      "Text": "Qualified",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.092925,
+          "Height": 0.015152,
+          "Left": 0.660033,
+          "Top": 0.126263
+        }
+      },
+      "Id": "59acab19-d6c2-51e0-95d3-2d5a61e1755c"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 97.1,
+      "Text": "Dividend",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.082598,
+          "Height": 0.015152,
+          "Left": 0.763284,
+          "Top": 0.126263
+        }
+      },
+      "Id": "f8c75193-8b31-5a9f-8dae-38a97f3733b0"
+    },
+    {
+      "BlockType": "LINE",
+      "Confidence": 92.6,
+      "Text": "Income",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.062092,
+          "Height": 0.015152,
+          "Left": 0.468954,
+          "Top": 0.142045
+        }
+      },
+      "Id": "fee3952d-80c0-536b-b374-375e087210ec",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "67c97ba5-6056-5d4a-bb75-f22f88237e53"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 92.6,
+      "Text": "Income",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.062092,
+          "Height": 0.015152,
+          "Left": 0.468954,
+          "Top": 0.142045
+        }
+      },
+      "Id": "67c97ba5-6056-5d4a-bb75-f22f88237e53"
+    },
+    {
+      "BlockType": "LINE",
+      "Confidence": 91.4,
+      "Text": "Tax Year 2025 \u2014 Circular CG-2025/07",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.263072,
+          "Height": 0.014343,
+          "Left": 0.368464,
+          "Top": 0.164141
+        }
+      },
+      "Id": "f44b0ad5-2092-5a9f-83f7-f8ab36b93941",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "20dcca90-aa49-5ec6-8695-5ccf2e3979ed",
+            "c210b853-0015-5ae3-98b3-e98d44304595",
+            "34516628-b4c8-5639-b09c-f0eeeb01d424",
+            "358d0731-5e16-5d80-8d50-9ad9560e1985",
+            "15e5130f-9d52-500e-8194-a1791b487a94",
+            "3e689489-3bfa-5c52-9b03-69b44d94222e"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.1,
+      "Text": "Tax",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.022549,
+          "Height": 0.014343,
+          "Left": 0.368464,
+          "Top": 0.164141
+        }
+      },
+      "Id": "20dcca90-aa49-5ec6-8695-5ccf2e3979ed"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.8,
+      "Text": "Year",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.030065,
+          "Height": 0.014343,
+          "Left": 0.398529,
+          "Top": 0.164141
+        }
+      },
+      "Id": "c210b853-0015-5ae3-98b3-e98d44304595"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 91.4,
+      "Text": "2025",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.030065,
+          "Height": 0.014343,
+          "Left": 0.436111,
+          "Top": 0.164141
+        }
+      },
+      "Id": "34516628-b4c8-5639-b09c-f0eeeb01d424"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.2,
+      "Text": "\u2014",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.007516,
+          "Height": 0.014343,
+          "Left": 0.473693,
+          "Top": 0.164141
+        }
+      },
+      "Id": "358d0731-5e16-5d80-8d50-9ad9560e1985"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.4,
+      "Text": "Circular",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.060131,
+          "Height": 0.014343,
+          "Left": 0.488725,
+          "Top": 0.164141
+        }
+      },
+      "Id": "15e5130f-9d52-500e-8194-a1791b487a94"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.8,
+      "Text": "CG-2025/07",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.075163,
+          "Height": 0.014343,
+          "Left": 0.556373,
+          "Top": 0.164141
+        }
+      },
+      "Id": "3e689489-3bfa-5c52-9b03-69b44d94222e"
+    },
+    {
+      "BlockType": "LINE",
+      "Confidence": 91.4,
+      "Text": "SUPERSEDED. This circular states the rates applicable to taxable years beginning before January 1, 2026. It is retained",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.756863,
+          "Height": 0.012854,
+          "Left": 0.121961,
+          "Top": 0.202424
+        }
+      },
+      "Id": "7b06d6bf-e7a8-53cc-971f-a58886dff133",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "c53a1875-7774-5d8b-96ad-a12647328a93",
+            "dacfaa43-2640-5a74-8b5f-d2fab19291ff",
+            "cbe7a15f-d21e-5a49-87ee-9ae3ac428c89",
+            "5a34cf88-7e57-5beb-999b-e3fe91793dbb",
+            "e75eed0d-c33a-57e4-9a14-ea00509d67f9",
+            "de495c33-c4c7-531f-aa82-fe18a09524e0",
+            "c50a0988-a444-524c-b7ba-e91df3962387",
+            "b4223658-5af5-5c92-bd48-dd19a3c9090e",
+            "3c9b5f89-cf26-583c-9da1-e68ba0dfaeae",
+            "7b200458-d264-5994-8980-9d9a2aee07c2",
+            "eaf36c08-7ffb-5d6c-847c-b4f0c6a1925a",
+            "e62e1890-13f8-595c-8685-8adbf8f6dfd7",
+            "a2701764-6e04-58f8-91cc-bd6550338780",
+            "fd9c752c-a1c8-5278-89b6-33e64d74bee7",
+            "35cc8850-a5af-5af7-912a-fe11537caef6",
+            "97c53505-2dbf-5582-9314-a18b4067a551",
+            "bcc6f9be-d740-52cc-88d4-7b84e762b6ba",
+            "69c6d39f-e231-5004-a65f-b11a44b520ba"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.9,
+      "Text": "SUPERSEDED.",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.069967,
+          "Height": 0.012854,
+          "Left": 0.121961,
+          "Top": 0.202424
+        }
+      },
+      "Id": "c53a1875-7774-5d8b-96ad-a12647328a93"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 93.2,
+      "Text": "This",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.025441,
+          "Height": 0.012854,
+          "Left": 0.198284,
+          "Top": 0.202424
+        }
+      },
+      "Id": "dacfaa43-2640-5a74-8b5f-d2fab19291ff"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 97.1,
+      "Text": "circular",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.050882,
+          "Height": 0.012854,
+          "Left": 0.230082,
+          "Top": 0.202424
+        }
+      },
+      "Id": "cbe7a15f-d21e-5a49-87ee-9ae3ac428c89"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 92.6,
+      "Text": "states",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.03817,
+          "Height": 0.012854,
+          "Left": 0.28732,
+          "Top": 0.202424
+        }
+      },
+      "Id": "5a34cf88-7e57-5beb-999b-e3fe91793dbb"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.1,
+      "Text": "the",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.019085,
+          "Height": 0.012854,
+          "Left": 0.331846,
+          "Top": 0.202424
+        }
+      },
+      "Id": "e75eed0d-c33a-57e4-9a14-ea00509d67f9"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.8,
+      "Text": "rates",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.031797,
+          "Height": 0.012854,
+          "Left": 0.357288,
+          "Top": 0.202424
+        }
+      },
+      "Id": "de495c33-c4c7-531f-aa82-fe18a09524e0"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 91.4,
+      "Text": "applicable",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.063611,
+          "Height": 0.012854,
+          "Left": 0.395441,
+          "Top": 0.202424
+        }
+      },
+      "Id": "c50a0988-a444-524c-b7ba-e91df3962387"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.2,
+      "Text": "to",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.012729,
+          "Height": 0.012854,
+          "Left": 0.465408,
+          "Top": 0.202424
+        }
+      },
+      "Id": "b4223658-5af5-5c92-bd48-dd19a3c9090e"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.4,
+      "Text": "taxable",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.044526,
+          "Height": 0.012854,
+          "Left": 0.484493,
+          "Top": 0.202424
+        }
+      },
+      "Id": "3c9b5f89-cf26-583c-9da1-e68ba0dfaeae"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.8,
+      "Text": "years",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.031797,
+          "Height": 0.012854,
+          "Left": 0.535376,
+          "Top": 0.202424
+        }
+      },
+      "Id": "7b200458-d264-5994-8980-9d9a2aee07c2"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.9,
+      "Text": "beginning",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.057239,
+          "Height": 0.012854,
+          "Left": 0.573529,
+          "Top": 0.202424
+        }
+      },
+      "Id": "eaf36c08-7ffb-5d6c-847c-b4f0c6a1925a"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 93.2,
+      "Text": "before",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.038154,
+          "Height": 0.012854,
+          "Left": 0.637141,
+          "Top": 0.202424
+        }
+      },
+      "Id": "e62e1890-13f8-595c-8685-8adbf8f6dfd7"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 97.1,
+      "Text": "January",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.044526,
+          "Height": 0.012854,
+          "Left": 0.68165,
+          "Top": 0.202424
+        }
+      },
+      "Id": "a2701764-6e04-58f8-91cc-bd6550338780"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 92.6,
+      "Text": "1,",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.012729,
+          "Height": 0.012854,
+          "Left": 0.732533,
+          "Top": 0.202424
+        }
+      },
+      "Id": "fd9c752c-a1c8-5278-89b6-33e64d74bee7"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.1,
+      "Text": "2026.",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.031797,
+          "Height": 0.012854,
+          "Left": 0.751618,
+          "Top": 0.202424
+        }
+      },
+      "Id": "35cc8850-a5af-5af7-912a-fe11537caef6"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.8,
+      "Text": "It",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.012712,
+          "Height": 0.012854,
+          "Left": 0.789788,
+          "Top": 0.202424
+        }
+      },
+      "Id": "97c53505-2dbf-5582-9314-a18b4067a551"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 91.4,
+      "Text": "is",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.012729,
+          "Height": 0.012854,
+          "Left": 0.808856,
+          "Top": 0.202424
+        }
+      },
+      "Id": "bcc6f9be-d740-52cc-88d4-7b84e762b6ba"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.2,
+      "Text": "retained",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.050882,
+          "Height": 0.012854,
+          "Left": 0.827941,
+          "Top": 0.202424
+        }
+      },
+      "Id": "69c6d39f-e231-5004-a65f-b11a44b520ba"
+    },
+    {
+      "BlockType": "LINE",
+      "Confidence": 91.4,
+      "Text": "for reference in connection with amended returns and prior-period assessments. For taxable years beginning on or after",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.756863,
+          "Height": 0.012879,
+          "Left": 0.121961,
+          "Top": 0.218813
+        }
+      },
+      "Id": "18425f08-0b0a-5c04-b5b6-b7595e10ce0e",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "5159cc43-a23a-55a2-a396-324020e7ac7b",
+            "14487962-e46a-5f7b-bea7-18a93ffda83f",
+            "f900d9f9-a659-59f6-bbfc-3b21908f3d8f",
+            "e542e44b-f091-56cd-bad7-f460f8c010fc",
+            "144b8a97-f1f0-5c24-845b-40d8c6f9390c",
+            "766b6696-55c8-5f08-805b-538cdef650dd",
+            "7c16d4e5-93d3-55fb-b47e-3141ef124805",
+            "a50fafde-c659-50d0-8db4-0bc57114cf6e",
+            "f189e1a2-799e-59cd-9024-264f843d98af",
+            "de7b6157-6d8d-57e5-9b11-7e48d75eb731",
+            "6fe0d4d9-1b1b-5abd-a7ca-44386c52557d",
+            "a5c87788-3f50-51f7-b031-29b11ded69c1",
+            "2aa05c09-da24-5270-9161-60ae85a41130",
+            "555c38b1-fe0b-5f04-bd70-b9cc851b31fe",
+            "f365b805-6141-5144-ba97-275d942ee7f9",
+            "2e5503ec-6b04-5955-9668-9a5e46ba70d9",
+            "711b6b90-a492-5087-b343-c1bda782b6ad"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.4,
+      "Text": "for",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.019248,
+          "Height": 0.012879,
+          "Left": 0.121961,
+          "Top": 0.218813
+        }
+      },
+      "Id": "5159cc43-a23a-55a2-a396-324020e7ac7b"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.8,
+      "Text": "reference",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.057729,
+          "Height": 0.012879,
+          "Left": 0.147614,
+          "Top": 0.218813
+        }
+      },
+      "Id": "14487962-e46a-5f7b-bea7-18a93ffda83f"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.9,
+      "Text": "in",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.012827,
+          "Height": 0.012879,
+          "Left": 0.211765,
+          "Top": 0.218813
+        }
+      },
+      "Id": "f900d9f9-a659-59f6-bbfc-3b21908f3d8f"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 93.2,
+      "Text": "connection",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.06415,
+          "Height": 0.012879,
+          "Left": 0.230997,
+          "Top": 0.218813
+        }
+      },
+      "Id": "e542e44b-f091-56cd-bad7-f460f8c010fc"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 97.1,
+      "Text": "with",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.025654,
+          "Height": 0.012879,
+          "Left": 0.301552,
+          "Top": 0.218813
+        }
+      },
+      "Id": "144b8a97-f1f0-5c24-845b-40d8c6f9390c"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 92.6,
+      "Text": "amended",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.044902,
+          "Height": 0.012879,
+          "Left": 0.333627,
+          "Top": 0.218813
+        }
+      },
+      "Id": "766b6696-55c8-5f08-805b-538cdef650dd"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.1,
+      "Text": "returns",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.044902,
+          "Height": 0.012879,
+          "Left": 0.384935,
+          "Top": 0.218813
+        }
+      },
+      "Id": "7c16d4e5-93d3-55fb-b47e-3141ef124805"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.8,
+      "Text": "and",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.019232,
+          "Height": 0.012879,
+          "Left": 0.436258,
+          "Top": 0.218813
+        }
+      },
+      "Id": "a50fafde-c659-50d0-8db4-0bc57114cf6e"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 91.4,
+      "Text": "prior-period",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.076961,
+          "Height": 0.012879,
+          "Left": 0.461912,
+          "Top": 0.218813
+        }
+      },
+      "Id": "f189e1a2-799e-59cd-9024-264f843d98af"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.2,
+      "Text": "assessments.",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.076961,
+          "Height": 0.012879,
+          "Left": 0.545294,
+          "Top": 0.218813
+        }
+      },
+      "Id": "de7b6157-6d8d-57e5-9b11-7e48d75eb731"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.4,
+      "Text": "For",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.019232,
+          "Height": 0.012879,
+          "Left": 0.628676,
+          "Top": 0.218813
+        }
+      },
+      "Id": "6fe0d4d9-1b1b-5abd-a7ca-44386c52557d"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.8,
+      "Text": "taxable",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.044902,
+          "Height": 0.012879,
+          "Left": 0.65433,
+          "Top": 0.218813
+        }
+      },
+      "Id": "a5c87788-3f50-51f7-b031-29b11ded69c1"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.9,
+      "Text": "years",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.032075,
+          "Height": 0.012879,
+          "Left": 0.705637,
+          "Top": 0.218813
+        }
+      },
+      "Id": "2aa05c09-da24-5270-9161-60ae85a41130"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 93.2,
+      "Text": "beginning",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.057712,
+          "Height": 0.012879,
+          "Left": 0.744134,
+          "Top": 0.218813
+        }
+      },
+      "Id": "555c38b1-fe0b-5f04-bd70-b9cc851b31fe"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 97.1,
+      "Text": "on",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.012827,
+          "Height": 0.012879,
+          "Left": 0.808268,
+          "Top": 0.218813
+        }
+      },
+      "Id": "f365b805-6141-5144-ba97-275d942ee7f9"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 92.6,
+      "Text": "or",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.012827,
+          "Height": 0.012879,
+          "Left": 0.827516,
+          "Top": 0.218813
+        }
+      },
+      "Id": "2e5503ec-6b04-5955-9668-9a5e46ba70d9"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.1,
+      "Text": "after",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.032075,
+          "Height": 0.012879,
+          "Left": 0.846748,
+          "Top": 0.218813
+        }
+      },
+      "Id": "711b6b90-a492-5087-b343-c1bda782b6ad"
+    },
+    {
+      "BlockType": "LINE",
+      "Confidence": 91.4,
+      "Text": "January 1, 2026, see Circular CG-2026/03.",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.257124,
+          "Height": 0.012879,
+          "Left": 0.121961,
+          "Top": 0.235227
+        }
+      },
+      "Id": "0ce3fe7a-6648-5c98-b822-adbd269071ce",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "8b4db8a6-5316-5a9e-b8b0-5dc542dcc0d3",
+            "0cf3ffec-336d-5f2f-b59f-38c85aca4a6e",
+            "688bb296-c91f-5f66-b546-c92057b70da0",
+            "0fb3a9d6-14a8-527e-abd9-d3bbb9b6cfa9",
+            "23464dae-a010-5eb3-8b3f-0b74e0548444",
+            "9db8a57e-dfb1-5bcd-bbb9-735b113faf09"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.8,
+      "Text": "January",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.043905,
+          "Height": 0.012879,
+          "Left": 0.121961,
+          "Top": 0.235227
+        }
+      },
+      "Id": "8b4db8a6-5316-5a9e-b8b0-5dc542dcc0d3"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 91.4,
+      "Text": "1,",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.012549,
+          "Height": 0.012879,
+          "Left": 0.172124,
+          "Top": 0.235227
+        }
+      },
+      "Id": "0cf3ffec-336d-5f2f-b59f-38c85aca4a6e"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.2,
+      "Text": "2026,",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.031356,
+          "Height": 0.012879,
+          "Left": 0.190948,
+          "Top": 0.235227
+        }
+      },
+      "Id": "688bb296-c91f-5f66-b546-c92057b70da0"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.4,
+      "Text": "see",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.018807,
+          "Height": 0.012879,
+          "Left": 0.228578,
+          "Top": 0.235227
+        }
+      },
+      "Id": "0fb3a9d6-14a8-527e-abd9-d3bbb9b6cfa9"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.8,
+      "Text": "Circular",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.050163,
+          "Height": 0.012879,
+          "Left": 0.25366,
+          "Top": 0.235227
+        }
+      },
+      "Id": "23464dae-a010-5eb3-8b3f-0b74e0548444"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.9,
+      "Text": "CG-2026/03.",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.068987,
+          "Height": 0.012879,
+          "Left": 0.310098,
+          "Top": 0.235227
+        }
+      },
+      "Id": "9db8a57e-dfb1-5bcd-bbb9-735b113faf09"
+    },
+    {
+      "BlockType": "LINE",
+      "Confidence": 91.4,
+      "Text": "Net long-term capital gain and qualified dividend income are taxed at the preferential rates set out below. The applicable",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.756863,
+          "Height": 0.012879,
+          "Left": 0.121961,
+          "Top": 0.257576
+        }
+      },
+      "Id": "8261d8e2-6b04-596a-8483-e6a52d5d0556",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "5c5145c6-9a60-542e-b12e-7fbedbdb12ef",
+            "ce9f8458-fbd7-541a-b492-ac532fb3eafc",
+            "1028ab23-f00d-5cb9-b453-63c778fecd47",
+            "51366134-d53e-5399-9042-06ff13f0fff1",
+            "6ec6bc75-0b4d-5aca-9184-5d56c4d839c0",
+            "ed6969d8-71d7-5b25-bccf-e5910974f0e5",
+            "f40ea18b-5cfe-5fb3-ac3f-68a0f5c756e2",
+            "fdf76d8b-5976-5cc3-8f87-b12148f9362d",
+            "1d577845-c6f8-5583-a8fa-c631a45b9f30",
+            "b36b5044-ed32-5752-859a-0d8f8db56e3c",
+            "a9f9f4f8-e021-5384-9dd9-c3924aedc0d4",
+            "8e3f2402-24fc-5116-b62d-d341311d67cf",
+            "22e8000b-1994-587b-8df0-77ef55e3c70e",
+            "87deab28-02cf-5036-999b-3234d9413c06",
+            "ee1147f3-b348-59e7-b1ba-7bf4fe9ef07d",
+            "8f9eee79-0e4e-57d0-ad94-e1011f8c1f7c",
+            "b3b2244b-fe97-5a21-8a14-9c1cb497c20a",
+            "4285051f-dc7a-5597-bacf-fe403c1751a8",
+            "539ef7e4-48c6-5c23-acf6-73eb504638f5"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 93.2,
+      "Text": "Net",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.018611,
+          "Height": 0.012879,
+          "Left": 0.121961,
+          "Top": 0.257576
+        }
+      },
+      "Id": "5c5145c6-9a60-542e-b12e-7fbedbdb12ef"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 97.1,
+      "Text": "long-term",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.055833,
+          "Height": 0.012879,
+          "Left": 0.146781,
+          "Top": 0.257576
+        }
+      },
+      "Id": "ce9f8458-fbd7-541a-b492-ac532fb3eafc"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 92.6,
+      "Text": "capital",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.043431,
+          "Height": 0.012879,
+          "Left": 0.208807,
+          "Top": 0.257576
+        }
+      },
+      "Id": "1028ab23-f00d-5cb9-b453-63c778fecd47"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.1,
+      "Text": "gain",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.024804,
+          "Height": 0.012879,
+          "Left": 0.258448,
+          "Top": 0.257576
+        }
+      },
+      "Id": "51366134-d53e-5399-9042-06ff13f0fff1"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.8,
+      "Text": "and",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.018611,
+          "Height": 0.012879,
+          "Left": 0.289461,
+          "Top": 0.257576
+        }
+      },
+      "Id": "6ec6bc75-0b4d-5aca-9184-5d56c4d839c0"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 91.4,
+      "Text": "qualified",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.055833,
+          "Height": 0.012879,
+          "Left": 0.314281,
+          "Top": 0.257576
+        }
+      },
+      "Id": "ed6969d8-71d7-5b25-bccf-e5910974f0e5"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.2,
+      "Text": "dividend",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.049624,
+          "Height": 0.012879,
+          "Left": 0.376324,
+          "Top": 0.257576
+        }
+      },
+      "Id": "f40ea18b-5cfe-5fb3-ac3f-68a0f5c756e2"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.4,
+      "Text": "income",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.037222,
+          "Height": 0.012879,
+          "Left": 0.432157,
+          "Top": 0.257576
+        }
+      },
+      "Id": "fdf76d8b-5976-5cc3-8f87-b12148f9362d"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.8,
+      "Text": "are",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.018611,
+          "Height": 0.012879,
+          "Left": 0.475572,
+          "Top": 0.257576
+        }
+      },
+      "Id": "1d577845-c6f8-5583-a8fa-c631a45b9f30"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.9,
+      "Text": "taxed",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.031013,
+          "Height": 0.012879,
+          "Left": 0.500392,
+          "Top": 0.257576
+        }
+      },
+      "Id": "b36b5044-ed32-5752-859a-0d8f8db56e3c"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 93.2,
+      "Text": "at",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.012402,
+          "Height": 0.012879,
+          "Left": 0.537614,
+          "Top": 0.257576
+        }
+      },
+      "Id": "a9f9f4f8-e021-5384-9dd9-c3924aedc0d4"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 97.1,
+      "Text": "the",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.018611,
+          "Height": 0.012879,
+          "Left": 0.556225,
+          "Top": 0.257576
+        }
+      },
+      "Id": "8e3f2402-24fc-5116-b62d-d341311d67cf"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 92.6,
+      "Text": "preferential",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.074444,
+          "Height": 0.012879,
+          "Left": 0.581046,
+          "Top": 0.257576
+        }
+      },
+      "Id": "22e8000b-1994-587b-8df0-77ef55e3c70e"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.1,
+      "Text": "rates",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.031029,
+          "Height": 0.012879,
+          "Left": 0.661683,
+          "Top": 0.257576
+        }
+      },
+      "Id": "87deab28-02cf-5036-999b-3234d9413c06"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.8,
+      "Text": "set",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.018611,
+          "Height": 0.012879,
+          "Left": 0.698922,
+          "Top": 0.257576
+        }
+      },
+      "Id": "ee1147f3-b348-59e7-b1ba-7bf4fe9ef07d"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 91.4,
+      "Text": "out",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.018611,
+          "Height": 0.012879,
+          "Left": 0.723725,
+          "Top": 0.257576
+        }
+      },
+      "Id": "8f9eee79-0e4e-57d0-ad94-e1011f8c1f7c"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.2,
+      "Text": "below.",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.037222,
+          "Height": 0.012879,
+          "Left": 0.748546,
+          "Top": 0.257576
+        }
+      },
+      "Id": "b3b2244b-fe97-5a21-8a14-9c1cb497c20a"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.4,
+      "Text": "The",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.018611,
+          "Height": 0.012879,
+          "Left": 0.791977,
+          "Top": 0.257576
+        }
+      },
+      "Id": "4285051f-dc7a-5597-bacf-fe403c1751a8"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.8,
+      "Text": "applicable",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.062042,
+          "Height": 0.012879,
+          "Left": 0.816781,
+          "Top": 0.257576
+        }
+      },
+      "Id": "539ef7e4-48c6-5c23-acf6-73eb504638f5"
+    },
+    {
+      "BlockType": "LINE",
+      "Confidence": 91.4,
+      "Text": "rate is determined by reference to the taxpayer's total taxable income, including the gain itself. Where taxable income spans",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.756863,
+          "Height": 0.012879,
+          "Left": 0.121961,
+          "Top": 0.27399
+        }
+      },
+      "Id": "1fbb7353-f969-5f44-8d24-6bc70ab75be8",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "11b1a28b-e6ab-5271-90b0-18332967dc25",
+            "9b107f88-d458-5d87-a826-22329843fa1c",
+            "91aa3636-8b4c-5b33-9dc1-9ee57de099ae",
+            "d807da76-6505-516d-82b9-650293d3495f",
+            "41933ca6-21d3-5c0d-9aa8-1e08320fcba5",
+            "94021c22-d6eb-5e75-9f2b-4ff1c8ac2c4a",
+            "9e42d6d2-e775-5e53-9d8c-97a7721d0cbf",
+            "61c669a2-46cd-5437-9967-f850533eafad",
+            "529838fa-71b1-560d-b9cf-2a2c48ac5d24",
+            "80938b44-2633-5310-8a99-e45a239a5ea3",
+            "e8c64a34-e486-5d67-8cc3-242de6295ea2",
+            "2a0e12a0-981b-508f-8ef6-926d6cbd8696",
+            "969d118f-d42a-5e68-b3f4-d851b5c9d7a3",
+            "c438658d-621e-5fc4-b2c3-24a4c6ebd74c",
+            "91799ae4-703d-56ba-b677-ef416d2f9b61",
+            "fefce6af-8351-5d43-858a-8849b9399a39",
+            "302cf986-8914-5db0-b3f8-9f408706c6f6",
+            "a590592b-c40e-5b72-8fde-437e345c7a9b",
+            "327f44c5-1de9-5ba6-8fea-914c199b311c"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.9,
+      "Text": "rate",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.024216,
+          "Height": 0.012879,
+          "Left": 0.121961,
+          "Top": 0.27399
+        }
+      },
+      "Id": "11b1a28b-e6ab-5271-90b0-18332967dc25"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 93.2,
+      "Text": "is",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.012108,
+          "Height": 0.012879,
+          "Left": 0.152239,
+          "Top": 0.27399
+        }
+      },
+      "Id": "9b107f88-d458-5d87-a826-22329843fa1c"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 97.1,
+      "Text": "determined",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.060556,
+          "Height": 0.012879,
+          "Left": 0.170392,
+          "Top": 0.27399
+        }
+      },
+      "Id": "91aa3636-8b4c-5b33-9dc1-9ee57de099ae"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 92.6,
+      "Text": "by",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.012108,
+          "Height": 0.012879,
+          "Left": 0.23701,
+          "Top": 0.27399
+        }
+      },
+      "Id": "d807da76-6505-516d-82b9-650293d3495f"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.1,
+      "Text": "reference",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.054493,
+          "Height": 0.012879,
+          "Left": 0.255163,
+          "Top": 0.27399
+        }
+      },
+      "Id": "41933ca6-21d3-5c0d-9aa8-1e08320fcba5"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.8,
+      "Text": "to",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.012108,
+          "Height": 0.012879,
+          "Left": 0.315719,
+          "Top": 0.27399
+        }
+      },
+      "Id": "94021c22-d6eb-5e75-9f2b-4ff1c8ac2c4a"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 91.4,
+      "Text": "the",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.018154,
+          "Height": 0.012879,
+          "Left": 0.333889,
+          "Top": 0.27399
+        }
+      },
+      "Id": "9e42d6d2-e775-5e53-9d8c-97a7721d0cbf"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.2,
+      "Text": "taxpayer's",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.060539,
+          "Height": 0.012879,
+          "Left": 0.358105,
+          "Top": 0.27399
+        }
+      },
+      "Id": "61c669a2-46cd-5437-9967-f850533eafad"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.4,
+      "Text": "total",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.030278,
+          "Height": 0.012879,
+          "Left": 0.424706,
+          "Top": 0.27399
+        }
+      },
+      "Id": "529838fa-71b1-560d-b9cf-2a2c48ac5d24"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.8,
+      "Text": "taxable",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.042386,
+          "Height": 0.012879,
+          "Left": 0.461029,
+          "Top": 0.27399
+        }
+      },
+      "Id": "80938b44-2633-5310-8a99-e45a239a5ea3"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.9,
+      "Text": "income,",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.042386,
+          "Height": 0.012879,
+          "Left": 0.509477,
+          "Top": 0.27399
+        }
+      },
+      "Id": "e8c64a34-e486-5d67-8cc3-242de6295ea2"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 93.2,
+      "Text": "including",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.054493,
+          "Height": 0.012879,
+          "Left": 0.557908,
+          "Top": 0.27399
+        }
+      },
+      "Id": "2a0e12a0-981b-508f-8ef6-926d6cbd8696"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 97.1,
+      "Text": "the",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.01817,
+          "Height": 0.012879,
+          "Left": 0.618464,
+          "Top": 0.27399
+        }
+      },
+      "Id": "969d118f-d42a-5e68-b3f4-d851b5c9d7a3"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 92.6,
+      "Text": "gain",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.024216,
+          "Height": 0.012879,
+          "Left": 0.64268,
+          "Top": 0.27399
+        }
+      },
+      "Id": "c438658d-621e-5fc4-b2c3-24a4c6ebd74c"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.1,
+      "Text": "itself.",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.042386,
+          "Height": 0.012879,
+          "Left": 0.672958,
+          "Top": 0.27399
+        }
+      },
+      "Id": "91799ae4-703d-56ba-b677-ef416d2f9b61"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.8,
+      "Text": "Where",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.030278,
+          "Height": 0.012879,
+          "Left": 0.721389,
+          "Top": 0.27399
+        }
+      },
+      "Id": "fefce6af-8351-5d43-858a-8849b9399a39"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 91.4,
+      "Text": "taxable",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.042386,
+          "Height": 0.012879,
+          "Left": 0.757729,
+          "Top": 0.27399
+        }
+      },
+      "Id": "302cf986-8914-5db0-b3f8-9f408706c6f6"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.2,
+      "Text": "income",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.03634,
+          "Height": 0.012879,
+          "Left": 0.80616,
+          "Top": 0.27399
+        }
+      },
+      "Id": "a590592b-c40e-5b72-8fde-437e345c7a9b"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.4,
+      "Text": "spans",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.030278,
+          "Height": 0.012879,
+          "Left": 0.848546,
+          "Top": 0.27399
+        }
+      },
+      "Id": "327f44c5-1de9-5ba6-8fea-914c199b311c"
+    },
+    {
+      "BlockType": "LINE",
+      "Confidence": 91.4,
+      "Text": "more than one band, the gain is allocated across the bands in order and each portion is taxed at the corresponding rate.",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.756863,
+          "Height": 0.012879,
+          "Left": 0.121961,
+          "Top": 0.290404
+        }
+      },
+      "Id": "400a5c3f-13c3-5679-b632-46964cd4c0d9",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "f50273e7-3151-5521-9f2a-3f7d8d05a534",
+            "523e8d2d-6e47-56a7-937d-1838b2b33404",
+            "c2b4c9a1-cd70-5b26-bae0-882f0d77dea5",
+            "db3e2525-ff9f-5ae2-9866-43fec4201c07",
+            "d699bc10-17c7-506f-810e-4610a708dd68",
+            "9dd2133c-49eb-5c63-bbf5-b43c0b116b50",
+            "c682bf2a-ad43-57b8-aeed-42187946db29",
+            "f907e2b1-bc54-56d0-a3ac-230c62cb8594",
+            "297e2684-b7a9-53e7-8005-bbfcd8b0ffaf",
+            "01c8904c-efcd-5a96-994d-04114384ef33",
+            "441ed495-16bb-5dc1-83dd-645f67163422",
+            "004a647f-01cd-5c8b-b4a0-9b18b9cd9763",
+            "27c74096-a7e5-5f49-9f52-43a558b5b8f7",
+            "5317c185-3491-5801-b010-0fa4949d01d3",
+            "b5305d77-76cd-54fe-b24d-d3ef4211e0b6",
+            "8e10baf4-e6d3-5890-abe2-fe5782d0a59f",
+            "f65c4705-a9f7-57ec-b98c-32e2f99ab9e4",
+            "a5ee39ac-7350-593a-844e-17c606915965",
+            "b7c08dc7-b315-5bdd-bed9-422be09e43bd",
+            "ed646807-9834-59cb-94f2-d779ab22f9f2",
+            "ac9ebb8c-7852-59a4-984b-dec1670a7620",
+            "f886287c-aa24-59d6-bdb9-7e545f7f0997"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.8,
+      "Text": "more",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.025229,
+          "Height": 0.012879,
+          "Left": 0.121961,
+          "Top": 0.290404
+        }
+      },
+      "Id": "f50273e7-3151-5521-9f2a-3f7d8d05a534"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.9,
+      "Text": "than",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.025229,
+          "Height": 0.012879,
+          "Left": 0.153497,
+          "Top": 0.290404
+        }
+      },
+      "Id": "523e8d2d-6e47-56a7-937d-1838b2b33404"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 93.2,
+      "Text": "one",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.018922,
+          "Height": 0.012879,
+          "Left": 0.185033,
+          "Top": 0.290404
+        }
+      },
+      "Id": "c2b4c9a1-cd70-5b26-bae0-882f0d77dea5"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 97.1,
+      "Text": "band,",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.031536,
+          "Height": 0.012879,
+          "Left": 0.210261,
+          "Top": 0.290404
+        }
+      },
+      "Id": "db3e2525-ff9f-5ae2-9866-43fec4201c07"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 92.6,
+      "Text": "the",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.018922,
+          "Height": 0.012879,
+          "Left": 0.248105,
+          "Top": 0.290404
+        }
+      },
+      "Id": "d699bc10-17c7-506f-810e-4610a708dd68"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.1,
+      "Text": "gain",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.025229,
+          "Height": 0.012879,
+          "Left": 0.273333,
+          "Top": 0.290404
+        }
+      },
+      "Id": "9dd2133c-49eb-5c63-bbf5-b43c0b116b50"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.8,
+      "Text": "is",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.012614,
+          "Height": 0.012879,
+          "Left": 0.304869,
+          "Top": 0.290404
+        }
+      },
+      "Id": "c682bf2a-ad43-57b8-aeed-42187946db29"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 91.4,
+      "Text": "allocated",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.056765,
+          "Height": 0.012879,
+          "Left": 0.323791,
+          "Top": 0.290404
+        }
+      },
+      "Id": "f907e2b1-bc54-56d0-a3ac-230c62cb8594"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.2,
+      "Text": "across",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.037843,
+          "Height": 0.012879,
+          "Left": 0.386863,
+          "Top": 0.290404
+        }
+      },
+      "Id": "297e2684-b7a9-53e7-8005-bbfcd8b0ffaf"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.4,
+      "Text": "the",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.018922,
+          "Height": 0.012879,
+          "Left": 0.431013,
+          "Top": 0.290404
+        }
+      },
+      "Id": "01c8904c-efcd-5a96-994d-04114384ef33"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.8,
+      "Text": "bands",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.031536,
+          "Height": 0.012879,
+          "Left": 0.456242,
+          "Top": 0.290404
+        }
+      },
+      "Id": "441ed495-16bb-5dc1-83dd-645f67163422"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.9,
+      "Text": "in",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.012614,
+          "Height": 0.012879,
+          "Left": 0.494085,
+          "Top": 0.290404
+        }
+      },
+      "Id": "004a647f-01cd-5c8b-b4a0-9b18b9cd9763"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 93.2,
+      "Text": "order",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.031536,
+          "Height": 0.012879,
+          "Left": 0.513007,
+          "Top": 0.290404
+        }
+      },
+      "Id": "27c74096-a7e5-5f49-9f52-43a558b5b8f7"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 97.1,
+      "Text": "and",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.018922,
+          "Height": 0.012879,
+          "Left": 0.55085,
+          "Top": 0.290404
+        }
+      },
+      "Id": "5317c185-3491-5801-b010-0fa4949d01d3"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 92.6,
+      "Text": "each",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.025229,
+          "Height": 0.012879,
+          "Left": 0.576078,
+          "Top": 0.290404
+        }
+      },
+      "Id": "b5305d77-76cd-54fe-b24d-d3ef4211e0b6"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.1,
+      "Text": "portion",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.04415,
+          "Height": 0.012879,
+          "Left": 0.607614,
+          "Top": 0.290404
+        }
+      },
+      "Id": "8e10baf4-e6d3-5890-abe2-fe5782d0a59f"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.8,
+      "Text": "is",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.012614,
+          "Height": 0.012879,
+          "Left": 0.658072,
+          "Top": 0.290404
+        }
+      },
+      "Id": "f65c4705-a9f7-57ec-b98c-32e2f99ab9e4"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 91.4,
+      "Text": "taxed",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.031536,
+          "Height": 0.012879,
+          "Left": 0.676993,
+          "Top": 0.290404
+        }
+      },
+      "Id": "a5ee39ac-7350-593a-844e-17c606915965"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.2,
+      "Text": "at",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.012614,
+          "Height": 0.012879,
+          "Left": 0.714837,
+          "Top": 0.290404
+        }
+      },
+      "Id": "b7c08dc7-b315-5bdd-bed9-422be09e43bd"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.4,
+      "Text": "the",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.018922,
+          "Height": 0.012879,
+          "Left": 0.733758,
+          "Top": 0.290404
+        }
+      },
+      "Id": "ed646807-9834-59cb-94f2-d779ab22f9f2"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.8,
+      "Text": "corresponding",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.081993,
+          "Height": 0.012879,
+          "Left": 0.758987,
+          "Top": 0.290404
+        }
+      },
+      "Id": "ac9ebb8c-7852-59a4-984b-dec1670a7620"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.9,
+      "Text": "rate.",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.031536,
+          "Height": 0.012879,
+          "Left": 0.847288,
+          "Top": 0.290404
+        }
+      },
+      "Id": "f886287c-aa24-59d6-bdb9-7e545f7f0997"
+    },
+    {
+      "BlockType": "LINE",
+      "Confidence": 91.4,
+      "Text": "Table 1. Preferential rate bands by filing status, taxable income",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.424183,
+          "Height": 0.012626,
+          "Left": 0.121569,
+          "Top": 0.32197
+        }
+      },
+      "Id": "98c317e0-2e80-5c45-a195-ca708506fe13",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "499c4f96-8ad4-549b-96bc-6a3bf440d297",
+            "5c9c73b5-678e-5170-8d82-67642b6b58cc",
+            "ea2f2683-322b-597c-9abe-39d2b809d4eb",
+            "5578f874-0f49-5e24-acac-e29290271a9b",
+            "5f0e9b41-0e8b-54f4-ba0b-6f0258f4c98d",
+            "61199ba0-fe03-557b-a83d-524c9beb8cfa",
+            "f08afebf-be3b-5701-8a95-36794b506e4e",
+            "e0da3e07-dffa-566a-806f-a6e094de8068",
+            "3e146026-c591-589e-ae12-ecefbee44288",
+            "a692fe91-9acb-58d9-870c-0c097564efeb"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 97.1,
+      "Text": "Table",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.032631,
+          "Height": 0.012626,
+          "Left": 0.121569,
+          "Top": 0.32197
+        }
+      },
+      "Id": "499c4f96-8ad4-549b-96bc-6a3bf440d297"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 92.6,
+      "Text": "1.",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.013056,
+          "Height": 0.012626,
+          "Left": 0.160719,
+          "Top": 0.32197
+        }
+      },
+      "Id": "5c9c73b5-678e-5170-8d82-67642b6b58cc"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.1,
+      "Text": "Preferential",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.078317,
+          "Height": 0.012626,
+          "Left": 0.180294,
+          "Top": 0.32197
+        }
+      },
+      "Id": "ea2f2683-322b-597c-9abe-39d2b809d4eb"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.8,
+      "Text": "rate",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.026111,
+          "Height": 0.012626,
+          "Left": 0.265131,
+          "Top": 0.32197
+        }
+      },
+      "Id": "5578f874-0f49-5e24-acac-e29290271a9b"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 91.4,
+      "Text": "bands",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.032631,
+          "Height": 0.012626,
+          "Left": 0.297761,
+          "Top": 0.32197
+        }
+      },
+      "Id": "5f0e9b41-0e8b-54f4-ba0b-6f0258f4c98d"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.2,
+      "Text": "by",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.013039,
+          "Height": 0.012626,
+          "Left": 0.336928,
+          "Top": 0.32197
+        }
+      },
+      "Id": "61199ba0-fe03-557b-a83d-524c9beb8cfa"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.4,
+      "Text": "filing",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.03915,
+          "Height": 0.012626,
+          "Left": 0.356503,
+          "Top": 0.32197
+        }
+      },
+      "Id": "f08afebf-be3b-5701-8a95-36794b506e4e"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.8,
+      "Text": "status,",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.04567,
+          "Height": 0.012626,
+          "Left": 0.40219,
+          "Top": 0.32197
+        }
+      },
+      "Id": "e0da3e07-dffa-566a-806f-a6e094de8068"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.9,
+      "Text": "taxable",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.04567,
+          "Height": 0.012626,
+          "Left": 0.454395,
+          "Top": 0.32197
+        }
+      },
+      "Id": "3e146026-c591-589e-ae12-ecefbee44288"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 93.2,
+      "Text": "income",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.03915,
+          "Height": 0.012626,
+          "Left": 0.506601,
+          "Top": 0.32197
+        }
+      },
+      "Id": "a692fe91-9acb-58d9-870c-0c097564efeb"
+    },
+    {
+      "BlockType": "LINE",
+      "Confidence": 97.1,
+      "Text": "Rate",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.026144,
+          "Height": 0.011364,
+          "Left": 0.122026,
+          "Top": 0.353157
+        }
+      },
+      "Id": "9b7644ee-dff6-5fa4-bf28-7a6e8d85a39c",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "20e3138c-bfad-5b57-a566-de80d59b5abd"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 97.1,
+      "Text": "Rate",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.026144,
+          "Height": 0.011364,
+          "Left": 0.122026,
+          "Top": 0.353157
+        }
+      },
+      "Id": "20e3138c-bfad-5b57-a566-de80d59b5abd"
+    },
+    {
+      "BlockType": "LINE",
+      "Confidence": 92.6,
+      "Text": "Single",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.039216,
+          "Height": 0.011364,
+          "Left": 0.253725,
+          "Top": 0.353157
+        }
+      },
+      "Id": "f19e56b2-f8d3-53cf-a99a-3314c3df3bcb",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "83e75e12-24ce-5e44-b67a-aee9b243177a"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 92.6,
+      "Text": "Single",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.039216,
+          "Height": 0.011364,
+          "Left": 0.253725,
+          "Top": 0.353157
+        }
+      },
+      "Id": "83e75e12-24ce-5e44-b67a-aee9b243177a"
+    },
+    {
+      "BlockType": "LINE",
+      "Confidence": 91.4,
+      "Text": "Married Filing Jointly",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.143791,
+          "Height": 0.011364,
+          "Left": 0.383791,
+          "Top": 0.353157
+        }
+      },
+      "Id": "8cbe49fe-337f-59a4-9eff-22b814a8ac66",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "f8edeec6-8d14-59ce-ae9d-be091bf5f5dc",
+            "97985bb6-2728-5f6b-9d7c-a3046b8bfd70",
+            "3316644a-ba11-508c-a2fa-779eb76fd4ec"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.1,
+      "Text": "Married",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.045752,
+          "Height": 0.011364,
+          "Left": 0.383791,
+          "Top": 0.353157
+        }
+      },
+      "Id": "f8edeec6-8d14-59ce-ae9d-be091bf5f5dc"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.8,
+      "Text": "Filing",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.039216,
+          "Height": 0.011364,
+          "Left": 0.436078,
+          "Top": 0.353157
+        }
+      },
+      "Id": "97985bb6-2728-5f6b-9d7c-a3046b8bfd70"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 91.4,
+      "Text": "Jointly",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.045752,
+          "Height": 0.011364,
+          "Left": 0.48183,
+          "Top": 0.353157
+        }
+      },
+      "Id": "3316644a-ba11-508c-a2fa-779eb76fd4ec"
+    },
+    {
+      "BlockType": "LINE",
+      "Confidence": 94.2,
+      "Text": "Married Filing Separately",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.163399,
+          "Height": 0.011364,
+          "Left": 0.562222,
+          "Top": 0.353157
+        }
+      },
+      "Id": "5068bd4b-fc1e-5858-892a-22797e1ef803",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "bf8487ab-cb26-5b0d-883f-00fd90adaf75",
+            "bb2ea9e3-d6dc-5b4a-855e-992e389f0dfe",
+            "914a5888-839b-589a-af75-1c293e13a506"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.2,
+      "Text": "Married",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.045752,
+          "Height": 0.011364,
+          "Left": 0.562222,
+          "Top": 0.353157
+        }
+      },
+      "Id": "bf8487ab-cb26-5b0d-883f-00fd90adaf75"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.4,
+      "Text": "Filing",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.039216,
+          "Height": 0.011364,
+          "Left": 0.61451,
+          "Top": 0.353157
+        }
+      },
+      "Id": "bb2ea9e3-d6dc-5b4a-855e-992e389f0dfe"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.8,
+      "Text": "Separately",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.065359,
+          "Height": 0.011364,
+          "Left": 0.660261,
+          "Top": 0.353157
+        }
+      },
+      "Id": "914a5888-839b-589a-af75-1c293e13a506"
+    },
+    {
+      "BlockType": "LINE",
+      "Confidence": 93.2,
+      "Text": "Head of Household",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.111111,
+          "Height": 0.011364,
+          "Left": 0.770719,
+          "Top": 0.353157
+        }
+      },
+      "Id": "d50dc79c-f1e5-532b-a7e1-8bcb292888bd",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "681233f7-cfb8-5c87-9932-d2855adde7f6",
+            "e72a0843-ed30-5e9e-a52e-fb857885a4ee",
+            "a2bd4a20-cba3-5a33-bb90-7245159573e5"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.9,
+      "Text": "Head",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.026144,
+          "Height": 0.011364,
+          "Left": 0.770719,
+          "Top": 0.353157
+        }
+      },
+      "Id": "681233f7-cfb8-5c87-9932-d2855adde7f6"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 93.2,
+      "Text": "of",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.013072,
+          "Height": 0.011364,
+          "Left": 0.803399,
+          "Top": 0.353157
+        }
+      },
+      "Id": "e72a0843-ed30-5e9e-a52e-fb857885a4ee"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 97.1,
+      "Text": "Household",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.058824,
+          "Height": 0.011364,
+          "Left": 0.823007,
+          "Top": 0.353157
+        }
+      },
+      "Id": "a2bd4a20-cba3-5a33-bb90-7245159573e5"
+    },
+    {
+      "BlockType": "LINE",
+      "Confidence": 92.6,
+      "Text": "0 percent",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.058824,
+          "Height": 0.011364,
+          "Left": 0.105686,
+          "Top": 0.383207
+        }
+      },
+      "Id": "2ec4059d-af43-54f3-9e92-b1d18b35f313",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "67dddfe7-92aa-5c66-8f3b-dc42cc50a843",
+            "e7454269-9a2e-52e6-87ba-f5e57b331e80"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 92.6,
+      "Text": "0",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.006536,
+          "Height": 0.011364,
+          "Left": 0.105686,
+          "Top": 0.383207
+        }
+      },
+      "Id": "67dddfe7-92aa-5c66-8f3b-dc42cc50a843"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.1,
+      "Text": "percent",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.045752,
+          "Height": 0.011364,
+          "Left": 0.118758,
+          "Top": 0.383207
+        }
+      },
+      "Id": "e7454269-9a2e-52e6-87ba-f5e57b331e80"
+    },
+    {
+      "BlockType": "LINE",
+      "Confidence": 55.0,
+      "Text": "$0 to $48,350",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.084967,
+          "Height": 0.011364,
+          "Left": 0.23085,
+          "Top": 0.383207
+        }
+      },
+      "Id": "b59a2a1a-ff91-5c1e-a33a-8f2b8d53deed",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "2f43a580-0674-50ed-bf18-d2159ef4e6ac",
+            "4825c697-f2f9-50a4-94c8-ceae2aa7c7d5",
+            "8bb79689-cb47-56ed-9eca-f9733e2b8585"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.1,
+      "Text": "$0",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.013072,
+          "Height": 0.011364,
+          "Left": 0.23085,
+          "Top": 0.383207
+        }
+      },
+      "Id": "2f43a580-0674-50ed-bf18-d2159ef4e6ac"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 55.0,
+      "Text": "to",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.013072,
+          "Height": 0.011364,
+          "Left": 0.250458,
+          "Top": 0.383207
+        }
+      },
+      "Id": "4825c697-f2f9-50a4-94c8-ceae2aa7c7d5"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 55.0,
+      "Text": "$48,350",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.045752,
+          "Height": 0.011364,
+          "Left": 0.270065,
+          "Top": 0.383207
+        }
+      },
+      "Id": "8bb79689-cb47-56ed-9eca-f9733e2b8585"
+    },
+    {
+      "BlockType": "LINE",
+      "Confidence": 91.4,
+      "Text": "$0 to $96,700",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.084967,
+          "Height": 0.011364,
+          "Left": 0.413203,
+          "Top": 0.383207
+        }
+      },
+      "Id": "4b098ce9-3cfe-51c1-880c-4d1c29680a62",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "e2e5f60a-8f06-59b9-bb3b-5776796db4d8",
+            "36e2e41e-1460-51c9-948f-7d0fdf5ec369",
+            "9a550f0d-7ef7-53c9-af1c-fa91999d04fe"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.8,
+      "Text": "$0",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.013072,
+          "Height": 0.011364,
+          "Left": 0.413203,
+          "Top": 0.383207
+        }
+      },
+      "Id": "e2e5f60a-8f06-59b9-bb3b-5776796db4d8"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 91.4,
+      "Text": "to",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.013072,
+          "Height": 0.011364,
+          "Left": 0.43281,
+          "Top": 0.383207
+        }
+      },
+      "Id": "36e2e41e-1460-51c9-948f-7d0fdf5ec369"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.2,
+      "Text": "$96,700",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.045752,
+          "Height": 0.011364,
+          "Left": 0.452418,
+          "Top": 0.383207
+        }
+      },
+      "Id": "9a550f0d-7ef7-53c9-af1c-fa91999d04fe"
+    },
+    {
+      "BlockType": "LINE",
+      "Confidence": 94.8,
+      "Text": "$0 to $48,350",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.084967,
+          "Height": 0.011364,
+          "Left": 0.601438,
+          "Top": 0.383207
+        }
+      },
+      "Id": "b4420513-825a-5420-bea4-5852c5e91ceb",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "cf60ac11-a303-57cd-8b03-748560d36645",
+            "905b7d88-44e1-53a3-bc19-306f5a26167e",
+            "220dff57-60b7-559d-b2ca-245b6e68c9da"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.4,
+      "Text": "$0",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.013072,
+          "Height": 0.011364,
+          "Left": 0.601438,
+          "Top": 0.383207
+        }
+      },
+      "Id": "cf60ac11-a303-57cd-8b03-748560d36645"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.8,
+      "Text": "to",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.013072,
+          "Height": 0.011364,
+          "Left": 0.621046,
+          "Top": 0.383207
+        }
+      },
+      "Id": "905b7d88-44e1-53a3-bc19-306f5a26167e"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.9,
+      "Text": "$48,350",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.045752,
+          "Height": 0.011364,
+          "Left": 0.640654,
+          "Top": 0.383207
+        }
+      },
+      "Id": "220dff57-60b7-559d-b2ca-245b6e68c9da"
+    },
+    {
+      "BlockType": "LINE",
+      "Confidence": 92.6,
+      "Text": "$0 to $64,750",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.084967,
+          "Height": 0.011364,
+          "Left": 0.783791,
+          "Top": 0.383207
+        }
+      },
+      "Id": "dac1d9f4-7adf-53c2-80e7-ef6b13dd36ae",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "7c336ecd-7d47-55e8-be5f-b4333ad5b6fe",
+            "9c598486-576c-58b6-bd96-61c0d5334cd7",
+            "1c546ae9-aa7b-5e51-84b3-89576401a536"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 93.2,
+      "Text": "$0",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.013072,
+          "Height": 0.011364,
+          "Left": 0.783791,
+          "Top": 0.383207
+        }
+      },
+      "Id": "7c336ecd-7d47-55e8-be5f-b4333ad5b6fe"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 97.1,
+      "Text": "to",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.013072,
+          "Height": 0.011364,
+          "Left": 0.803399,
+          "Top": 0.383207
+        }
+      },
+      "Id": "9c598486-576c-58b6-bd96-61c0d5334cd7"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 92.6,
+      "Text": "$64,750",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.045752,
+          "Height": 0.011364,
+          "Left": 0.823007,
+          "Top": 0.383207
+        }
+      },
+      "Id": "1c546ae9-aa7b-5e51-84b3-89576401a536"
+    },
+    {
+      "BlockType": "LINE",
+      "Confidence": 95.1,
+      "Text": "15 percent",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.065359,
+          "Height": 0.011364,
+          "Left": 0.102418,
+          "Top": 0.413258
+        }
+      },
+      "Id": "28733216-cd9e-56fd-8c22-35fabcf18e04",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "eab31010-3be8-5514-a252-2c44a8a9b4e5",
+            "2830b80a-970b-56f3-9b6b-b5f846b4ba2d"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.1,
+      "Text": "15",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.013072,
+          "Height": 0.011364,
+          "Left": 0.102418,
+          "Top": 0.413258
+        }
+      },
+      "Id": "eab31010-3be8-5514-a252-2c44a8a9b4e5"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.8,
+      "Text": "percent",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.045752,
+          "Height": 0.011364,
+          "Left": 0.122026,
+          "Top": 0.413258
+        }
+      },
+      "Id": "2830b80a-970b-56f3-9b6b-b5f846b4ba2d"
+    },
+    {
+      "BlockType": "LINE",
+      "Confidence": 91.4,
+      "Text": "$48,351 to $533,400",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.124183,
+          "Height": 0.011364,
+          "Left": 0.211242,
+          "Top": 0.413258
+        }
+      },
+      "Id": "fb49d5c8-003e-58c8-884d-6b5107a9f5e3",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "9a87de57-c72d-57dd-aa2e-d20c07927937",
+            "0e7af290-7668-583f-8ca9-9ec84a1d47e7",
+            "dfd63afe-93da-506c-b4af-e2217ab5abff"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 91.4,
+      "Text": "$48,351",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.045752,
+          "Height": 0.011364,
+          "Left": 0.211242,
+          "Top": 0.413258
+        }
+      },
+      "Id": "9a87de57-c72d-57dd-aa2e-d20c07927937"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.2,
+      "Text": "to",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.013072,
+          "Height": 0.011364,
+          "Left": 0.263529,
+          "Top": 0.413258
+        }
+      },
+      "Id": "0e7af290-7668-583f-8ca9-9ec84a1d47e7"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.4,
+      "Text": "$533,400",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.052288,
+          "Height": 0.011364,
+          "Left": 0.283137,
+          "Top": 0.413258
+        }
+      },
+      "Id": "dfd63afe-93da-506c-b4af-e2217ab5abff"
+    },
+    {
+      "BlockType": "LINE",
+      "Confidence": 93.2,
+      "Text": "$96,701 to $600,050",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.124183,
+          "Height": 0.011364,
+          "Left": 0.393595,
+          "Top": 0.413258
+        }
+      },
+      "Id": "58cba1d1-d68b-5135-806d-51d85129b31c",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "944c56e0-05ec-5a53-89d2-a619699353d6",
+            "2d165c4d-7e85-5dcc-866e-52c834912816",
+            "c48303c7-88ce-5505-8bd0-c46d210d3d56"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.8,
+      "Text": "$96,701",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.045752,
+          "Height": 0.011364,
+          "Left": 0.393595,
+          "Top": 0.413258
+        }
+      },
+      "Id": "944c56e0-05ec-5a53-89d2-a619699353d6"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.9,
+      "Text": "to",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.013072,
+          "Height": 0.011364,
+          "Left": 0.445882,
+          "Top": 0.413258
+        }
+      },
+      "Id": "2d165c4d-7e85-5dcc-866e-52c834912816"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 93.2,
+      "Text": "$600,050",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.052288,
+          "Height": 0.011364,
+          "Left": 0.46549,
+          "Top": 0.413258
+        }
+      },
+      "Id": "c48303c7-88ce-5505-8bd0-c46d210d3d56"
+    },
+    {
+      "BlockType": "LINE",
+      "Confidence": 92.6,
+      "Text": "$48,351 to $300,000",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.124183,
+          "Height": 0.011364,
+          "Left": 0.58183,
+          "Top": 0.413258
+        }
+      },
+      "Id": "e20c38c9-a4f4-5087-b5c9-0efb2c2f7042",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "c265a640-272f-5b18-ac4d-3c5a4323dbbf",
+            "77aa9731-0bd2-5c65-b63b-93c5f84dcebd",
+            "7b0b2b4b-bab5-51d1-b383-fc56a427cc9f"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 97.1,
+      "Text": "$48,351",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.045752,
+          "Height": 0.011364,
+          "Left": 0.58183,
+          "Top": 0.413258
+        }
+      },
+      "Id": "c265a640-272f-5b18-ac4d-3c5a4323dbbf"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 92.6,
+      "Text": "to",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.013072,
+          "Height": 0.011364,
+          "Left": 0.634118,
+          "Top": 0.413258
+        }
+      },
+      "Id": "77aa9731-0bd2-5c65-b63b-93c5f84dcebd"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.1,
+      "Text": "$300,000",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.052288,
+          "Height": 0.011364,
+          "Left": 0.653725,
+          "Top": 0.413258
+        }
+      },
+      "Id": "7b0b2b4b-bab5-51d1-b383-fc56a427cc9f"
+    },
+    {
+      "BlockType": "LINE",
+      "Confidence": 91.4,
+      "Text": "$64,751 to $566,700",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.124183,
+          "Height": 0.011364,
+          "Left": 0.764183,
+          "Top": 0.413258
+        }
+      },
+      "Id": "6d028d6e-022c-58c5-b8f6-1db9a92cd081",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "68849662-e680-59f6-976f-1b7c1858446f",
+            "025513ac-8900-510c-9157-d508a24b8889",
+            "827f94b4-afb9-5fce-8732-ca89201c539f"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.8,
+      "Text": "$64,751",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.045752,
+          "Height": 0.011364,
+          "Left": 0.764183,
+          "Top": 0.413258
+        }
+      },
+      "Id": "68849662-e680-59f6-976f-1b7c1858446f"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 91.4,
+      "Text": "to",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.013072,
+          "Height": 0.011364,
+          "Left": 0.816471,
+          "Top": 0.413258
+        }
+      },
+      "Id": "025513ac-8900-510c-9157-d508a24b8889"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.2,
+      "Text": "$566,700",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.052288,
+          "Height": 0.011364,
+          "Left": 0.836078,
+          "Top": 0.413258
+        }
+      },
+      "Id": "827f94b4-afb9-5fce-8732-ca89201c539f"
+    },
+    {
+      "BlockType": "LINE",
+      "Confidence": 94.8,
+      "Text": "20 percent",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.065359,
+          "Height": 0.011364,
+          "Left": 0.102418,
+          "Top": 0.443056
+        }
+      },
+      "Id": "ac479d28-6293-5141-a1c0-ebf383e31f20",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "1bfba41d-7483-5bbe-8fc4-d297fcb91173",
+            "4fedc5e0-9921-53f3-9545-8c03330904ec"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.4,
+      "Text": "20",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.013072,
+          "Height": 0.011364,
+          "Left": 0.102418,
+          "Top": 0.443056
+        }
+      },
+      "Id": "1bfba41d-7483-5bbe-8fc4-d297fcb91173"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.8,
+      "Text": "percent",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.045752,
+          "Height": 0.011364,
+          "Left": 0.122026,
+          "Top": 0.443056
+        }
+      },
+      "Id": "4fedc5e0-9921-53f3-9545-8c03330904ec"
+    },
+    {
+      "BlockType": "LINE",
+      "Confidence": 93.2,
+      "Text": "Over $533,400",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.084967,
+          "Height": 0.011364,
+          "Left": 0.23085,
+          "Top": 0.443056
+        }
+      },
+      "Id": "d20fda43-ac20-54cc-93e1-b5f8bdfccbc1",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "d5c86733-9b3a-5958-8175-c4499b45fb04",
+            "178265fe-3ddd-5a5f-8234-ad37105f5b5c"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.9,
+      "Text": "Over",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.026144,
+          "Height": 0.011364,
+          "Left": 0.23085,
+          "Top": 0.443056
+        }
+      },
+      "Id": "d5c86733-9b3a-5958-8175-c4499b45fb04"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 93.2,
+      "Text": "$533,400",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.052288,
+          "Height": 0.011364,
+          "Left": 0.263529,
+          "Top": 0.443056
+        }
+      },
+      "Id": "178265fe-3ddd-5a5f-8234-ad37105f5b5c"
+    },
+    {
+      "BlockType": "LINE",
+      "Confidence": 92.6,
+      "Text": "Over $600,050",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.084967,
+          "Height": 0.011364,
+          "Left": 0.413203,
+          "Top": 0.443056
+        }
+      },
+      "Id": "08e7a769-acc4-52f7-9ff6-1ae955394f59",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "28082a4a-8831-539a-b175-37b8d15c15aa",
+            "738634a5-fb2f-5754-a125-138b98ed00ed"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 97.1,
+      "Text": "Over",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.026144,
+          "Height": 0.011364,
+          "Left": 0.413203,
+          "Top": 0.443056
+        }
+      },
+      "Id": "28082a4a-8831-539a-b175-37b8d15c15aa"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 92.6,
+      "Text": "$600,050",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.052288,
+          "Height": 0.011364,
+          "Left": 0.445882,
+          "Top": 0.443056
+        }
+      },
+      "Id": "738634a5-fb2f-5754-a125-138b98ed00ed"
+    },
+    {
+      "BlockType": "LINE",
+      "Confidence": 95.1,
+      "Text": "Over $300,000",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.084967,
+          "Height": 0.011364,
+          "Left": 0.601438,
+          "Top": 0.443056
+        }
+      },
+      "Id": "5f32b054-327e-50ea-b416-83c5af826673",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "f94cb55a-be23-5393-8860-bc1bc2441754",
+            "af66f135-8d05-5b5c-b048-c049f41b4075"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.1,
+      "Text": "Over",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.026144,
+          "Height": 0.011364,
+          "Left": 0.601438,
+          "Top": 0.443056
+        }
+      },
+      "Id": "f94cb55a-be23-5393-8860-bc1bc2441754"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.8,
+      "Text": "$300,000",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.052288,
+          "Height": 0.011364,
+          "Left": 0.634118,
+          "Top": 0.443056
+        }
+      },
+      "Id": "af66f135-8d05-5b5c-b048-c049f41b4075"
+    },
+    {
+      "BlockType": "LINE",
+      "Confidence": 91.4,
+      "Text": "Over $566,700",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.084967,
+          "Height": 0.011364,
+          "Left": 0.783791,
+          "Top": 0.443056
+        }
+      },
+      "Id": "a4d62adb-c997-55bf-b099-d94f29ac88b4",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "badeef6b-6379-59e3-a4ce-286f98013851",
+            "50d706e3-b2d1-5777-b626-07af1b311f96"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 91.4,
+      "Text": "Over",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.026144,
+          "Height": 0.011364,
+          "Left": 0.783791,
+          "Top": 0.443056
+        }
+      },
+      "Id": "badeef6b-6379-59e3-a4ce-286f98013851"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.2,
+      "Text": "$566,700",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.052288,
+          "Height": 0.011364,
+          "Left": 0.816471,
+          "Top": 0.443056
+        }
+      },
+      "Id": "50d706e3-b2d1-5777-b626-07af1b311f96"
+    },
+    {
+      "BlockType": "LINE",
+      "Confidence": 92.6,
+      "Text": "Table 2. Special rate categories",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.20549,
+          "Height": 0.010909,
+          "Left": 0.121569,
+          "Top": 0.480606
+        }
+      },
+      "Id": "41b656a0-a3db-55ce-b39d-32ec27e0e976",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "7e947499-74ad-5d87-9821-3e84ac9f7c9a",
+            "44abf118-a7a1-5a33-8a4e-9f6ac4ecbc4c",
+            "183315b5-5ccd-5d54-bf87-a4d5ebc9a065",
+            "acbff10e-16ae-54eb-9cab-5833e2adf62c",
+            "9d88ec51-9642-5d23-8c68-bcbe858e75a3"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 93.2,
+      "Text": "Table",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.032108,
+          "Height": 0.010909,
+          "Left": 0.121569,
+          "Top": 0.480606
+        }
+      },
+      "Id": "7e947499-74ad-5d87-9821-3e84ac9f7c9a"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 97.1,
+      "Text": "2.",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.012843,
+          "Height": 0.010909,
+          "Left": 0.160098,
+          "Top": 0.480606
+        }
+      },
+      "Id": "44abf118-a7a1-5a33-8a4e-9f6ac4ecbc4c"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 92.6,
+      "Text": "Special",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.044951,
+          "Height": 0.010909,
+          "Left": 0.179363,
+          "Top": 0.480606
+        }
+      },
+      "Id": "183315b5-5ccd-5d54-bf87-a4d5ebc9a065"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.1,
+      "Text": "rate",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.025686,
+          "Height": 0.010909,
+          "Left": 0.230735,
+          "Top": 0.480606
+        }
+      },
+      "Id": "acbff10e-16ae-54eb-9cab-5833e2adf62c"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.8,
+      "Text": "categories",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.064216,
+          "Height": 0.010909,
+          "Left": 0.262843,
+          "Top": 0.480606
+        }
+      },
+      "Id": "9d88ec51-9642-5d23-8c68-bcbe858e75a3"
+    },
+    {
+      "BlockType": "LINE",
+      "Confidence": 96.4,
+      "Text": "Category",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.052288,
+          "Height": 0.011364,
+          "Left": 0.379346,
+          "Top": 0.509886
+        }
+      },
+      "Id": "765fc6e7-7d99-5299-908c-0940224bb075",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "70063407-a0d8-5510-a58d-1cfc3531741c"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.4,
+      "Text": "Category",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.052288,
+          "Height": 0.011364,
+          "Left": 0.379346,
+          "Top": 0.509886
+        }
+      },
+      "Id": "70063407-a0d8-5510-a58d-1cfc3531741c"
+    },
+    {
+      "BlockType": "LINE",
+      "Confidence": 94.8,
+      "Text": "Maximum rate",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.078431,
+          "Height": 0.011364,
+          "Left": 0.672157,
+          "Top": 0.509886
+        }
+      },
+      "Id": "a8bbbedf-aee9-514a-bd69-69ca31de34fc",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "25534035-53c7-533d-a171-5abd7c484987",
+            "57b87b81-5e2a-5899-8665-5c51ee45cbfb"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.8,
+      "Text": "Maximum",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.045752,
+          "Height": 0.011364,
+          "Left": 0.672157,
+          "Top": 0.509886
+        }
+      },
+      "Id": "25534035-53c7-533d-a171-5abd7c484987"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.9,
+      "Text": "rate",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.026144,
+          "Height": 0.011364,
+          "Left": 0.724444,
+          "Top": 0.509886
+        }
+      },
+      "Id": "57b87b81-5e2a-5899-8665-5c51ee45cbfb"
+    },
+    {
+      "BlockType": "LINE",
+      "Confidence": 92.6,
+      "Text": "Unrecaptured section 1250 gain",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.196078,
+          "Height": 0.011364,
+          "Left": 0.200261,
+          "Top": 0.539811
+        }
+      },
+      "Id": "2e9a5c99-b8d3-5820-b08a-04ec49030dfd",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "2c50a76a-e15f-5d74-9b3d-a00289e51d2a",
+            "c375a4f3-6783-5ebe-9751-ebe23099053f",
+            "5f724eca-1bed-5ae5-a659-4d5a7e66b6d3",
+            "733485c6-daed-54a3-ba7c-264b63960e80"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 93.2,
+      "Text": "Unrecaptured",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.078431,
+          "Height": 0.011364,
+          "Left": 0.200261,
+          "Top": 0.539811
+        }
+      },
+      "Id": "2c50a76a-e15f-5d74-9b3d-a00289e51d2a"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 97.1,
+      "Text": "section",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.045752,
+          "Height": 0.011364,
+          "Left": 0.285229,
+          "Top": 0.539811
+        }
+      },
+      "Id": "c375a4f3-6783-5ebe-9751-ebe23099053f"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 92.6,
+      "Text": "1250",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.026144,
+          "Height": 0.011364,
+          "Left": 0.337516,
+          "Top": 0.539811
+        }
+      },
+      "Id": "5f724eca-1bed-5ae5-a659-4d5a7e66b6d3"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.1,
+      "Text": "gain",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.026144,
+          "Height": 0.011364,
+          "Left": 0.370196,
+          "Top": 0.539811
+        }
+      },
+      "Id": "733485c6-daed-54a3-ba7c-264b63960e80"
+    },
+    {
+      "BlockType": "LINE",
+      "Confidence": 91.4,
+      "Text": "25 percent",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.065359,
+          "Height": 0.011364,
+          "Left": 0.678693,
+          "Top": 0.539811
+        }
+      },
+      "Id": "6647f972-434a-55a4-a34d-0e858c6aa290",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "82aa5ccc-c39b-5067-b262-2233638f894c",
+            "1fe0f7a9-6020-5c3c-8a65-6f9c31b4619d"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.8,
+      "Text": "25",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.013072,
+          "Height": 0.011364,
+          "Left": 0.678693,
+          "Top": 0.539811
+        }
+      },
+      "Id": "82aa5ccc-c39b-5067-b262-2233638f894c"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 91.4,
+      "Text": "percent",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.045752,
+          "Height": 0.011364,
+          "Left": 0.698301,
+          "Top": 0.539811
+        }
+      },
+      "Id": "1fe0f7a9-6020-5c3c-8a65-6f9c31b4619d"
+    },
+    {
+      "BlockType": "LINE",
+      "Confidence": 93.2,
+      "Text": "Collectibles and certain small business stock",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.294118,
+          "Height": 0.011364,
+          "Left": 0.200261,
+          "Top": 0.569735
+        }
+      },
+      "Id": "66571666-06cf-5ff5-ab32-104d15f15c70",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "5e0f1cd7-f67f-5c0b-ae99-7d2839c1f1ed",
+            "c8b61bd9-926c-5984-a977-d4ee2519bdd3",
+            "aff511f2-eff3-5bbd-8c75-bd87fda6f23b",
+            "3cdb9837-19e7-5295-888a-32ebc1b39c1a",
+            "d47526f4-6789-5622-810c-1bc7d89ebd03",
+            "c0774db5-abb2-5559-a905-6f83751d888f"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.2,
+      "Text": "Collectibles",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.078431,
+          "Height": 0.011364,
+          "Left": 0.200261,
+          "Top": 0.569735
+        }
+      },
+      "Id": "5e0f1cd7-f67f-5c0b-ae99-7d2839c1f1ed"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.4,
+      "Text": "and",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.019608,
+          "Height": 0.011364,
+          "Left": 0.285229,
+          "Top": 0.569735
+        }
+      },
+      "Id": "c8b61bd9-926c-5984-a977-d4ee2519bdd3"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.8,
+      "Text": "certain",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.045752,
+          "Height": 0.011364,
+          "Left": 0.311373,
+          "Top": 0.569735
+        }
+      },
+      "Id": "aff511f2-eff3-5bbd-8c75-bd87fda6f23b"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.9,
+      "Text": "small",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.03268,
+          "Height": 0.011364,
+          "Left": 0.36366,
+          "Top": 0.569735
+        }
+      },
+      "Id": "3cdb9837-19e7-5295-888a-32ebc1b39c1a"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 93.2,
+      "Text": "business",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.052288,
+          "Height": 0.011364,
+          "Left": 0.402876,
+          "Top": 0.569735
+        }
+      },
+      "Id": "d47526f4-6789-5622-810c-1bc7d89ebd03"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 97.1,
+      "Text": "stock",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.03268,
+          "Height": 0.011364,
+          "Left": 0.461699,
+          "Top": 0.569735
+        }
+      },
+      "Id": "c0774db5-abb2-5559-a905-6f83751d888f"
+    },
+    {
+      "BlockType": "LINE",
+      "Confidence": 92.6,
+      "Text": "28 percent",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.065359,
+          "Height": 0.011364,
+          "Left": 0.678693,
+          "Top": 0.569735
+        }
+      },
+      "Id": "da882b26-dbac-56b3-9fe4-9e681d121697",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "f70ef114-55c1-5179-9c77-fcc607f8c751",
+            "c709e04b-8031-51c0-9cb9-d9644018b426"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 92.6,
+      "Text": "28",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.013072,
+          "Height": 0.011364,
+          "Left": 0.678693,
+          "Top": 0.569735
+        }
+      },
+      "Id": "f70ef114-55c1-5179-9c77-fcc607f8c751"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.1,
+      "Text": "percent",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.045752,
+          "Height": 0.011364,
+          "Left": 0.698301,
+          "Top": 0.569735
+        }
+      },
+      "Id": "c709e04b-8031-51c0-9cb9-d9644018b426"
+    },
+    {
+      "BlockType": "LINE",
+      "Confidence": 91.4,
+      "Text": "Short-term capital gain",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.150327,
+          "Height": 0.011364,
+          "Left": 0.200261,
+          "Top": 0.599659
+        }
+      },
+      "Id": "8a54bd79-da2f-5f53-9614-70d253470407",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "2bac21a1-d4ff-5108-b9c2-420f188335c4",
+            "adcba8ff-b93d-584a-bb5b-3c6aa4bc1f62",
+            "0c67e441-fec4-501b-a7d0-00553d9c45de"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.8,
+      "Text": "Short-term",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.065359,
+          "Height": 0.011364,
+          "Left": 0.200261,
+          "Top": 0.599659
+        }
+      },
+      "Id": "2bac21a1-d4ff-5108-b9c2-420f188335c4"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 91.4,
+      "Text": "capital",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.045752,
+          "Height": 0.011364,
+          "Left": 0.272157,
+          "Top": 0.599659
+        }
+      },
+      "Id": "adcba8ff-b93d-584a-bb5b-3c6aa4bc1f62"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.2,
+      "Text": "gain",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.026144,
+          "Height": 0.011364,
+          "Left": 0.324444,
+          "Top": 0.599659
+        }
+      },
+      "Id": "0c67e441-fec4-501b-a7d0-00553d9c45de"
+    },
+    {
+      "BlockType": "LINE",
+      "Confidence": 94.8,
+      "Text": "Ordinary rates",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.091503,
+          "Height": 0.011364,
+          "Left": 0.665621,
+          "Top": 0.599659
+        }
+      },
+      "Id": "677ec95c-6166-5254-829a-a71cb92f6508",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "e8029508-52d1-5de7-afd6-8b63c517570e",
+            "69910556-cf3a-589b-ac3f-ecd6f448e3fc"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.4,
+      "Text": "Ordinary",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.052288,
+          "Height": 0.011364,
+          "Left": 0.665621,
+          "Top": 0.599659
+        }
+      },
+      "Id": "e8029508-52d1-5de7-afd6-8b63c517570e"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.8,
+      "Text": "rates",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.03268,
+          "Height": 0.011364,
+          "Left": 0.724444,
+          "Top": 0.599659
+        }
+      },
+      "Id": "69910556-cf3a-589b-ac3f-ecd6f448e3fc"
+    },
+    {
+      "BlockType": "LINE",
+      "Confidence": 91.4,
+      "Text": "NOTE. An additional Net Investment Income Tax of 3.8 percent applies to the lesser of net investment income or the excess of modified",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.745882,
+          "Height": 0.01096,
+          "Left": 0.121569,
+          "Top": 0.634242
+        }
+      },
+      "Id": "b965d02f-96a7-5358-9de5-c3dffa94ff26",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "b7b38656-edae-5221-b283-87d98c2b58c1",
+            "22ddcc7e-e91d-5219-83ec-f8198008a929",
+            "c8f18c4b-f108-55a6-9876-03a1d0d3c2d3",
+            "743b24ee-bace-5a97-a9f0-9b1d7c2ab4b4",
+            "dab1d89a-ffe9-5bda-a2de-e83ffea288f7",
+            "80246327-3b7a-56f2-bef0-bc3db3fe9e11",
+            "e0031a04-c8a9-537c-a00b-349dcd01595a",
+            "95975067-61ce-5d0b-87eb-584230295c76",
+            "fcd6d225-e0ab-5241-a7dd-0fdd4ad42ac1",
+            "ce680d03-7ad9-5b5a-9198-5e2f3ef23a49",
+            "a7044eb0-2bf6-50b7-a766-d97a7119c034",
+            "d19b57ce-4def-5be4-8bba-40ab01f48a17",
+            "2d835cff-d4bb-5c3b-9e53-bcfdd274d16e",
+            "278f25d1-5a3a-502e-8d33-e6084834d338",
+            "1a387e38-f909-5214-af9d-5e82984dc416",
+            "16f1e061-61a4-52ee-977b-a85ae3687e70",
+            "aad51da7-c17e-502d-96c2-2f309d39d5ba",
+            "5ab675f8-a13c-5f29-a93f-f126566e952a",
+            "563a86b7-0243-5a9b-ab47-18ddaac0c523",
+            "5b21cf02-7894-52bd-818c-4e4c7a689e62",
+            "1bd43788-ca28-5701-b4ab-0ceef4c4e0dd",
+            "1f40efe6-dafa-5cbf-b4da-19754b8ff915",
+            "774a35ba-490c-5618-b218-e576c372bf5e"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 91.4,
+      "Text": "NOTE.",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.028039,
+          "Height": 0.01096,
+          "Left": 0.121569,
+          "Top": 0.634242
+        }
+      },
+      "Id": "b7b38656-edae-5221-b283-87d98c2b58c1"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.2,
+      "Text": "An",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.011225,
+          "Height": 0.01096,
+          "Left": 0.155212,
+          "Top": 0.634242
+        }
+      },
+      "Id": "22ddcc7e-e91d-5219-83ec-f8198008a929"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.4,
+      "Text": "additional",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.056078,
+          "Height": 0.01096,
+          "Left": 0.172042,
+          "Top": 0.634242
+        }
+      },
+      "Id": "c8f18c4b-f108-55a6-9876-03a1d0d3c2d3"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.8,
+      "Text": "Net",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.01683,
+          "Height": 0.01096,
+          "Left": 0.233725,
+          "Top": 0.634242
+        }
+      },
+      "Id": "743b24ee-bace-5a97-a9f0-9b1d7c2ab4b4"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.9,
+      "Text": "Investment",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.056078,
+          "Height": 0.01096,
+          "Left": 0.25616,
+          "Top": 0.634242
+        }
+      },
+      "Id": "dab1d89a-ffe9-5bda-a2de-e83ffea288f7"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 93.2,
+      "Text": "Income",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.033644,
+          "Height": 0.01096,
+          "Left": 0.317859,
+          "Top": 0.634242
+        }
+      },
+      "Id": "80246327-3b7a-56f2-bef0-bc3db3fe9e11"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 97.1,
+      "Text": "Tax",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.01683,
+          "Height": 0.01096,
+          "Left": 0.357108,
+          "Top": 0.634242
+        }
+      },
+      "Id": "e0031a04-c8a9-537c-a00b-349dcd01595a"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 92.6,
+      "Text": "of",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.011209,
+          "Height": 0.01096,
+          "Left": 0.379542,
+          "Top": 0.634242
+        }
+      },
+      "Id": "95975067-61ce-5d0b-87eb-584230295c76"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.1,
+      "Text": "3.8",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.016814,
+          "Height": 0.01096,
+          "Left": 0.396373,
+          "Top": 0.634242
+        }
+      },
+      "Id": "fcd6d225-e0ab-5241-a7dd-0fdd4ad42ac1"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.8,
+      "Text": "percent",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.039248,
+          "Height": 0.01096,
+          "Left": 0.418807,
+          "Top": 0.634242
+        }
+      },
+      "Id": "ce680d03-7ad9-5b5a-9198-5e2f3ef23a49"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 91.4,
+      "Text": "applies",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.039265,
+          "Height": 0.01096,
+          "Left": 0.46366,
+          "Top": 0.634242
+        }
+      },
+      "Id": "a7044eb0-2bf6-50b7-a766-d97a7119c034"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.2,
+      "Text": "to",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.011209,
+          "Height": 0.01096,
+          "Left": 0.508529,
+          "Top": 0.634242
+        }
+      },
+      "Id": "d19b57ce-4def-5be4-8bba-40ab01f48a17"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.4,
+      "Text": "the",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.016814,
+          "Height": 0.01096,
+          "Left": 0.525359,
+          "Top": 0.634242
+        }
+      },
+      "Id": "2d835cff-d4bb-5c3b-9e53-bcfdd274d16e"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.8,
+      "Text": "lesser",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.033644,
+          "Height": 0.01096,
+          "Left": 0.547794,
+          "Top": 0.634242
+        }
+      },
+      "Id": "278f25d1-5a3a-502e-8d33-e6084834d338"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.9,
+      "Text": "of",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.011225,
+          "Height": 0.01096,
+          "Left": 0.587042,
+          "Top": 0.634242
+        }
+      },
+      "Id": "1a387e38-f909-5214-af9d-5e82984dc416"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 93.2,
+      "Text": "net",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.016814,
+          "Height": 0.01096,
+          "Left": 0.603873,
+          "Top": 0.634242
+        }
+      },
+      "Id": "16f1e061-61a4-52ee-977b-a85ae3687e70"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 97.1,
+      "Text": "investment",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.056078,
+          "Height": 0.01096,
+          "Left": 0.626307,
+          "Top": 0.634242
+        }
+      },
+      "Id": "aad51da7-c17e-502d-96c2-2f309d39d5ba"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 92.6,
+      "Text": "income",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.033644,
+          "Height": 0.01096,
+          "Left": 0.68799,
+          "Top": 0.634242
+        }
+      },
+      "Id": "5ab675f8-a13c-5f29-a93f-f126566e952a"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.1,
+      "Text": "or",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.011209,
+          "Height": 0.01096,
+          "Left": 0.727255,
+          "Top": 0.634242
+        }
+      },
+      "Id": "563a86b7-0243-5a9b-ab47-18ddaac0c523"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.8,
+      "Text": "the",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.01683,
+          "Height": 0.01096,
+          "Left": 0.744069,
+          "Top": 0.634242
+        }
+      },
+      "Id": "5b21cf02-7894-52bd-818c-4e4c7a689e62"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 91.4,
+      "Text": "excess",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.033644,
+          "Height": 0.01096,
+          "Left": 0.766503,
+          "Top": 0.634242
+        }
+      },
+      "Id": "1bd43788-ca28-5701-b4ab-0ceef4c4e0dd"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.2,
+      "Text": "of",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.011209,
+          "Height": 0.01096,
+          "Left": 0.805768,
+          "Top": 0.634242
+        }
+      },
+      "Id": "1f40efe6-dafa-5cbf-b4da-19754b8ff915"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.4,
+      "Text": "modified",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.044869,
+          "Height": 0.01096,
+          "Left": 0.822582,
+          "Top": 0.634242
+        }
+      },
+      "Id": "774a35ba-490c-5618-b218-e576c372bf5e"
+    },
+    {
+      "BlockType": "LINE",
+      "Confidence": 91.4,
+      "Text": "adjusted gross income over $200,000 (single and head of household), $250,000 (married filing jointly) or $125,000 (married filing separately).",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.745882,
+          "Height": 0.010985,
+          "Left": 0.121569,
+          "Top": 0.647096
+        }
+      },
+      "Id": "3d3b18b1-9220-5da2-b6a7-591a0f597a99",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "41f772d4-35bc-59cd-9b45-e1b93599cb0e",
+            "7c6d4098-240f-5cd3-abdc-b436882ee453",
+            "3eec023b-f5aa-58f1-96bc-f1da88296d1c",
+            "bde95eed-1200-5bcf-93c5-c3cc61343c9c",
+            "26a35e51-4f6c-53f3-b1d2-f8f6a76131a4",
+            "32a36436-0f44-5e2a-b839-3d679cba5dde",
+            "4ab6c72e-6b98-5760-a905-f650ab045f3c",
+            "dd75ba2a-88f4-57f7-a37f-7a3ed24e5b47",
+            "629459da-017a-5017-a587-88e0300884ac",
+            "7dbba22a-cbb4-5d7f-9e24-5a4dbd487b9d",
+            "b0b32210-07c2-53cc-b17f-6e6b962b28fe",
+            "9965e3ce-a9ce-571d-bc62-1a66d9252473",
+            "a91247b2-4503-59bb-a969-4fca505c2f3b",
+            "06bda5f5-8d33-5c1f-b32c-68c4b2034f27",
+            "cc433e24-4eec-5963-9e86-6bec845482d1",
+            "281332da-78f8-5ec6-9e8a-7319bc2ca5c2",
+            "da85842d-1a0f-51cb-ad59-37d086bb4760",
+            "ec463c7a-eaf6-518f-8d76-f0c16a3a6f14",
+            "5e247035-3dcf-5a7e-a4d1-ce57fd9d6ac8"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.8,
+      "Text": "adjusted",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.042026,
+          "Height": 0.010985,
+          "Left": 0.121569,
+          "Top": 0.647096
+        }
+      },
+      "Id": "41f772d4-35bc-59cd-9b45-e1b93599cb0e"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.9,
+      "Text": "gross",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.026275,
+          "Height": 0.010985,
+          "Left": 0.16884,
+          "Top": 0.647096
+        }
+      },
+      "Id": "7c6d4098-240f-5cd3-abdc-b436882ee453"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 93.2,
+      "Text": "income",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.03152,
+          "Height": 0.010985,
+          "Left": 0.200359,
+          "Top": 0.647096
+        }
+      },
+      "Id": "3eec023b-f5aa-58f1-96bc-f1da88296d1c"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 97.1,
+      "Text": "over",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.021013,
+          "Height": 0.010985,
+          "Left": 0.237124,
+          "Top": 0.647096
+        }
+      },
+      "Id": "bde95eed-1200-5bcf-93c5-c3cc61343c9c"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 92.6,
+      "Text": "$200,000",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.04201,
+          "Height": 0.010985,
+          "Left": 0.263399,
+          "Top": 0.647096
+        }
+      },
+      "Id": "26a35e51-4f6c-53f3-b1d2-f8f6a76131a4"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.1,
+      "Text": "(single",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.036765,
+          "Height": 0.010985,
+          "Left": 0.31067,
+          "Top": 0.647096
+        }
+      },
+      "Id": "32a36436-0f44-5e2a-b839-3d679cba5dde"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.8,
+      "Text": "and",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.015768,
+          "Height": 0.010985,
+          "Left": 0.35268,
+          "Top": 0.647096
+        }
+      },
+      "Id": "4ab6c72e-6b98-5760-a905-f650ab045f3c"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 91.4,
+      "Text": "head",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.021013,
+          "Height": 0.010985,
+          "Left": 0.373693,
+          "Top": 0.647096
+        }
+      },
+      "Id": "dd75ba2a-88f4-57f7-a37f-7a3ed24e5b47"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.2,
+      "Text": "of",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.010507,
+          "Height": 0.010985,
+          "Left": 0.399967,
+          "Top": 0.647096
+        }
+      },
+      "Id": "629459da-017a-5017-a587-88e0300884ac"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.4,
+      "Text": "household),",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.057778,
+          "Height": 0.010985,
+          "Left": 0.415719,
+          "Top": 0.647096
+        }
+      },
+      "Id": "7dbba22a-cbb4-5d7f-9e24-5a4dbd487b9d"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.8,
+      "Text": "$250,000",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.04201,
+          "Height": 0.010985,
+          "Left": 0.478758,
+          "Top": 0.647096
+        }
+      },
+      "Id": "b0b32210-07c2-53cc-b17f-6e6b962b28fe"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.9,
+      "Text": "(married",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.042026,
+          "Height": 0.010985,
+          "Left": 0.526029,
+          "Top": 0.647096
+        }
+      },
+      "Id": "9965e3ce-a9ce-571d-bc62-1a66d9252473"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 93.2,
+      "Text": "filing",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.03152,
+          "Height": 0.010985,
+          "Left": 0.573301,
+          "Top": 0.647096
+        }
+      },
+      "Id": "a91247b2-4503-59bb-a969-4fca505c2f3b"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 97.1,
+      "Text": "jointly)",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.042026,
+          "Height": 0.010985,
+          "Left": 0.610065,
+          "Top": 0.647096
+        }
+      },
+      "Id": "06bda5f5-8d33-5c1f-b32c-68c4b2034f27"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 92.6,
+      "Text": "or",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.010507,
+          "Height": 0.010985,
+          "Left": 0.657337,
+          "Top": 0.647096
+        }
+      },
+      "Id": "cc433e24-4eec-5963-9e86-6bec845482d1"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.1,
+      "Text": "$125,000",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.042026,
+          "Height": 0.010985,
+          "Left": 0.673105,
+          "Top": 0.647096
+        }
+      },
+      "Id": "281332da-78f8-5ec6-9e8a-7319bc2ca5c2"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.8,
+      "Text": "(married",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.042026,
+          "Height": 0.010985,
+          "Left": 0.720376,
+          "Top": 0.647096
+        }
+      },
+      "Id": "da85842d-1a0f-51cb-ad59-37d086bb4760"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 91.4,
+      "Text": "filing",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.03152,
+          "Height": 0.010985,
+          "Left": 0.767647,
+          "Top": 0.647096
+        }
+      },
+      "Id": "ec463c7a-eaf6-518f-8d76-f0c16a3a6f14"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.2,
+      "Text": "separately).",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.063039,
+          "Height": 0.010985,
+          "Left": 0.804412,
+          "Top": 0.647096
+        }
+      },
+      "Id": "5e247035-3dcf-5a7e-a4d1-ce57fd9d6ac8"
+    },
+    {
+      "BlockType": "LINE",
+      "Confidence": 91.4,
+      "Text": "This surtax is imposed in addition to the rates shown in Table 1 and is not reflected in those rates.",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.554902,
+          "Height": 0.011162,
+          "Left": 0.121569,
+          "Top": 0.660354
+        }
+      },
+      "Id": "5aa85a4f-e9f9-575a-8706-5aa4f62f6685",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "7eb6ad8b-abcf-5589-89c0-09081bba202c",
+            "154e2f5c-3c24-53ec-bbdd-9e853e7d5c65",
+            "7c144de7-a46c-5ed9-8ce7-16b4a25a2e1c",
+            "a0b519e0-8074-54a9-bad6-d040604709d9",
+            "d54981f0-47ec-54b8-b7d1-dce641d6c97b",
+            "166c4b67-cb28-59ef-800a-5f7240ba2bcb",
+            "6cb0616d-6619-5d83-84bb-d8c2a72dc87a",
+            "7b78dacb-8f46-5b1d-8b22-04e2ec5b01a2",
+            "36709b9c-375d-5d71-88d6-bd3e2a25b6be",
+            "adff4121-8245-55fe-9061-aa01e77e76b1",
+            "95968665-fe7b-5e17-a702-50a4a0fbcbdd",
+            "a3b15321-ed73-5c46-8ddb-979cd1883469",
+            "4ad6bcb4-f13e-5fe8-b92d-06b6af9646b5",
+            "559f5e50-61b0-5323-90d9-e95abcdeb453",
+            "7b512293-18b3-54a1-a68c-fce8720153d1",
+            "cf6ff2bd-016d-5ef3-ba16-d987b054a21a",
+            "7fccbbd2-f627-5adb-b76c-b9f96e1e18a2",
+            "1d852dee-3fa8-519b-a2f2-89f7e4a31116",
+            "83851f1e-262b-5694-9086-9a04e2e4ee7a",
+            "952366cc-5104-5577-b806-352b4ddc8624"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.4,
+      "Text": "This",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.021977,
+          "Height": 0.011162,
+          "Left": 0.121569,
+          "Top": 0.660354
+        }
+      },
+      "Id": "7eb6ad8b-abcf-5589-89c0-09081bba202c"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.8,
+      "Text": "surtax",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.032974,
+          "Height": 0.011162,
+          "Left": 0.149036,
+          "Top": 0.660354
+        }
+      },
+      "Id": "154e2f5c-3c24-53ec-bbdd-9e853e7d5c65"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.9,
+      "Text": "is",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.01098,
+          "Height": 0.011162,
+          "Left": 0.1875,
+          "Top": 0.660354
+        }
+      },
+      "Id": "7c144de7-a46c-5ed9-8ce7-16b4a25a2e1c"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 93.2,
+      "Text": "imposed",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.038448,
+          "Height": 0.011162,
+          "Left": 0.203987,
+          "Top": 0.660354
+        }
+      },
+      "Id": "a0b519e0-8074-54a9-bad6-d040604709d9"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 97.1,
+      "Text": "in",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.010997,
+          "Height": 0.011162,
+          "Left": 0.247925,
+          "Top": 0.660354
+        }
+      },
+      "Id": "d54981f0-47ec-54b8-b7d1-dce641d6c97b"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 92.6,
+      "Text": "addition",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.043954,
+          "Height": 0.011162,
+          "Left": 0.264412,
+          "Top": 0.660354
+        }
+      },
+      "Id": "166c4b67-cb28-59ef-800a-5f7240ba2bcb"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.1,
+      "Text": "to",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.010997,
+          "Height": 0.011162,
+          "Left": 0.313856,
+          "Top": 0.660354
+        }
+      },
+      "Id": "6cb0616d-6619-5d83-84bb-d8c2a72dc87a"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.8,
+      "Text": "the",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.016487,
+          "Height": 0.011162,
+          "Left": 0.330343,
+          "Top": 0.660354
+        }
+      },
+      "Id": "7b78dacb-8f46-5b1d-8b22-04e2ec5b01a2"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 91.4,
+      "Text": "rates",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.027467,
+          "Height": 0.011162,
+          "Left": 0.35232,
+          "Top": 0.660354
+        }
+      },
+      "Id": "36709b9c-375d-5d71-88d6-bd3e2a25b6be"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.2,
+      "Text": "shown",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.027484,
+          "Height": 0.011162,
+          "Left": 0.385278,
+          "Top": 0.660354
+        }
+      },
+      "Id": "adff4121-8245-55fe-9061-aa01e77e76b1"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.4,
+      "Text": "in",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.01098,
+          "Height": 0.011162,
+          "Left": 0.418252,
+          "Top": 0.660354
+        }
+      },
+      "Id": "95968665-fe7b-5e17-a702-50a4a0fbcbdd"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.8,
+      "Text": "Table",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.027467,
+          "Height": 0.011162,
+          "Left": 0.434739,
+          "Top": 0.660354
+        }
+      },
+      "Id": "a3b15321-ed73-5c46-8ddb-979cd1883469"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.9,
+      "Text": "1",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.00549,
+          "Height": 0.011162,
+          "Left": 0.467696,
+          "Top": 0.660354
+        }
+      },
+      "Id": "4ad6bcb4-f13e-5fe8-b92d-06b6af9646b5"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 93.2,
+      "Text": "and",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.016487,
+          "Height": 0.011162,
+          "Left": 0.478676,
+          "Top": 0.660354
+        }
+      },
+      "Id": "559f5e50-61b0-5323-90d9-e95abcdeb453"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 97.1,
+      "Text": "is",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.010997,
+          "Height": 0.011162,
+          "Left": 0.500654,
+          "Top": 0.660354
+        }
+      },
+      "Id": "7b512293-18b3-54a1-a68c-fce8720153d1"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 92.6,
+      "Text": "not",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.016487,
+          "Height": 0.011162,
+          "Left": 0.517141,
+          "Top": 0.660354
+        }
+      },
+      "Id": "cf6ff2bd-016d-5ef3-ba16-d987b054a21a"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.1,
+      "Text": "reflected",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.049444,
+          "Height": 0.011162,
+          "Left": 0.539118,
+          "Top": 0.660354
+        }
+      },
+      "Id": "7fccbbd2-f627-5adb-b76c-b9f96e1e18a2"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.8,
+      "Text": "in",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.010997,
+          "Height": 0.011162,
+          "Left": 0.594052,
+          "Top": 0.660354
+        }
+      },
+      "Id": "1d852dee-3fa8-519b-a2f2-89f7e4a31116"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 91.4,
+      "Text": "those",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.027467,
+          "Height": 0.011162,
+          "Left": 0.610539,
+          "Top": 0.660354
+        }
+      },
+      "Id": "83851f1e-262b-5694-9086-9a04e2e4ee7a"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.2,
+      "Text": "rates.",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.032958,
+          "Height": 0.011162,
+          "Left": 0.643513,
+          "Top": 0.660354
+        }
+      },
+      "Id": "952366cc-5104-5577-b806-352b4ddc8624"
+    },
+    {
+      "BlockType": "LINE",
+      "Confidence": 91.4,
+      "Text": "Synthetic sample data for systems evaluation. Not an authoritative tax publication.",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.463791,
+          "Height": 0.008182,
+          "Left": 0.111373,
+          "Top": 0.948485
+        }
+      },
+      "Id": "ca63a6be-2e42-554e-b287-92a0b7adba79",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "a534a8f0-cc30-5f85-90b5-f0e57d0dddff",
+            "83e32043-e515-5265-8fa1-1f58382bec1b",
+            "750593cb-00bb-528c-a4e3-7c651387583a",
+            "44b2fbaa-857f-574d-b118-11c5402489fc",
+            "0b96b02d-ac8b-51ff-9928-01ecbaccd54c",
+            "d01d90bf-9520-5133-9962-03a4d15daf17",
+            "a889a5a1-0c77-5cff-9f0d-cbe8ae8f3523",
+            "05574cce-ea80-57e1-9534-3fdf2dc0360f",
+            "1d1c4728-56b9-5cdb-be6b-63b1593f2666",
+            "6b5f490f-0735-5f55-91be-b78c405b6055",
+            "f9ef15b0-de01-519a-9e9f-be77632456db"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.4,
+      "Text": "Synthetic",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.050294,
+          "Height": 0.008182,
+          "Left": 0.111373,
+          "Top": 0.948485
+        }
+      },
+      "Id": "a534a8f0-cc30-5f85-90b5-f0e57d0dddff"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.8,
+      "Text": "sample",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.033529,
+          "Height": 0.008182,
+          "Left": 0.167255,
+          "Top": 0.948485
+        }
+      },
+      "Id": "83e32043-e515-5265-8fa1-1f58382bec1b"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.9,
+      "Text": "data",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.022337,
+          "Height": 0.008182,
+          "Left": 0.206373,
+          "Top": 0.948485
+        }
+      },
+      "Id": "750593cb-00bb-528c-a4e3-7c651387583a"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 93.2,
+      "Text": "for",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.016765,
+          "Height": 0.008182,
+          "Left": 0.234297,
+          "Top": 0.948485
+        }
+      },
+      "Id": "44b2fbaa-857f-574d-b118-11c5402489fc"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 97.1,
+      "Text": "systems",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.039118,
+          "Height": 0.008182,
+          "Left": 0.25665,
+          "Top": 0.948485
+        }
+      },
+      "Id": "0b96b02d-ac8b-51ff-9928-01ecbaccd54c"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 92.6,
+      "Text": "evaluation.",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.061471,
+          "Height": 0.008182,
+          "Left": 0.301356,
+          "Top": 0.948485
+        }
+      },
+      "Id": "d01d90bf-9520-5133-9962-03a4d15daf17"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.1,
+      "Text": "Not",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.016765,
+          "Height": 0.008182,
+          "Left": 0.368415,
+          "Top": 0.948485
+        }
+      },
+      "Id": "a889a5a1-0c77-5cff-9f0d-cbe8ae8f3523"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.8,
+      "Text": "an",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.011176,
+          "Height": 0.008182,
+          "Left": 0.390768,
+          "Top": 0.948485
+        }
+      },
+      "Id": "05574cce-ea80-57e1-9534-3fdf2dc0360f"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 91.4,
+      "Text": "authoritative",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.072631,
+          "Height": 0.008182,
+          "Left": 0.407533,
+          "Top": 0.948485
+        }
+      },
+      "Id": "1d1c4728-56b9-5cdb-be6b-63b1593f2666"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.2,
+      "Text": "tax",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.016765,
+          "Height": 0.008182,
+          "Left": 0.485752,
+          "Top": 0.948485
+        }
+      },
+      "Id": "6b5f490f-0735-5f55-91be-b78c405b6055"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 96.4,
+      "Text": "publication.",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.067059,
+          "Height": 0.008182,
+          "Left": 0.508105,
+          "Top": 0.948485
+        }
+      },
+      "Id": "f9ef15b0-de01-519a-9e9f-be77632456db"
+    },
+    {
+      "BlockType": "LINE",
+      "Confidence": 93.2,
+      "Text": "CG-2025/07 \u2014 1",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.101569,
+          "Height": 0.008182,
+          "Left": 0.784314,
+          "Top": 0.948485
+        }
+      },
+      "Id": "1999c376-1f13-5a99-89d4-e541faea28cc",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "4d631f67-b255-54bf-bba8-d50d84676c50",
+            "5b8bcef6-4443-5ca1-9cfc-0db291ee6471",
+            "35ca5fb0-6905-5ea9-83b5-94f6c5075428"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 94.8,
+      "Text": "CG-2025/07",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.072549,
+          "Height": 0.008182,
+          "Left": 0.784314,
+          "Top": 0.948485
+        }
+      },
+      "Id": "4d631f67-b255-54bf-bba8-d50d84676c50"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 95.9,
+      "Text": "\u2014",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.007255,
+          "Height": 0.008182,
+          "Left": 0.864118,
+          "Top": 0.948485
+        }
+      },
+      "Id": "5b8bcef6-4443-5ca1-9cfc-0db291ee6471"
+    },
+    {
+      "BlockType": "WORD",
+      "Confidence": 93.2,
+      "Text": "1",
+      "TextType": "PRINTED",
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.007255,
+          "Height": 0.008182,
+          "Left": 0.878627,
+          "Top": 0.948485
+        }
+      },
+      "Id": "35ca5fb0-6905-5ea9-83b5-94f6c5075428"
+    },
+    {
+      "BlockType": "TABLE",
+      "Confidence": 99.0,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.829412,
+          "Height": 0.145455,
+          "Left": 0.085098,
+          "Top": 0.318182
+        }
+      },
+      "Id": "fb2dc4a6-048d-5d62-9ea4-aa9ff2063302",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "586680c4-3939-5082-945c-7abacd3e7a15",
+            "83826ade-49fb-5ac2-8fd2-e3c9be1450f6",
+            "ab90a3db-1783-5149-8244-039bd99ed779",
+            "3bfead3e-4893-5d0b-b335-4f144eef4502",
+            "7cd9df74-249b-5f0d-b91a-fff5004d479c",
+            "67bf007c-5c35-52fa-b5c3-f655a2a02674",
+            "85b4840b-6b32-5620-912b-dc8160cbf4d3",
+            "4cc9aac0-9d73-5fd2-9fdc-ade244d62641",
+            "ef5ea7c3-ae67-5f30-b40b-6485603ce4f1",
+            "2f716e60-1e24-5cd6-b002-5279fc065684",
+            "0d037524-ed2d-5b61-bbc0-ca8ee2559d94",
+            "42c686ad-44f3-53ab-b972-e88b78c80a3e",
+            "bab99edc-735c-5940-907b-6db6030c4a13",
+            "3d604a93-f285-5192-95a5-5b4bc9065e79",
+            "5347e2d6-172f-533d-86ee-82da66966a07",
+            "0d41075c-3fbb-5bdc-af0f-b9a32c4b7528",
+            "3b1590cb-9163-5c15-a877-c4be543c519d",
+            "2f38eec3-7fe6-52a5-99e0-51f9c4736d6b",
+            "da9e67c3-77b4-5496-997b-58746e14f6f2",
+            "c7c8de00-b8c4-58e4-96ca-e2dd3d92c966",
+            "b2c0f5a5-7542-5e46-9e51-63ae870aac8e",
+            "c2bfc6d9-1974-56ed-a817-7e49438a4122",
+            "ed69b054-1f4a-594d-a808-9a6be6d74218",
+            "30135773-862a-5c61-97f7-a2c6aa87d82f",
+            "664142b9-16f6-53a6-ba31-2249cd7cc749",
+            "5f0234b3-4522-5d5c-8b18-ccfd266893e8"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "CELL",
+      "Confidence": 98.0,
+      "RowIndex": 1,
+      "ColumnIndex": 1,
+      "RowSpan": 1,
+      "ColumnSpan": 1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.1,
+          "Height": 0.025758,
+          "Left": 0.085098,
+          "Top": 0.318182
+        }
+      },
+      "Id": "586680c4-3939-5082-945c-7abacd3e7a15",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "499c4f96-8ad4-549b-96bc-6a3bf440d297",
+            "5c9c73b5-678e-5170-8d82-67642b6b58cc"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "CELL",
+      "Confidence": 98.0,
+      "RowIndex": 1,
+      "ColumnIndex": 2,
+      "RowSpan": 1,
+      "ColumnSpan": 1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.176471,
+          "Height": 0.025758,
+          "Left": 0.185098,
+          "Top": 0.318182
+        }
+      },
+      "Id": "83826ade-49fb-5ac2-8fd2-e3c9be1450f6",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "ea2f2683-322b-597c-9abe-39d2b809d4eb",
+            "5578f874-0f49-5e24-acac-e29290271a9b",
+            "5f0e9b41-0e8b-54f4-ba0b-6f0258f4c98d",
+            "61199ba0-fe03-557b-a83d-524c9beb8cfa"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "CELL",
+      "Confidence": 98.0,
+      "RowIndex": 1,
+      "ColumnIndex": 3,
+      "RowSpan": 1,
+      "ColumnSpan": 1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.188235,
+          "Height": 0.025758,
+          "Left": 0.361569,
+          "Top": 0.318182
+        }
+      },
+      "Id": "ab90a3db-1783-5149-8244-039bd99ed779",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "f08afebf-be3b-5701-8a95-36794b506e4e",
+            "e0da3e07-dffa-566a-806f-a6e094de8068",
+            "3e146026-c591-589e-ae12-ecefbee44288",
+            "a692fe91-9acb-58d9-870c-0c097564efeb"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "CELL",
+      "Confidence": 98.0,
+      "RowIndex": 1,
+      "ColumnIndex": 4,
+      "RowSpan": 1,
+      "ColumnSpan": 1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.188235,
+          "Height": 0.025758,
+          "Left": 0.549804,
+          "Top": 0.318182
+        }
+      },
+      "Id": "3bfead3e-4893-5d0b-b335-4f144eef4502"
+    },
+    {
+      "BlockType": "CELL",
+      "Confidence": 98.0,
+      "RowIndex": 1,
+      "ColumnIndex": 5,
+      "RowSpan": 1,
+      "ColumnSpan": 1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.176471,
+          "Height": 0.025758,
+          "Left": 0.738039,
+          "Top": 0.318182
+        }
+      },
+      "Id": "7cd9df74-249b-5f0d-b91a-fff5004d479c"
+    },
+    {
+      "BlockType": "MERGED_CELL",
+      "Confidence": 96.0,
+      "RowIndex": 1,
+      "ColumnIndex": 1,
+      "RowSpan": 1,
+      "ColumnSpan": 3,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.464706,
+          "Height": 0.025758,
+          "Left": 0.085098,
+          "Top": 0.318182
+        }
+      },
+      "Id": "67bf007c-5c35-52fa-b5c3-f655a2a02674",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "586680c4-3939-5082-945c-7abacd3e7a15",
+            "83826ade-49fb-5ac2-8fd2-e3c9be1450f6",
+            "ab90a3db-1783-5149-8244-039bd99ed779"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "CELL",
+      "Confidence": 98.0,
+      "RowIndex": 2,
+      "ColumnIndex": 1,
+      "RowSpan": 1,
+      "ColumnSpan": 1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.1,
+          "Height": 0.029798,
+          "Left": 0.085098,
+          "Top": 0.343939
+        }
+      },
+      "Id": "85b4840b-6b32-5620-912b-dc8160cbf4d3",
+      "EntityTypes": [
+        "COLUMN_HEADER"
+      ],
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "20e3138c-bfad-5b57-a566-de80d59b5abd"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "CELL",
+      "Confidence": 98.0,
+      "RowIndex": 2,
+      "ColumnIndex": 2,
+      "RowSpan": 1,
+      "ColumnSpan": 1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.176471,
+          "Height": 0.029798,
+          "Left": 0.185098,
+          "Top": 0.343939
+        }
+      },
+      "Id": "4cc9aac0-9d73-5fd2-9fdc-ade244d62641",
+      "EntityTypes": [
+        "COLUMN_HEADER"
+      ],
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "83e75e12-24ce-5e44-b67a-aee9b243177a"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "CELL",
+      "Confidence": 98.0,
+      "RowIndex": 2,
+      "ColumnIndex": 3,
+      "RowSpan": 1,
+      "ColumnSpan": 1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.188235,
+          "Height": 0.029798,
+          "Left": 0.361569,
+          "Top": 0.343939
+        }
+      },
+      "Id": "ef5ea7c3-ae67-5f30-b40b-6485603ce4f1",
+      "EntityTypes": [
+        "COLUMN_HEADER"
+      ],
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "f8edeec6-8d14-59ce-ae9d-be091bf5f5dc",
+            "97985bb6-2728-5f6b-9d7c-a3046b8bfd70",
+            "3316644a-ba11-508c-a2fa-779eb76fd4ec"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "CELL",
+      "Confidence": 98.0,
+      "RowIndex": 2,
+      "ColumnIndex": 4,
+      "RowSpan": 1,
+      "ColumnSpan": 1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.188235,
+          "Height": 0.029798,
+          "Left": 0.549804,
+          "Top": 0.343939
+        }
+      },
+      "Id": "2f716e60-1e24-5cd6-b002-5279fc065684",
+      "EntityTypes": [
+        "COLUMN_HEADER"
+      ],
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "bf8487ab-cb26-5b0d-883f-00fd90adaf75",
+            "bb2ea9e3-d6dc-5b4a-855e-992e389f0dfe",
+            "914a5888-839b-589a-af75-1c293e13a506"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "CELL",
+      "Confidence": 98.0,
+      "RowIndex": 2,
+      "ColumnIndex": 5,
+      "RowSpan": 1,
+      "ColumnSpan": 1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.176471,
+          "Height": 0.029798,
+          "Left": 0.738039,
+          "Top": 0.343939
+        }
+      },
+      "Id": "0d037524-ed2d-5b61-bbc0-ca8ee2559d94",
+      "EntityTypes": [
+        "COLUMN_HEADER"
+      ],
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "681233f7-cfb8-5c87-9932-d2855adde7f6",
+            "e72a0843-ed30-5e9e-a52e-fb857885a4ee",
+            "a2bd4a20-cba3-5a33-bb90-7245159573e5"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "CELL",
+      "Confidence": 98.0,
+      "RowIndex": 3,
+      "ColumnIndex": 1,
+      "RowSpan": 1,
+      "ColumnSpan": 1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.1,
+          "Height": 0.030303,
+          "Left": 0.085098,
+          "Top": 0.373737
+        }
+      },
+      "Id": "42c686ad-44f3-53ab-b972-e88b78c80a3e",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "67dddfe7-92aa-5c66-8f3b-dc42cc50a843",
+            "e7454269-9a2e-52e6-87ba-f5e57b331e80"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "CELL",
+      "Confidence": 98.0,
+      "RowIndex": 3,
+      "ColumnIndex": 2,
+      "RowSpan": 1,
+      "ColumnSpan": 1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.176471,
+          "Height": 0.030303,
+          "Left": 0.185098,
+          "Top": 0.373737
+        }
+      },
+      "Id": "bab99edc-735c-5940-907b-6db6030c4a13",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "2f43a580-0674-50ed-bf18-d2159ef4e6ac",
+            "4825c697-f2f9-50a4-94c8-ceae2aa7c7d5",
+            "8bb79689-cb47-56ed-9eca-f9733e2b8585"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "CELL",
+      "Confidence": 98.0,
+      "RowIndex": 3,
+      "ColumnIndex": 3,
+      "RowSpan": 1,
+      "ColumnSpan": 1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.188235,
+          "Height": 0.030303,
+          "Left": 0.361569,
+          "Top": 0.373737
+        }
+      },
+      "Id": "3d604a93-f285-5192-95a5-5b4bc9065e79",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "e2e5f60a-8f06-59b9-bb3b-5776796db4d8",
+            "36e2e41e-1460-51c9-948f-7d0fdf5ec369",
+            "9a550f0d-7ef7-53c9-af1c-fa91999d04fe"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "CELL",
+      "Confidence": 98.0,
+      "RowIndex": 3,
+      "ColumnIndex": 4,
+      "RowSpan": 1,
+      "ColumnSpan": 1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.188235,
+          "Height": 0.030303,
+          "Left": 0.549804,
+          "Top": 0.373737
+        }
+      },
+      "Id": "5347e2d6-172f-533d-86ee-82da66966a07",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "cf60ac11-a303-57cd-8b03-748560d36645",
+            "905b7d88-44e1-53a3-bc19-306f5a26167e",
+            "220dff57-60b7-559d-b2ca-245b6e68c9da"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "CELL",
+      "Confidence": 98.0,
+      "RowIndex": 3,
+      "ColumnIndex": 5,
+      "RowSpan": 1,
+      "ColumnSpan": 1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.176471,
+          "Height": 0.030303,
+          "Left": 0.738039,
+          "Top": 0.373737
+        }
+      },
+      "Id": "0d41075c-3fbb-5bdc-af0f-b9a32c4b7528",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "7c336ecd-7d47-55e8-be5f-b4333ad5b6fe",
+            "9c598486-576c-58b6-bd96-61c0d5334cd7",
+            "1c546ae9-aa7b-5e51-84b3-89576401a536"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "CELL",
+      "Confidence": 98.0,
+      "RowIndex": 4,
+      "ColumnIndex": 1,
+      "RowSpan": 1,
+      "ColumnSpan": 1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.1,
+          "Height": 0.029798,
+          "Left": 0.085098,
+          "Top": 0.40404
+        }
+      },
+      "Id": "3b1590cb-9163-5c15-a877-c4be543c519d",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "eab31010-3be8-5514-a252-2c44a8a9b4e5",
+            "2830b80a-970b-56f3-9b6b-b5f846b4ba2d"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "CELL",
+      "Confidence": 98.0,
+      "RowIndex": 4,
+      "ColumnIndex": 2,
+      "RowSpan": 1,
+      "ColumnSpan": 1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.176471,
+          "Height": 0.029798,
+          "Left": 0.185098,
+          "Top": 0.40404
+        }
+      },
+      "Id": "2f38eec3-7fe6-52a5-99e0-51f9c4736d6b",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "9a87de57-c72d-57dd-aa2e-d20c07927937",
+            "0e7af290-7668-583f-8ca9-9ec84a1d47e7",
+            "dfd63afe-93da-506c-b4af-e2217ab5abff"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "CELL",
+      "Confidence": 98.0,
+      "RowIndex": 4,
+      "ColumnIndex": 3,
+      "RowSpan": 1,
+      "ColumnSpan": 1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.188235,
+          "Height": 0.029798,
+          "Left": 0.361569,
+          "Top": 0.40404
+        }
+      },
+      "Id": "da9e67c3-77b4-5496-997b-58746e14f6f2",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "944c56e0-05ec-5a53-89d2-a619699353d6",
+            "2d165c4d-7e85-5dcc-866e-52c834912816",
+            "c48303c7-88ce-5505-8bd0-c46d210d3d56"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "CELL",
+      "Confidence": 98.0,
+      "RowIndex": 4,
+      "ColumnIndex": 4,
+      "RowSpan": 1,
+      "ColumnSpan": 1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.188235,
+          "Height": 0.029798,
+          "Left": 0.549804,
+          "Top": 0.40404
+        }
+      },
+      "Id": "c7c8de00-b8c4-58e4-96ca-e2dd3d92c966",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "c265a640-272f-5b18-ac4d-3c5a4323dbbf",
+            "77aa9731-0bd2-5c65-b63b-93c5f84dcebd",
+            "7b0b2b4b-bab5-51d1-b383-fc56a427cc9f"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "CELL",
+      "Confidence": 98.0,
+      "RowIndex": 4,
+      "ColumnIndex": 5,
+      "RowSpan": 1,
+      "ColumnSpan": 1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.176471,
+          "Height": 0.029798,
+          "Left": 0.738039,
+          "Top": 0.40404
+        }
+      },
+      "Id": "b2c0f5a5-7542-5e46-9e51-63ae870aac8e",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "68849662-e680-59f6-976f-1b7c1858446f",
+            "025513ac-8900-510c-9157-d508a24b8889",
+            "827f94b4-afb9-5fce-8732-ca89201c539f"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "CELL",
+      "Confidence": 98.0,
+      "RowIndex": 5,
+      "ColumnIndex": 1,
+      "RowSpan": 1,
+      "ColumnSpan": 1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.1,
+          "Height": 0.029798,
+          "Left": 0.085098,
+          "Top": 0.433838
+        }
+      },
+      "Id": "c2bfc6d9-1974-56ed-a817-7e49438a4122",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "1bfba41d-7483-5bbe-8fc4-d297fcb91173",
+            "4fedc5e0-9921-53f3-9545-8c03330904ec"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "CELL",
+      "Confidence": 98.0,
+      "RowIndex": 5,
+      "ColumnIndex": 2,
+      "RowSpan": 1,
+      "ColumnSpan": 1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.176471,
+          "Height": 0.029798,
+          "Left": 0.185098,
+          "Top": 0.433838
+        }
+      },
+      "Id": "ed69b054-1f4a-594d-a808-9a6be6d74218",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "d5c86733-9b3a-5958-8175-c4499b45fb04",
+            "178265fe-3ddd-5a5f-8234-ad37105f5b5c"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "CELL",
+      "Confidence": 98.0,
+      "RowIndex": 5,
+      "ColumnIndex": 3,
+      "RowSpan": 1,
+      "ColumnSpan": 1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.188235,
+          "Height": 0.029798,
+          "Left": 0.361569,
+          "Top": 0.433838
+        }
+      },
+      "Id": "30135773-862a-5c61-97f7-a2c6aa87d82f",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "28082a4a-8831-539a-b175-37b8d15c15aa",
+            "738634a5-fb2f-5754-a125-138b98ed00ed"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "CELL",
+      "Confidence": 98.0,
+      "RowIndex": 5,
+      "ColumnIndex": 4,
+      "RowSpan": 1,
+      "ColumnSpan": 1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.188235,
+          "Height": 0.029798,
+          "Left": 0.549804,
+          "Top": 0.433838
+        }
+      },
+      "Id": "664142b9-16f6-53a6-ba31-2249cd7cc749",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "f94cb55a-be23-5393-8860-bc1bc2441754",
+            "af66f135-8d05-5b5c-b048-c049f41b4075"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "CELL",
+      "Confidence": 98.0,
+      "RowIndex": 5,
+      "ColumnIndex": 5,
+      "RowSpan": 1,
+      "ColumnSpan": 1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.176471,
+          "Height": 0.029798,
+          "Left": 0.738039,
+          "Top": 0.433838
+        }
+      },
+      "Id": "5f0234b3-4522-5d5c-8b18-ccfd266893e8",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "badeef6b-6379-59e3-a4ce-286f98013851",
+            "50d706e3-b2d1-5777-b626-07af1b311f96"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "TABLE",
+      "Confidence": 99.0,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.611765,
+          "Height": 0.119697,
+          "Left": 0.193725,
+          "Top": 0.500606
+        }
+      },
+      "Id": "cb20f83f-07a8-5f73-ba1a-3f5976dbafec",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "7170a611-9e19-552b-acb7-3121e5b1b020",
+            "16655753-2ac5-5ccf-9700-896f9f02073a",
+            "8cc90539-4577-5d75-b631-41d72d859838",
+            "849be22a-4fbe-59c1-9762-1005bb2eaa6f",
+            "dfd4b3c5-fe1e-5836-a56c-ba1ea29e69cf",
+            "af88dd6d-7ff1-5c8f-80ad-ce205a34356c",
+            "c01d1973-2cb6-5909-b387-202ee0e843a8",
+            "d9bb58a2-067b-519c-8acd-ae2212f5adaa"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "CELL",
+      "Confidence": 98.0,
+      "RowIndex": 1,
+      "ColumnIndex": 1,
+      "RowSpan": 1,
+      "ColumnSpan": 1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.423529,
+          "Height": 0.029924,
+          "Left": 0.193725,
+          "Top": 0.500606
+        }
+      },
+      "Id": "7170a611-9e19-552b-acb7-3121e5b1b020",
+      "EntityTypes": [
+        "COLUMN_HEADER"
+      ],
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "70063407-a0d8-5510-a58d-1cfc3531741c"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "CELL",
+      "Confidence": 98.0,
+      "RowIndex": 1,
+      "ColumnIndex": 2,
+      "RowSpan": 1,
+      "ColumnSpan": 1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.188235,
+          "Height": 0.029924,
+          "Left": 0.617255,
+          "Top": 0.500606
+        }
+      },
+      "Id": "16655753-2ac5-5ccf-9700-896f9f02073a",
+      "EntityTypes": [
+        "COLUMN_HEADER"
+      ],
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "25534035-53c7-533d-a171-5abd7c484987",
+            "57b87b81-5e2a-5899-8665-5c51ee45cbfb"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "CELL",
+      "Confidence": 98.0,
+      "RowIndex": 2,
+      "ColumnIndex": 1,
+      "RowSpan": 1,
+      "ColumnSpan": 1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.423529,
+          "Height": 0.029924,
+          "Left": 0.193725,
+          "Top": 0.53053
+        }
+      },
+      "Id": "8cc90539-4577-5d75-b631-41d72d859838",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "2c50a76a-e15f-5d74-9b3d-a00289e51d2a",
+            "c375a4f3-6783-5ebe-9751-ebe23099053f",
+            "5f724eca-1bed-5ae5-a659-4d5a7e66b6d3",
+            "733485c6-daed-54a3-ba7c-264b63960e80"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "CELL",
+      "Confidence": 98.0,
+      "RowIndex": 2,
+      "ColumnIndex": 2,
+      "RowSpan": 1,
+      "ColumnSpan": 1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.188235,
+          "Height": 0.029924,
+          "Left": 0.617255,
+          "Top": 0.53053
+        }
+      },
+      "Id": "849be22a-4fbe-59c1-9762-1005bb2eaa6f",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "82aa5ccc-c39b-5067-b262-2233638f894c",
+            "1fe0f7a9-6020-5c3c-8a65-6f9c31b4619d"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "CELL",
+      "Confidence": 98.0,
+      "RowIndex": 3,
+      "ColumnIndex": 1,
+      "RowSpan": 1,
+      "ColumnSpan": 1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.423529,
+          "Height": 0.029924,
+          "Left": 0.193725,
+          "Top": 0.560455
+        }
+      },
+      "Id": "dfd4b3c5-fe1e-5836-a56c-ba1ea29e69cf",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "5e0f1cd7-f67f-5c0b-ae99-7d2839c1f1ed",
+            "c8b61bd9-926c-5984-a977-d4ee2519bdd3",
+            "aff511f2-eff3-5bbd-8c75-bd87fda6f23b",
+            "3cdb9837-19e7-5295-888a-32ebc1b39c1a",
+            "d47526f4-6789-5622-810c-1bc7d89ebd03",
+            "c0774db5-abb2-5559-a905-6f83751d888f"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "CELL",
+      "Confidence": 98.0,
+      "RowIndex": 3,
+      "ColumnIndex": 2,
+      "RowSpan": 1,
+      "ColumnSpan": 1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.188235,
+          "Height": 0.029924,
+          "Left": 0.617255,
+          "Top": 0.560455
+        }
+      },
+      "Id": "af88dd6d-7ff1-5c8f-80ad-ce205a34356c",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "f70ef114-55c1-5179-9c77-fcc607f8c751",
+            "c709e04b-8031-51c0-9cb9-d9644018b426"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "CELL",
+      "Confidence": 98.0,
+      "RowIndex": 4,
+      "ColumnIndex": 1,
+      "RowSpan": 1,
+      "ColumnSpan": 1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.423529,
+          "Height": 0.029924,
+          "Left": 0.193725,
+          "Top": 0.590379
+        }
+      },
+      "Id": "c01d1973-2cb6-5909-b387-202ee0e843a8",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "2bac21a1-d4ff-5108-b9c2-420f188335c4",
+            "adcba8ff-b93d-584a-bb5b-3c6aa4bc1f62",
+            "0c67e441-fec4-501b-a7d0-00553d9c45de"
+          ]
+        }
+      ]
+    },
+    {
+      "BlockType": "CELL",
+      "Confidence": 98.0,
+      "RowIndex": 4,
+      "ColumnIndex": 2,
+      "RowSpan": 1,
+      "ColumnSpan": 1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.188235,
+          "Height": 0.029924,
+          "Left": 0.617255,
+          "Top": 0.590379
+        }
+      },
+      "Id": "d9bb58a2-067b-519c-8acd-ae2212f5adaa",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": [
+            "e8029508-52d1-5de7-afd6-8b63c517570e",
+            "69910556-cf3a-589b-ac3f-ecd6f448e3fc"
+          ]
+        }
+      ]
+    }
+  ],
+  "AnalyzeDocumentModelVersion": "1.0",
+  "_provenance": "HAND-CONSTRUCTED representative fixture (CLAUDE.md): shaped from the documented Textract BLOCK/CELL/RELATIONSHIPS model, content transcribed from fixtures/05_capital_gains_preferential_rates_TY2025.pdf via local OCR. NOT a recorded API response; replace with one if credentials ever become available."
+}
