@@ -132,6 +132,8 @@ def run(paths: list[Path], dsn: str | None, artifacts: Path | None) -> int:
     )
     rows: list[tuple[str, ...]] = [header]
     errors: list[str] = []
+    #: Documents that ran to completion and yielded nothing.
+    lost: list[tuple[str, int]] = []
     adjudication_failures: list[str] = []
     try:
         for path in paths:
@@ -151,8 +153,21 @@ def run(paths: list[Path], dsn: str | None, artifacts: Path | None) -> int:
                 errors.append(f"{path.name}: {exc}")
                 rows.append((path.name, *("!",) * (len(header) - 1)))
                 continue
+            except Exception as exc:
+                # Deliberately broad, and found adversarially: a
+                # RateLimitError from the SDK used to escape as an uncaught
+                # traceback, taking the whole report with it — including the
+                # results of every document that had already succeeded. In a
+                # fan-out that is the worst possible failure mode for a
+                # diagnostic tool. The error is named, the exit code is
+                # nonzero, and the surviving documents still report.
+                errors.append(f"{path.name}: {type(exc).__name__}: {exc}")
+                rows.append((path.name, *("!",) * (len(header) - 1)))
+                continue
             if artifacts is not None:
                 _write_artifacts(artifacts, path.stem, result)
+            if not result.mapping.records:
+                lost.append((path.name, len(result.mapping.issues)))
             flagged = sum(
                 1
                 for record in result.triage.persistable
@@ -225,13 +240,21 @@ def run(paths: list[Path], dsn: str | None, artifacts: Path | None) -> int:
         print("\nfailed documents:")
         for error in errors:
             print(f"  {error}")
+    if lost:
+        # A document whose every proposed record was rejected reports
+        # `records 0` and used to exit 0, because nothing raised. Total data
+        # loss must never be a green exit (found adversarially on document 03,
+        # where 51 of 51 records were downgraded to issues).
+        print("\ndocuments that produced no records (every proposal rejected):")
+        for name, issue_count in lost:
+            print(f"  {name}: {issue_count} issue(s), 0 records")
     # The same table the accuracy gate prints: how often the model actually
     # honoured the response contract, measured rather than assumed.
     conformance = format_conformance_report()
     if conformance:
         print()
         print(conformance)
-    return 1 if errors else 0
+    return 1 if errors or lost else 0
 
 
 def main() -> None:
