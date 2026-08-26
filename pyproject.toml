@@ -4,8 +4,17 @@ version = "0.1.0"
 description = "Accept tax-table PDFs, extract and normalize tabular data, persist it, and expose it over a REST API."
 requires-python = ">=3.12"
 dependencies = [
+    "pdfplumber>=0.11.10",
     "psycopg[binary]>=3.2",
     "pydantic>=2.9",
+]
+
+[project.optional-dependencies]
+# Local-adapter-only OCR: the tesseract binary cannot exist on Vercel, so
+# pytesseract must never ride the main dependency list into a function
+# bundle. The docker-compose worker installs with --extra ocr.
+ocr = [
+    "pytesseract>=0.3.13",
 ]
 
 [dependency-groups]
@@ -13,6 +22,9 @@ dev = [
     "pytest>=8",
     "ruff>=0.9",
     "mypy>=1.14",
+    # Dev and CI exercise the local OCR adapter's tests, so the extra is
+    # mirrored here; runtime images use the `ocr` extra instead.
+    "pytesseract>=0.3.13",
 ]
 
 [build-system]
@@ -37,6 +49,11 @@ known-first-party = ["tax_tables", "tests"]
 strict = true
 files = ["src", "tests"]
 mypy_path = "src"
+
+[[tool.mypy.overrides]]
+# None of the PDF/OCR libraries ship type stubs.
+module = ["pdfplumber", "pdfplumber.*", "pytesseract", "pypdfium2"]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -29,5 +29,6 @@ jobs:
         with:
           enable-cache: true
       - run: uv python install
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq tesseract-ocr
       - run: uv sync
       - run: make check
