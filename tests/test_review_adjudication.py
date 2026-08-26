@@ -8,8 +8,9 @@ The property that matters most here is accountability. Auto-closing a tax
 data finding is acceptable ONLY because every closed item carries the
 resolution, its citations, who closed it, and when — so the audit trail is
 not a convention the application is trusted to follow but a constraint the
-database enforces (``resolved_rows_carry_audit_trail``), and an already
-resolved item can never be silently overwritten by a second pass.
+database enforces (``closed_rows_carry_audit_trail``, migrations 0007/0008),
+and an already resolved item can never be silently overwritten by a second
+pass.
 
 The payload under test is built by ``Adjudication.audit_payload()`` rather
 than hand-written, so a change to what the adapter proposes cannot drift
@@ -237,12 +238,14 @@ class TestProposeResolution:
             item = repository.list_open_reviews(document_id)[0]
             payload = _adjudication(item.id, confidence="0.55").audit_payload()
             repository.propose_resolution(item.id, payload)
-            still_open = repository.list_open_reviews(document_id)
+            work_list = repository.list_open_reviews(document_id)
 
         # Below the threshold the reviewer gets the reasoning, not a
-        # decision: the item is still theirs.
-        assert item.id in {other.id for other in still_open}
-        assert len(still_open) == 3
+        # decision: the item is still theirs (status stays open below) — but
+        # it leaves the adjudicator's WORK list, so a re-ingest of the same
+        # document never re-pays to adjudicate it (promoted review minor).
+        assert item.id not in {other.id for other in work_list}
+        assert len(work_list) == 2
 
         row = db.execute(
             "SELECT status, resolution, resolved_by, resolved_at FROM review_queue WHERE id = %s",
@@ -301,10 +304,11 @@ class TestProposeResolution:
         assert row == ("0.97",)
 
 
-class TestMigration0007Check:
-    """Migration 0007 exercised directly, not through the adapter: the
+class TestAuditTrailCheck:
+    """Migrations 0007/0008 exercised directly, not through the adapter: the
     audit trail must be impossible to omit even for SQL that never goes
-    through this repository."""
+    through this repository — for ANY exit from 'open', resolution or
+    dismissal alike."""
 
     def _queued_item_id(self, db: psycopg.Connection) -> UUID:
         with PostgresRecordRepository(TEST_DSN) as repository:
@@ -316,7 +320,7 @@ class TestMigration0007Check:
         item_id = self._queued_item_id(db)
         with pytest.raises(psycopg.errors.CheckViolation) as caught:
             db.execute("UPDATE review_queue SET status = 'resolved' WHERE id = %s", (item_id,))
-        assert caught.value.diag.constraint_name == "resolved_rows_carry_audit_trail"
+        assert caught.value.diag.constraint_name == "closed_rows_carry_audit_trail"
 
         row = db.execute("SELECT status FROM review_queue WHERE id = %s", (item_id,)).fetchone()
         assert row == ("open",)
@@ -330,7 +334,32 @@ class TestMigration0007Check:
                 " WHERE id = %s",
                 (item_id,),
             )
-        assert caught.value.diag.constraint_name == "resolved_rows_carry_audit_trail"
+        assert caught.value.diag.constraint_name == "closed_rows_carry_audit_trail"
+
+    def test_dismissed_without_audit_trail_is_unrepresentable(self, db: psycopg.Connection) -> None:
+        # 0007 guarded only 'resolved'; 0008 closed the unaudited-dismissal
+        # exit (promoted review minor).
+        item_id = self._queued_item_id(db)
+        with pytest.raises(psycopg.errors.CheckViolation) as caught:
+            db.execute("UPDATE review_queue SET status = 'dismissed' WHERE id = %s", (item_id,))
+        assert caught.value.diag.constraint_name == "closed_rows_carry_audit_trail"
+
+    def test_audited_dismissal_is_representable_without_a_resolution(
+        self, db: psycopg.Connection
+    ) -> None:
+        """A dismissal is a judgment that no resolution payload is needed —
+        who and when still are."""
+        item_id = self._queued_item_id(db)
+        db.execute(
+            "UPDATE review_queue SET status = 'dismissed',"
+            " resolved_by = 'human:reviewer@example.com', resolved_at = now()"
+            " WHERE id = %s",
+            (item_id,),
+        )
+        row = db.execute(
+            "SELECT status, resolution FROM review_queue WHERE id = %s", (item_id,)
+        ).fetchone()
+        assert row == ("dismissed", None)
 
     def test_open_item_may_carry_a_proposal(self, db: psycopg.Connection) -> None:
         """The CHECK constrains resolved rows only: a stored proposal on an

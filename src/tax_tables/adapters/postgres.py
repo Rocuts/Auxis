@@ -198,13 +198,16 @@ class PostgresRecordRepository:
         # transaction() even for a read: a bare execute would open psycopg's
         # implicit transaction and silently demote every later transaction()
         # to a savepoint inside it — rolled back, not committed, on close.
+        # resolution IS NULL keeps this a WORK list: an item already carrying
+        # a stored proposal awaits its human and is never re-adjudicated, so
+        # re-ingesting a document does not re-pay for old open items.
         with self._conn.transaction():
             rows = self._conn.execute(
                 """
                 SELECT id, document_id, source_page, table_id, row_index, col_index,
                        raw_value, reason
                 FROM review_queue
-                WHERE document_id = %s AND status = 'open'
+                WHERE document_id = %s AND status = 'open' AND resolution IS NULL
                 ORDER BY created_at, id
                 """,
                 (document_id,),

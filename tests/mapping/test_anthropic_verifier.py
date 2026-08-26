@@ -611,3 +611,48 @@ class TestVerify:
             AnthropicRecordVerifier(_config(), client=client).verify(
                 _document(), _mapping(_record())
             )
+
+
+class TestPromotedReviewMinors:
+    def test_cache_read_tokens_are_priced_at_a_tenth(self) -> None:
+        """The verifier's cache-read pricing branch, exercised: items read
+        from cache bill at 0.1x the input price."""
+        client = _FakeClient(
+            _message(
+                _verdicts_text({"record_index": 0, "verdict": "confirmed", "reason": None}),
+                input_tokens=1_000,
+                output_tokens=1_000,
+                cache_creation=0,
+                cache_read=100_000,
+            )
+        )
+        verifier = AnthropicRecordVerifier(_config(), client=client)
+        result = verifier.verify(_document(), _mapping(_record()))
+        cost = result.cost
+        assert cost is not None
+        assert cost.cache_read_tokens == 100_000
+        # 1000/1M*5 + 100000/1M*5*0.1 + 1000/1M*25 = 0.005 + 0.05 + 0.025
+        assert cost.usd == Decimal("0.08")
+
+    def test_mapper_prices_do_not_transfer_to_a_different_model(self) -> None:
+        config = VerifierConfig.from_env(
+            {
+                "ANTHROPIC_API_KEY": "k",
+                "SCHEMA_MAPPER_USD_PER_MTOK_IN": "2.50",
+                "SCHEMA_MAPPER_USD_PER_MTOK_OUT": "12.5",
+                "RECORD_VERIFIER_MODEL": "claude-haiku-4-5-20251001",
+            }
+        )
+        assert config.usd_per_mtok_in == Decimal(5)
+        assert config.usd_per_mtok_out == Decimal(25)
+
+    def test_mapper_prices_transfer_when_the_model_is_the_mappers(self) -> None:
+        config = VerifierConfig.from_env(
+            {
+                "ANTHROPIC_API_KEY": "k",
+                "SCHEMA_MAPPER_MODEL": "claude-sonnet-5",
+                "RECORD_VERIFIER_MODEL": "claude-sonnet-5",
+                "SCHEMA_MAPPER_USD_PER_MTOK_IN": "3",
+            }
+        )
+        assert config.usd_per_mtok_in == Decimal(3)

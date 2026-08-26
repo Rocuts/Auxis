@@ -476,3 +476,56 @@ verifier outage fails the gate like a mapper outage.
 strict clean. The accuracy run itself still waits on the funded API key
 (`make accuracy` once it lands in .env) — unchanged from 2b, now through the
 two-agent layer.
+
+## 2026-08-25 — Gate condition: the twelve unverified minors, dispositioned
+
+Rule applied (user-set): promote whatever touches persistence, cost
+accounting, or auth; park the rest by name.
+
+**Promoted and fixed (six minors, five fixes):**
+- *Re-ingest re-pays for old open items* -> `list_open_reviews` is now a
+  WORK list (`status='open' AND resolution IS NULL`): an item already
+  carrying a stored proposal awaits its human and is never re-adjudicated;
+  a second pass re-examines only never-proposed (e.g. previously errored)
+  items. Pinned in memory- and DB-backed tests.
+- *Failed adjudications invisible in pipeline_report* + *their spend
+  unreported* -> `AdjudicationError` carries the cost the failed call still
+  incurred (a truncated or malformed response was paid for; a transport
+  failure that never got a response stays None), `AdjudicationOutcome`
+  keeps it as `error_cost`, and pipeline_report gains an `adj_err` column,
+  counts the spend into `adj_usd`, and names every failed item under
+  "failed adjudications (items left open)" — non-fatal by design, since
+  the item stays open and visible.
+- *0007's CHECK guarded 'resolved' but not 'dismissed'* -> migration 0008
+  replaces it with `closed_rows_carry_audit_trail`: ANY exit from 'open'
+  needs who and when; 'resolved' additionally keeps its payload. Dismissal
+  without an audit trail is now unrepresentable; tests cover both
+  directions.
+- *Mapper prices silently transferred to an overridden model* ->
+  `SCHEMA_MAPPER_USD_*` now transfers only while the role runs the mapper's
+  model; an overridden model without explicit role prices uses the
+  defaults. Documented in .env.example, tested in both configs.
+- *Verifier cache-read pricing branch untested* -> pinned (0.1x input
+  price, exact arithmetic).
+- *`list_open_reviews` "insertion order" overclaim* -> docstring corrected
+  to what the code guarantees (created_at then id; ties inside one
+  transaction timestamp fall back to id order).
+
+**Already closed before this pass:** the dev-log absence (the amendment
+entry above) and the unguarded repository ValueError (fixed with confirmed
+finding #1).
+
+**Parked as known minors (three), with reasons:**
+- *Output ceilings ignore adaptive thinking*: ceilings are env-tunable;
+  sizing them against thinking budgets is a measurement task that belongs
+  with the Phase 3.5 latency work.
+- *No pipeline-side check that verdict count equals record count*: the
+  adapter constructs exactly one verdict per record fail-closed and the
+  port validates 0..n-1 ordering; a pipeline recount would assert the same
+  invariant twice.
+- *Disagreement-column tests use a single group*: the column plumbing and
+  totals are pinned; per-group attribution is exercised by the
+  five-document accuracy run itself.
+
+Post-fix: make check 328 passed + the credential skip, ruff + mypy strict
+clean.

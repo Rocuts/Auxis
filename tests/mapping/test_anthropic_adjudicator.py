@@ -529,3 +529,66 @@ class TestMalformedResponses:
         assert issubclass(AdjudicatorError, AdjudicationError)
         with pytest.raises(AdjudicationError):
             _adjudicate(_message("not json"))
+
+
+class TestPromotedReviewMinors:
+    def test_stop_reason_failure_carries_the_paid_cost(self) -> None:
+        """A truncated response was still billed: the raised error carries
+        the usage-derived spend so the report never shows it as free."""
+        message = _message(
+            _payload_text(),
+            stop_reason="max_tokens",
+            input_tokens=10_000,
+            output_tokens=2_000,
+            cache_creation=4_000,
+        )
+        with pytest.raises(AdjudicatorError) as caught:
+            _adjudicate(message)
+        cost = caught.value.cost
+        assert cost is not None
+        assert cost.output_tokens == 2_000
+        # 10000/1M*5 + 4000/1M*5*1.25 + 2000/1M*25 = 0.05 + 0.025 + 0.05
+        assert cost.usd == Decimal("0.125")
+
+    def test_malformed_json_failure_carries_the_paid_cost(self) -> None:
+        with pytest.raises(AdjudicatorError) as caught:
+            _adjudicate(_message("not json at all"))
+        assert caught.value.cost is not None
+        assert caught.value.cost.api_calls == 1
+
+    def test_mapper_prices_do_not_transfer_to_a_different_model(self) -> None:
+        """SCHEMA_MAPPER_USD_* describes the mapper's model; a role pointed
+        at another model without its own prices uses the defaults."""
+        config = AdjudicatorConfig.from_env(
+            {
+                "ANTHROPIC_API_KEY": "k",
+                "SCHEMA_MAPPER_USD_PER_MTOK_IN": "2.50",
+                "SCHEMA_MAPPER_USD_PER_MTOK_OUT": "12.5",
+                "ADJUDICATOR_MODEL": "claude-haiku-4-5-20251001",
+            }
+        )
+        assert config.usd_per_mtok_in == Decimal(5)
+        assert config.usd_per_mtok_out == Decimal(25)
+
+    def test_mapper_prices_transfer_when_the_model_is_the_mappers(self) -> None:
+        config = AdjudicatorConfig.from_env(
+            {
+                "ANTHROPIC_API_KEY": "k",
+                "SCHEMA_MAPPER_MODEL": "claude-opus-5",
+                "ADJUDICATOR_MODEL": "claude-opus-5",
+                "SCHEMA_MAPPER_USD_PER_MTOK_IN": "2.50",
+            }
+        )
+        assert config.usd_per_mtok_in == Decimal("2.50")
+
+    def test_explicit_role_prices_always_win(self) -> None:
+        config = AdjudicatorConfig.from_env(
+            {
+                "ANTHROPIC_API_KEY": "k",
+                "ADJUDICATOR_MODEL": "claude-haiku-4-5-20251001",
+                "ADJUDICATOR_USD_PER_MTOK_IN": "1",
+                "ADJUDICATOR_USD_PER_MTOK_OUT": "5",
+            }
+        )
+        assert config.usd_per_mtok_in == Decimal(1)
+        assert config.usd_per_mtok_out == Decimal(5)

@@ -111,13 +111,14 @@ class AdjudicatorConfig:
                 "no adjudication API key: set ADJUDICATOR_API_KEY, "
                 "SCHEMA_MAPPER_API_KEY, or ANTHROPIC_API_KEY"
             )
+        mapper_model = source.get("SCHEMA_MAPPER_MODEL") or _DEFAULT_MODEL
+        model = source.get("ADJUDICATOR_MODEL") or mapper_model
+        # Mapper prices transfer only when this role runs the mapper's model
+        # (see the same rule in VerifierConfig.from_env).
+        same_engine = model == mapper_model
         return cls(
             api_key=api_key,
-            model=(
-                source.get("ADJUDICATOR_MODEL")
-                or source.get("SCHEMA_MAPPER_MODEL")
-                or _DEFAULT_MODEL
-            ),
+            model=model,
             base_url=(
                 source.get("ADJUDICATOR_BASE_URL")
                 or source.get("SCHEMA_MAPPER_BASE_URL")
@@ -125,12 +126,12 @@ class AdjudicatorConfig:
             ),
             usd_per_mtok_in=Decimal(
                 source.get("ADJUDICATOR_USD_PER_MTOK_IN")
-                or source.get("SCHEMA_MAPPER_USD_PER_MTOK_IN")
+                or (source.get("SCHEMA_MAPPER_USD_PER_MTOK_IN") if same_engine else None)
                 or str(_DEFAULT_USD_PER_MTOK_IN)
             ),
             usd_per_mtok_out=Decimal(
                 source.get("ADJUDICATOR_USD_PER_MTOK_OUT")
-                or source.get("SCHEMA_MAPPER_USD_PER_MTOK_OUT")
+                or (source.get("SCHEMA_MAPPER_USD_PER_MTOK_OUT") if same_engine else None)
                 or str(_DEFAULT_USD_PER_MTOK_OUT)
             ),
             max_output_tokens=int(
@@ -293,31 +294,38 @@ def parse_adjudication_payload(
 
     Envelope problems raise (there is nothing to store); citation problems
     do not (there is a proposal to store, it simply may not auto-resolve).
+    Every raised error carries ``cost``: a malformed response was still a
+    paid response, and the report must not show a failed call as free.
     """
     try:
-        payload = json.loads(text, parse_float=Decimal)
-    except json.JSONDecodeError as exc:
-        raise AdjudicatorError(f"adjudication response is not valid JSON: {exc}") from exc
-    if not isinstance(payload, dict) or not {"resolution", "citations", "confidence"} <= set(
-        payload
-    ):
-        raise AdjudicatorError(
-            "adjudication response JSON lacks the resolution/citations/confidence envelope"
+        try:
+            payload = json.loads(text, parse_float=Decimal)
+        except json.JSONDecodeError as exc:
+            raise AdjudicatorError(f"adjudication response is not valid JSON: {exc}") from exc
+        if not isinstance(payload, dict) or not {"resolution", "citations", "confidence"} <= set(
+            payload
+        ):
+            raise AdjudicatorError(
+                "adjudication response JSON lacks the resolution/citations/confidence envelope"
+            )
+
+        resolution = payload["resolution"]
+        if not isinstance(resolution, str) or not resolution.strip():
+            raise AdjudicatorError("adjudication resolution is empty or not a string")
+
+        citations = _as_citations(payload["citations"])
+        return Adjudication(
+            item_id=item.id,
+            resolution=resolution,
+            citations=citations,
+            confidence=_as_confidence(payload["confidence"]),
+            citations_valid=citations_are_valid(citations, extracted),
+            cost=cost,
         )
-
-    resolution = payload["resolution"]
-    if not isinstance(resolution, str) or not resolution.strip():
-        raise AdjudicatorError("adjudication resolution is empty or not a string")
-
-    citations = _as_citations(payload["citations"])
-    return Adjudication(
-        item_id=item.id,
-        resolution=resolution,
-        citations=citations,
-        confidence=_as_confidence(payload["confidence"]),
-        citations_valid=citations_are_valid(citations, extracted),
-        cost=cost,
-    )
+    except AdjudicatorError as exc:
+        if exc.cost is None:
+            exc.cost = cost
+        raise
 
 
 # ---------------------------------------------------------------------------
@@ -383,20 +391,8 @@ class AnthropicAdjudicator:
         ) as stream:
             message = stream.get_final_message()
 
-        if message.stop_reason != "end_turn":
-            raise AdjudicatorError(
-                f"adjudication call ended with stop_reason={message.stop_reason!r}; "
-                "refusing to parse a truncated or refused response"
-            )
-        text: str | None = None
-        for block in message.content:
-            candidate = getattr(block, "text", None) if block.type == "text" else None
-            if candidate:
-                text = candidate
-                break
-        if text is None:
-            raise AdjudicatorError("adjudication response contains no text block")
-
+        # Cost is computed BEFORE the failure checks: a truncated or refused
+        # response was still paid for, and the error must carry that spend.
         usage = message.usage
         input_tokens = getattr(usage, "input_tokens", 0) or 0
         output_tokens = getattr(usage, "output_tokens", 0) or 0
@@ -418,6 +414,22 @@ class AnthropicAdjudicator:
             usd=usd,
             wall_seconds=time.perf_counter() - started,
         )
+
+        if message.stop_reason != "end_turn":
+            raise AdjudicatorError(
+                f"adjudication call ended with stop_reason={message.stop_reason!r}; "
+                "refusing to parse a truncated or refused response",
+                cost=cost,
+            )
+        text: str | None = None
+        for block in message.content:
+            candidate = getattr(block, "text", None) if block.type == "text" else None
+            if candidate:
+                text = candidate
+                break
+        if text is None:
+            raise AdjudicatorError("adjudication response contains no text block", cost=cost)
+
         return parse_adjudication_payload(text, item=item, extracted=extracted, cost=cost)
 
 

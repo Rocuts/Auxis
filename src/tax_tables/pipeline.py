@@ -46,7 +46,7 @@ from tax_tables.ports.adjudicator import (
     Adjudicator,
     ReviewItem,
 )
-from tax_tables.ports.mapper import MappingIssue, MappingResult, SchemaMapper
+from tax_tables.ports.mapper import MappingCost, MappingIssue, MappingResult, SchemaMapper
 from tax_tables.ports.repository import IngestOutcome, RecordRepository
 from tax_tables.ports.verifier import RecordVerifier, VerificationResult
 from tax_tables.validation.validators import (
@@ -84,6 +84,9 @@ class AdjudicationOutcome:
     disposition: Literal["auto_resolved", "proposal_stored", "error"]
     adjudication: Adjudication | None
     error: str | None = None
+    #: Spend the failed call still incurred (a paid-for truncated or
+    #: malformed response); None when the failure never got a response.
+    error_cost: MappingCost | None = None
 
 
 @dataclass(frozen=True)
@@ -165,12 +168,14 @@ def _adjudicate_queue(
             # the pass continues. Persistence already committed; a raise here
             # would discard the whole PipelineResult for data that is
             # already in the database (anti-goal #8; adversarial review).
+            spent = getattr(exc, "cost", None)
             outcomes.append(
                 AdjudicationOutcome(
                     item_id=item.id,
                     disposition="error",
                     adjudication=None,
                     error=f"{type(exc).__name__}: {exc}",
+                    error_cost=spent if isinstance(spent, MappingCost) else None,
                 )
             )
             continue

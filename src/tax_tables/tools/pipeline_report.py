@@ -122,6 +122,7 @@ def run(paths: list[Path], dsn: str | None, artifacts: Path | None) -> int:
         "conflicts",
         "overlaps",
         "auto_res",
+        "adj_err",
         "tok_in",
         "tok_out",
         "map_usd",
@@ -130,6 +131,7 @@ def run(paths: list[Path], dsn: str | None, artifacts: Path | None) -> int:
     )
     rows: list[tuple[str, ...]] = [header]
     errors: list[str] = []
+    adjudication_failures: list[str] = []
     try:
         for path in paths:
             try:
@@ -156,10 +158,16 @@ def run(paths: list[Path], dsn: str | None, artifacts: Path | None) -> int:
                 if record.review_status is ReviewStatus.NEEDS_REVIEW
             )
             verification = result.verification
+            # Failed calls were still paid for: their cost rides on the
+            # error outcome and counts like any other adjudication spend.
             adjudication_costs = [
                 outcome.adjudication.cost
                 for outcome in result.adjudications
                 if outcome.adjudication is not None
+            ] + [
+                outcome.error_cost
+                for outcome in result.adjudications
+                if outcome.error_cost is not None
             ]
             role_costs = [
                 result.mapping.cost,
@@ -170,6 +178,10 @@ def run(paths: list[Path], dsn: str | None, artifacts: Path | None) -> int:
             tokens_out = sum(_tokens(cost)[1] for cost in role_costs)
             auto_resolved = sum(
                 1 for outcome in result.adjudications if outcome.disposition == "auto_resolved"
+            )
+            failed = [o for o in result.adjudications if o.disposition == "error"]
+            adjudication_failures.extend(
+                f"{path.name} item {outcome.item_id}: {outcome.error}" for outcome in failed
             )
             rows.append(
                 (
@@ -183,6 +195,7 @@ def run(paths: list[Path], dsn: str | None, artifacts: Path | None) -> int:
                     "-" if result.ingest is None else str(result.ingest.cross_document_conflicts),
                     "-" if result.ingest is None else str(result.ingest.overlap_rejections),
                     "-" if adjudicator is None else str(auto_resolved),
+                    "-" if adjudicator is None else str(len(failed)),
                     str(tokens_in),
                     str(tokens_out),
                     f"{_usd(result.mapping.cost):.4f}",
@@ -201,6 +214,12 @@ def run(paths: list[Path], dsn: str | None, artifacts: Path | None) -> int:
         print("  ".join(cell.ljust(widths[i]) for i, cell in enumerate(row)).rstrip())
         if index == 0:
             print("  ".join("-" * width for width in widths))
+    if adjudication_failures:
+        # Named, counted, costed — but not fatal: a failed adjudication
+        # leaves its item open and visible, unlike a failed document run.
+        print("\nfailed adjudications (items left open):")
+        for failure in adjudication_failures:
+            print(f"  {failure}")
     if errors:
         print("\nfailed documents:")
         for error in errors:

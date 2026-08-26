@@ -109,13 +109,17 @@ class VerifierConfig:
                 "no verification API key: set RECORD_VERIFIER_API_KEY, "
                 "SCHEMA_MAPPER_API_KEY or ANTHROPIC_API_KEY"
             )
+        mapper_model = source.get("SCHEMA_MAPPER_MODEL") or _DEFAULT_MODEL
+        model = source.get("RECORD_VERIFIER_MODEL") or mapper_model
+        # The mapper's env prices describe the MAPPER's model. They transfer
+        # only when this role runs that same model; a role pointed elsewhere
+        # without its own prices falls to the defaults, so a cheaper verifier
+        # is never silently billed at another model's rate (adversarial-
+        # review minor, promoted).
+        same_engine = model == mapper_model
         return cls(
             api_key=api_key,
-            model=(
-                source.get("RECORD_VERIFIER_MODEL")
-                or source.get("SCHEMA_MAPPER_MODEL")
-                or _DEFAULT_MODEL
-            ),
+            model=model,
             base_url=(
                 source.get("RECORD_VERIFIER_BASE_URL")
                 or source.get("SCHEMA_MAPPER_BASE_URL")
@@ -123,12 +127,12 @@ class VerifierConfig:
             ),
             usd_per_mtok_in=Decimal(
                 source.get("RECORD_VERIFIER_USD_PER_MTOK_IN")
-                or source.get("SCHEMA_MAPPER_USD_PER_MTOK_IN")
+                or (source.get("SCHEMA_MAPPER_USD_PER_MTOK_IN") if same_engine else None)
                 or str(_DEFAULT_USD_PER_MTOK_IN)
             ),
             usd_per_mtok_out=Decimal(
                 source.get("RECORD_VERIFIER_USD_PER_MTOK_OUT")
-                or source.get("SCHEMA_MAPPER_USD_PER_MTOK_OUT")
+                or (source.get("SCHEMA_MAPPER_USD_PER_MTOK_OUT") if same_engine else None)
                 or str(_DEFAULT_USD_PER_MTOK_OUT)
             ),
             max_output_tokens=int(

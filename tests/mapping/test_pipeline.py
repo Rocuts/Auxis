@@ -459,7 +459,10 @@ class TestAdjudicatorPass:
         assert resolved_by is None and not has_time
         status, resolution, resolved_by, has_time = by_reason["mapping"]
         assert status == "open" and resolution is None  # failed call touches nothing
-        assert len(open_after) == 2
+        # Work list after the pass: the resolved item is closed and the
+        # proposal-stored item awaits its human — only the errored item
+        # (no proposal) remains adjudicable.
+        assert len(open_after) == 1
 
     def test_dry_run_never_adjudicates(self) -> None:
         adjudicator = _FakeAdjudicator()
@@ -528,7 +531,13 @@ class _MemoryRepository:
         return len(entries)
 
     def list_open_reviews(self, document_id: UUID) -> list[ReviewItem]:
-        return [item for item in self.items if self.status[item.id] == "open"]
+        # Work-list semantics, like the Postgres adapter: open AND not yet
+        # carrying a stored proposal.
+        return [
+            item
+            for item in self.items
+            if self.status[item.id] == "open" and item.id not in self.proposals
+        ]
 
     def resolve_review(
         self, item_id: UUID, *, resolution: Mapping[str, Any], resolved_by: str
@@ -688,3 +697,59 @@ class TestAdjudicatorContainment:
         # The three eligible items' resolves race and are reported as
         # errors; the REJECT item's proposal write still happens.
         assert sorted(dispositions) == ["error", "error", "error", "proposal_stored"]
+
+    def test_second_pass_never_re_pays_for_proposed_items(self) -> None:
+        """Re-ingesting a document re-adjudicates only items with no stored
+        proposal (promoted review minor): the below-threshold proposal from
+        pass one awaits its human; the errored item is retried."""
+        from tax_tables.pipeline import _adjudicate_queue
+
+        repository = _MemoryRepository()
+        handle = repository.register_document(sha256="ab" * 32, filename="x.pdf", byte_size=1)
+        repository.queue_review(
+            handle.id,
+            [
+                {"reason": "bracket_overlap: [500, 8000] overlaps", "source_page": 1},
+                {"reason": "mapping: unreadable cell", "source_page": 1},
+            ],
+        )
+        first = _TransportFailingAdjudicator("mapping")
+        outcomes = _adjudicate_queue(
+            repository, first, handle.id, _stamped_scan_extracted(), Decimal("0.9")
+        )
+        assert sorted(o.disposition for o in outcomes) == ["error", "proposal_stored"]
+
+        class _Counting(_ConfidentAdjudicator):
+            def __init__(self) -> None:
+                self.seen: list[str] = []
+
+            def adjudicate(self, item: ReviewItem, extracted: ExtractedDocument) -> Adjudication:
+                self.seen.append(item.reason)
+                return super().adjudicate(item, extracted)
+
+        second = _Counting()
+        _adjudicate_queue(repository, second, handle.id, _stamped_scan_extracted(), Decimal("0.9"))
+        # Only the errored (never-proposed) item is re-examined; the
+        # overlap item's stored proposal is not paid for again.
+        assert second.seen == ["mapping: unreadable cell"]
+
+    def test_error_outcome_carries_the_failed_calls_cost(self) -> None:
+        """A truncated response was still paid for: the error outcome keeps
+        the spend the port error carries (promoted review minor)."""
+        from tax_tables.pipeline import _adjudicate_queue
+        from tax_tables.ports.adjudicator import AdjudicationError
+
+        spent = MappingCost(engine="test-model", api_calls=1, output_tokens=500)
+
+        class _PaidFailure(_ConfidentAdjudicator):
+            def adjudicate(self, item: ReviewItem, extracted: ExtractedDocument) -> Adjudication:
+                raise AdjudicationError("stop_reason='max_tokens'", cost=spent)
+
+        repository = _MemoryRepository()
+        handle = repository.register_document(sha256="ab" * 32, filename="x.pdf", byte_size=1)
+        repository.queue_review(handle.id, [{"reason": "confidence_floor: 0.5", "source_page": 1}])
+        (outcome,) = _adjudicate_queue(
+            repository, _PaidFailure(), handle.id, _stamped_scan_extracted(), Decimal("0.9")
+        )
+        assert outcome.disposition == "error"
+        assert outcome.error_cost == spent

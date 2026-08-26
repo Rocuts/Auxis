@@ -60,8 +60,12 @@ class RecordRepository(Protocol):
         ...
 
     def list_open_reviews(self, document_id: UUID) -> list[ReviewItem]:
-        """Every ``status='open'`` review-queue row for the document, in
-        insertion order — the adjudicator's work list."""
+        """The adjudicator's WORK list: ``status='open'`` rows that carry no
+        stored proposal yet. An item a previous pass already proposed on
+        awaits its human and is excluded — re-ingesting a document never
+        re-pays for it. Ordered by creation time then id; ties inside one
+        transaction timestamp fall back to id order, so strict insertion
+        order is not guaranteed within a batch."""
         ...
 
     def resolve_review(

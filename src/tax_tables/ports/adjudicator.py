@@ -34,7 +34,16 @@ class AdjudicationError(RuntimeError):
     adapters; the pipeline catches it PER ITEM — one failed adjudication
     leaves its item open and named, and never aborts the pass (anti-goal #8:
     the queue is the safety net, so the safety net must not have a crash
-    path through it)."""
+    path through it).
+
+    ``cost`` carries the spend the failed call still incurred when a
+    response was received before the failure was detected (a truncated or
+    malformed body was paid for); a transport failure that never got a
+    response leaves it None. Failed calls must not be free in the report."""
+
+    def __init__(self, message: str, *, cost: MappingCost | None = None) -> None:
+        super().__init__(message)
+        self.cost = cost
 
 
 class ReviewItem(BaseModel):
