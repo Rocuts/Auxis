@@ -37,6 +37,7 @@ from psycopg import errors
 from psycopg.types.json import Jsonb
 
 from tax_tables.domain.records import CanonicalRecord
+from tax_tables.ports.adjudicator import ReviewItem
 from tax_tables.ports.repository import DocumentHandle, IngestOutcome
 
 #: The mapper produces Decimal attr values (its JSON is parsed with
@@ -192,6 +193,57 @@ class PostgresRecordRepository:
                 )
                 inserted += 1
         return inserted
+
+    def list_open_reviews(self, document_id: UUID) -> list[ReviewItem]:
+        rows = self._conn.execute(
+            """
+            SELECT id, document_id, source_page, table_id, row_index, col_index,
+                   raw_value, reason
+            FROM review_queue
+            WHERE document_id = %s AND status = 'open'
+            ORDER BY created_at, id
+            """,
+            (document_id,),
+        ).fetchall()
+        return [
+            ReviewItem(
+                id=row[0],
+                document_id=row[1],
+                source_page=row[2],
+                table_id=row[3],
+                row_index=row[4],
+                col_index=row[5],
+                raw_value=row[6],
+                reason=row[7],
+            )
+            for row in rows
+        ]
+
+    def resolve_review(
+        self, item_id: UUID, *, resolution: Mapping[str, Any], resolved_by: str
+    ) -> None:
+        with self._conn.transaction():
+            cursor = self._conn.execute(
+                """
+                UPDATE review_queue
+                SET status = 'resolved', resolution = %s,
+                    resolved_by = %s, resolved_at = now()
+                WHERE id = %s AND status = 'open'
+                """,
+                (Jsonb(dict(resolution), dumps=_JSONB_DUMPS), resolved_by, item_id),
+            )
+            if cursor.rowcount != 1:
+                # Re-resolving would silently overwrite an audit record.
+                raise ValueError(f"review item {item_id} is not open")
+
+    def propose_resolution(self, item_id: UUID, proposal: Mapping[str, Any]) -> None:
+        with self._conn.transaction():
+            cursor = self._conn.execute(
+                "UPDATE review_queue SET resolution = %s WHERE id = %s AND status = 'open'",
+                (Jsonb(dict(proposal), dumps=_JSONB_DUMPS), item_id),
+            )
+            if cursor.rowcount != 1:
+                raise ValueError(f"review item {item_id} is not open")
 
     def _queue_for_review(self, document_id: UUID, record: CanonicalRecord, reason: str) -> None:
         self._conn.execute(

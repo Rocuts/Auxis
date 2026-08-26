@@ -13,6 +13,7 @@ from typing import Any, Protocol
 from uuid import UUID
 
 from tax_tables.domain.records import CanonicalRecord
+from tax_tables.ports.adjudicator import ReviewItem
 
 
 @dataclass(frozen=True)
@@ -56,4 +57,24 @@ class RecordRepository(Protocol):
         table_id, row_index, col_index, raw_value, reason. Returns how many
         were inserted.
         """
+        ...
+
+    def list_open_reviews(self, document_id: UUID) -> list[ReviewItem]:
+        """Every ``status='open'`` review-queue row for the document, in
+        insertion order — the adjudicator's work list."""
+        ...
+
+    def resolve_review(
+        self, item_id: UUID, *, resolution: Mapping[str, Any], resolved_by: str
+    ) -> None:
+        """Mark one open item resolved with its full audit trail (resolution
+        payload, who, when — migration 0007's CHECK makes a resolved row
+        without the trail unrepresentable). Raises ``ValueError`` if the item
+        is not open: silently re-resolving would overwrite an audit record.
+        """
+        ...
+
+    def propose_resolution(self, item_id: UUID, proposal: Mapping[str, Any]) -> None:
+        """Store a below-threshold adjudication on an item that STAYS open —
+        the human reviewer sees the proposal; nothing is resolved."""
         ...

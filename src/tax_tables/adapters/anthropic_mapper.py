@@ -172,7 +172,9 @@ def _nullable(schema: dict[str, Any]) -> dict[str, Any]:
     return {"anyOf": [schema, {"type": "null"}]}
 
 
-_PROVENANCE_SCHEMA: dict[str, Any] = {
+# Public: the adjudicator's resolution citations are constrained by the same
+# schema and validated by the same ``check_provenance`` (ADR 012).
+PROVENANCE_SCHEMA: dict[str, Any] = {
     "type": "object",
     "properties": {
         "kind": {"type": "string", "enum": ["cell", "prose"]},
@@ -230,7 +232,7 @@ _RECORD_SCHEMA: dict[str, Any] = {
         "confidence": {"type": "number"},
         "source_table_label": {"type": "string"},
         "extra_attrs": {"type": "array", "items": _ATTR_SCHEMA},
-        "provenance": {"type": "array", "items": _PROVENANCE_SCHEMA},
+        "provenance": {"type": "array", "items": PROVENANCE_SCHEMA},
     },
     "required": [
         "source_page",
@@ -286,7 +288,7 @@ RESPONSE_SCHEMA: dict[str, Any] = {
 # System prompt — the canonical conventions
 # ---------------------------------------------------------------------------
 
-SYSTEM_PROMPT = """\
+_MAPPER_ROLE = """\
 You are the semantic schema mapper inside a tax-table ingestion pipeline.
 
 Your input is a machine-extracted view of one PDF document: cell grids
@@ -327,6 +329,14 @@ you never invent a value.
    a rule, a supersession notice). Map those facts as records too, with
    prose provenance.
 
+"""
+
+#: The canonical target-schema law, shared verbatim with the RecordVerifier's
+#: prompt (ADR 012): the two roles must judge by the same conventions, or a
+#: verifier "dispute" could be a mere prompt divergence. Sharing the output
+#: contract does not breach the roles' independence — what stays separate is
+#: each role's *reading of the document*, never the definition of the target.
+CANONICAL_CONVENTIONS = """\
 ## Canonical value conventions
 
 - rate: a decimal fraction (0.22 means 22%). A cell printed "22%" or a
@@ -431,6 +441,8 @@ commentary attrs; "provenance" and "source_table_label" are supplied in
 their own fields, not in extra_attrs.
 """
 
+SYSTEM_PROMPT = _MAPPER_ROLE + CANONICAL_CONVENTIONS
+
 _USER_INSTRUCTION = (
     "Map the following extracted document to canonical records per the "
     "conventions. Account for every data cell: record or issue.\n\n"
@@ -474,9 +486,13 @@ def _as_date(value: object, field: str) -> date | None:
     raise ValueError(f"{field} has unexpected type {type(value).__name__}")
 
 
-def _check_provenance(refs: list[Any], extracted: ExtractedDocument) -> None:
+def check_provenance(refs: list[Any], extracted: ExtractedDocument) -> None:
     """Structural half of the traceability contract: every reference must
-    name a cell or prose block that exists in the extracted document."""
+    name a cell or prose block that exists in the extracted document.
+
+    Public because it is the shared citation law of the semantic layer: the
+    mapper's provenance, and the adjudicator's resolution citations, are
+    validated by exactly the same rules (ADR 012)."""
     if not refs:
         raise ValueError("record has no provenance: every value must trace to a source")
     tables = {table.table_id: table for table in extracted.tables}
@@ -517,7 +533,7 @@ def _extraction_floor(table_id: str, extracted: ExtractedDocument) -> Decimal:
 
 def _build_record(raw: Mapping[str, Any], extracted: ExtractedDocument) -> CanonicalRecord:
     provenance = list(raw.get("provenance") or [])
-    _check_provenance(provenance, extracted)
+    check_provenance(provenance, extracted)
 
     record_type = RecordType(raw["record_type"])
     attribute_key = None if raw.get("attribute_key") is None else str(raw["attribute_key"])

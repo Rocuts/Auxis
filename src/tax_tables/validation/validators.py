@@ -62,6 +62,10 @@ RULE_OPEN_TOP = "open_top"
 RULE_RATE_PLAUSIBILITY = "rate_plausibility"
 RULE_CONFIDENCE_FLOOR = "confidence_floor"
 RULE_DERIVED_SUM = "derived_sum"
+#: Not a rule of this module: the independent RecordVerifier's disputes enter
+#: triage as extra findings under this name (ADR 012), so a disputed record
+#: rides the same FLAG machinery — persisted as needs_review, reason queued.
+RULE_VERIFIER_DISPUTE = "verifier_dispute"
 
 
 class Severity(StrEnum):
@@ -478,7 +482,10 @@ def validate_batch(
 
 
 def triage(
-    records: Sequence[CanonicalRecord], *, confidence_floor: Decimal = DEFAULT_CONFIDENCE_FLOOR
+    records: Sequence[CanonicalRecord],
+    *,
+    confidence_floor: Decimal = DEFAULT_CONFIDENCE_FLOOR,
+    extra_findings: Sequence[Finding] = (),
 ) -> TriageResult:
     """Split a batch into what the repository may insert and what must go to
     the review queue instead.
@@ -487,8 +494,23 @@ def triage(
     ``review_status='needs_review'`` — the inputs are frozen and are never
     mutated, so the caller's batch (and the accuracy harness's view of the
     mapper's raw output) stays exactly as the mapper produced it.
+
+    ``extra_findings`` lets upstream judges (the RecordVerifier's disputes)
+    join the partition under the same accounting: same severities, same
+    review-queue entries. An extra finding addressing a record index outside
+    the batch is a caller bug and raises — dropping it silently would lose a
+    dispute (anti-goal #8).
     """
-    findings = validate_batch(records, confidence_floor=confidence_floor)
+    for extra in extra_findings:
+        if extra.record_index >= len(records):
+            raise ValueError(
+                f"extra finding addresses record index {extra.record_index} "
+                f"of a {len(records)}-record batch"
+            )
+    findings = sorted(
+        [*validate_batch(records, confidence_floor=confidence_floor), *extra_findings],
+        key=lambda f: (f.record_index, f.rule),
+    )
     by_index: dict[int, list[Finding]] = defaultdict(list)
     for finding in findings:
         by_index[finding.record_index].append(finding)

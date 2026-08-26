@@ -30,6 +30,7 @@ from tax_tables.validation.validators import (
     RULE_DERIVED_SUM,
     RULE_OPEN_TOP,
     RULE_RATE_PLAUSIBILITY,
+    RULE_VERIFIER_DISPUTE,
     Finding,
     Severity,
     TriageResult,
@@ -395,3 +396,53 @@ class TestReviewQueueEntry:
         assert entry["reason"].startswith(f"{RULE_BRACKET_OVERLAP}: ")
         # raw_value carries the proposed record verbatim, as JSON.
         assert '"lower_bound":10000' in entry["raw_value"]
+
+
+class TestTriageExtraFindings:
+    """Verifier disputes enter triage as extra findings (ADR 012) and ride
+    the same FLAG machinery as the module's own rules."""
+
+    def _dispute(self, index: int, reason: str = "cell 1,0 reads 12%, record says 0.1") -> Finding:
+        return Finding(
+            rule=RULE_VERIFIER_DISPUTE,
+            severity=Severity.FLAG,
+            detail=reason,
+            record_index=index,
+        )
+
+    def test_dispute_flags_a_clean_record_as_needs_review(self) -> None:
+        records = [bracket(0, 12250), bracket(12251, None)]
+        result = triage(records, extra_findings=[self._dispute(0)])
+        assert_partitions(result, records)
+        assert result.persistable[0].review_status is ReviewStatus.NEEDS_REVIEW
+        assert result.persistable[1].review_status is ReviewStatus.CLEAN
+        assert RULE_VERIFIER_DISPUTE in rules_for(result.findings, 0)
+
+    def test_dispute_reason_reaches_the_review_queue_entry(self) -> None:
+        records = [bracket(0, 12250), bracket(12251, None)]
+        result = triage(records, extra_findings=[self._dispute(0)])
+        finding = next(f for f in result.findings if f.rule == RULE_VERIFIER_DISPUTE)
+        entry = review_queue_entry(records[0], finding)
+        assert entry["reason"] == f"{RULE_VERIFIER_DISPUTE}: cell 1,0 reads 12%, record says 0.1"
+
+    def test_dispute_joins_a_rejected_records_findings(self) -> None:
+        records = [bracket(0, 12250), bracket(10000, 20000)]  # overlap: index 1 rejected
+        result = triage(records, extra_findings=[self._dispute(1)])
+        assert [r.index for r in result.rejected] == [1]
+        rules = {f.rule for f in result.rejected[0].findings}
+        assert {RULE_BRACKET_OVERLAP, RULE_VERIFIER_DISPUTE} <= rules
+
+    def test_out_of_range_extra_finding_is_a_caller_bug(self) -> None:
+        records = [bracket(0, 12250)]
+        try:
+            triage(records, extra_findings=[self._dispute(1)])
+        except ValueError as error:
+            assert "record index 1" in str(error)
+        else:  # pragma: no cover - the assertion below always fires
+            raise AssertionError("out-of-range extra finding must raise")
+
+    def test_findings_stay_sorted_after_the_merge(self) -> None:
+        records = [bracket(0, 12250), bracket(10000, 20000), scalar(rate="0.8")]
+        result = triage(records, extra_findings=[self._dispute(0)])
+        keys = [(f.record_index, f.rule) for f in result.findings]
+        assert keys == sorted(keys)
