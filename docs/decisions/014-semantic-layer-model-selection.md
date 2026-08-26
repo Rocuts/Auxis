@@ -1,6 +1,6 @@
 # ADR 014 — Semantic-layer model selection, and its pre-registered escalation rule
 
-**Status:** accepted · **Date:** 2026-08-26 (amended same day, pre-run: §4 carve-out implemented, §5 venue fixed) · **Phase:** 2b
+**Status:** accepted · **Date:** 2026-08-26 (amended same day: §4 carve-out implemented, §5 venue fixed, §6 outcome recorded) · **Phase:** 2b
 
 ## Context
 
@@ -175,6 +175,37 @@ change — the ports design paying out again.
 `anthropic/claude-3-haiku` — the only Anthropic-family id reachable on the free
 tier — stays a **mechanism** fallback: it would prove the escalation path runs.
 It is a March 2024 model and may never be the source of a reported result.
+
+### 6. Outcome of the pre-registered run
+
+Run 2026-08-26 on the reachable pair. Full tables in the dev-log entry of the
+same date.
+
+| Trigger | Threshold | Measured | Fired |
+|---|---|---|---|
+| A — mapping attribution | ≥ 1 semantic miss | **0** | **No** |
+| B1 — hard contract failures | > 0 | **3** (2 mapper, 1 verifier) | **Yes** |
+| B2 — malformed item rate | > 2% | **72.9%** (51/70) | **Yes** |
+
+Field-level accuracy **0/128**, with `diff` 0 and `extra` 0 — every miss is a
+record that never reached the comparison, not a value mapped wrongly. Five
+adversarial passes, each denied the oracle, refuted no mapped value; on document
+03 repairing envelope faults alone yields 51/51 valid records with no semantic
+correction.
+
+Two things the rule did not anticipate and which the record should carry:
+
+1. **The verifier needs escalating too.** Document 04 produced 19 cleanly
+   conformant records — the only such response of the run — and was then lost
+   because `alibaba/qwen-3-235b` returned a body without the `verdicts`
+   envelope. Delta 2 bought cross-family independence and paid for it in
+   conformance. Escalation must cover both roles, not just `SCHEMA_MAPPER_MODEL`.
+2. **The written thresholds held up under a result nobody wanted.** B1 and B2
+   fired on measurement; A did not, and it would have been easy to read 0/128 as
+   a semantic catastrophe if the categories had not been fixed beforehand. That
+   is the whole return on pre-registering.
+
+Escalation is due, by the §5 route, and is an operator action.
 
 ## Consequences
 

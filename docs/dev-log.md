@@ -1666,3 +1666,128 @@ the run stops and reports; the purchase is an operator action, at the Anthropic
 console only.
 
 `make check`: 591 passed, 1 skipped.
+
+## 2026-08-26 — Gate 2b run on the reachable pair: 0/128, and both conformance triggers fired
+
+The gate ran on `zai/glm-5.3-flash` (mapper) and `alibaba/qwen-3-235b` (verifier)
+against the free allowance, per the decision recorded above. **It failed.**
+20 minutes 17 seconds, no throttling at all (`retryable 0` — running it with
+nothing else touching the gateway was the right call).
+
+### Accuracy by document
+
+```
+document                                         exp  ok  diff  miss  extra  disagree
+01_federal_income_tax_rate_schedules_TY2026.pdf   32   0     0    32      0         0
+02_standard_deduction_schedule_TY2026.pdf          8   0     0     8      0         0
+03_state_local_sales_tax_rates_2026.pdf           51   0     0    51      0         0
+04_employment_tax_rates_and_thresholds_2026.pdf   18   0     0    18      0         0
+05_capital_gains_preferential_rates_TY2025.pdf    19   0     0    19      0         0
+TOTAL                                            128   0     0   128      0         0
+
+field-level accuracy: 0/128
+fields compared: 0, differing: 0
+```
+
+By record type, all eleven types are 0: `ordinary_income_bracket` 0/32,
+`sales_tax_rate` 0/51, `preferential_gain_bracket` 0/12, `surtax_threshold` 0/9,
+`withholding_allowance` 0/6, `standard_deduction` 0/5, `employment_tax_rate` 0/4,
+`special_gain_rate` 0/3, `wage_base` 0/3, `additional_standard_deduction` 0/2,
+`dependent_deduction_rule` 0/1.
+
+**Read the shape of that table, not just the zero.** Every one of the 128 is
+`[missing] — no mapped record carries this natural key`. **`diff` is 0 and
+`extra` is 0.** Not one record arrived carrying a wrong value, and not one
+arrived that should not have. This is the signature of records that never
+reached the comparison at all, which is a completely different failure from a
+model that maps badly.
+
+### Conformance
+
+```
+role      calls  items  schema_fail  malformed  residue  transport  http_att  retryable  call_ok  item_ok  residue%
+mapper    5      70     2            51         0        0          5         0          60.0%    27.1%    0.0%
+verifier  1      0      1            0          0        0          1         0          0.0%     -        0.0%
+```
+
+Two of five mapper calls returned prose after a complete JSON value
+(`Extra data` at char 8,822 on document 02 and char 51,338 on document 03) —
+hard contract failures that the ADR 014 carve-out deliberately refuses, and
+correctly so. Of the three bodies that did arrive, 51 of 70 proposed items broke
+the item schema.
+
+### The result inside the result: document 04
+
+**Nineteen records built cleanly on document 04** — zero mapping issues, the
+only fully conformant mapper response of the run. It is also the only document
+that reached the verifier. And **the verifier broke its own contract**:
+`verification response JSON lacks the verdicts envelope`, so the document was
+discarded and its 19 records never entered the comparison.
+
+That is the cross-family verifier of delta 2 failing in exactly the way its
+conformance risk was acknowledged to permit. The fail-closed handling worked —
+nothing was assumed verified — but the cost was the one document the mapper got
+right. **So the escalation question covers both roles, not only the mapper.**
+
+### Cost
+
+```
+document                                         role      engine             tok_in  tok_out  cache_w  cache_r  usd     wall_s
+01_federal_income_tax_rate_schedules_TY2026.pdf  mapper    zai/glm-5.3-flash  3006    13079    0        64       0.0035  202.3
+05_capital_gains_preferential_rates_TY2025.pdf   mapper    zai/glm-5.3-flash  1656    15997    0        2048     0.0042  299.9
+```
+
+The other rows are `!` — the adapters raise before returning a cost on a
+contract failure, so a failed call's spend is not itemized here. Worth noting
+that **cache reads are real on this model** (2,048 tokens on document 05, 64 on
+01), so delta 1's 0.2× factor is binding rather than theoretical.
+
+The whole exercise — five-document fan-out plus this gate — cost about **$0.04**
+against the $5 allowance.
+
+### Trigger evaluation against ADR 014, as pre-registered
+
+| Trigger | Threshold | Measured | Fired |
+|---|---|---|---|
+| A — mapping attribution | ≥ 1 semantic miss | **0** | **No** |
+| B1 — hard contract failures | > 0 | **3** (2 mapper, 1 verifier) | **Yes** |
+| B2 — malformed item rate | > 2% | **72.9%** (51/70) | **Yes** |
+
+**Trigger A did not fire, and that is the finding.** Five independent
+adversarial passes over the five documents — each forbidden the oracle, each
+working only from the PDF and the extraction artifacts — could not refute a
+single mapped value. Between them they confirmed: 14 dash cells → null with zero
+0-substitutions, the single negative rate preserved with sign, percent→fraction
+scaling exact on 51 of 51 rows, a derived column consistent with both its
+printed cell and its inputs, `tax_year` taken from prose with the
+`TB-2025-14` and `Pub. 5001-A (Rev. 11-2025)` decoys cited zero times,
+supersession marked from the quoted sentence, a footnote-only rate captured
+across four filing statuses, and — the sharpest test — the planted near-miss on
+document 01 (`$257,250` for head-of-household against `$257,300` elsewhere)
+preserved distinctly rather than smoothed toward its plausible neighbour.
+
+On document 03 the attribution was settled experimentally rather than argued:
+repairing envelope faults **only** — list-shaped `extra_attrs`, `Decimal`
+coercion for `confidence`/`rate`, `source_page` derived from `table_id` — yields
+**51/51 valid records with zero semantic corrections**.
+
+So the honest one-line statement of this gate is: **the chosen model maps these
+documents correctly and cannot reliably emit the contract through a gateway that
+does not enforce it.** 0/128 measures the transport, not the semantics.
+
+### Anti-goal #8 under total failure
+
+Nothing was silently dropped anywhere. Every rejected proposal became a review
+queue entry with the model's raw output preserved; the fact table stayed empty
+rather than accepting a guess; and the adjudicator refused to auto-close a
+single item despite thirteen proposals scoring above the 0.9 threshold, because
+each stood for data the fact table never received. The worst run of this project
+is also the cleanest demonstration that its safety property holds.
+
+### Status
+
+Per the pre-registered rule, escalation is now due, and per ADR 014 §5 it goes
+**direct to Anthropic** — never a gateway credit purchase, which would
+permanently end the recurring allowance. That purchase is an operator action at
+`console.anthropic.com`. **Gate 2b remains OPEN.** This table ships in the
+README as the first half of the model-selection evidence.
