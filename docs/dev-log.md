@@ -1295,3 +1295,54 @@ unauthenticated POST rejected, sweep auth enforced, three measurements
 recorded. **Gate 3.5-LIVE: OPEN**, behind the same single blocker as Phase 2b:
 a funded model key. It covers the fixture seed with real mapping, data-bearing
 queries over the URL, and production promotion.
+
+## 2026-08-26 — The true cold chain, measured; and a prediction that did not hold
+
+The last keyless item. The 0.667 s "cold start" recorded earlier was taken
+minutes after a seed run, so the *function* was cold but **Neon was still
+active** — it was never the number an evaluator's first click pays. Measuring
+the real thing needs the database asleep too.
+
+Method: deploy a fresh preview (function never invoked), then leave the
+deployment and the database **completely untouched for 430 s** — past Neon's
+5-minute autosuspend, with margin — then issue **exactly one** request to a
+data-path endpoint (`GET /records?tax_year=2026`, which queries Postgres). The
+sleep and the measured request live in a single background script rather than
+across turns, because any intervening request would have destroyed the
+measurement. Nothing else could wake Neon in the window: Vercel crons run on
+production only, and the production baseline deployment fails closed at import
+without ever opening a connection.
+
+**Result: 6.763 s**, against 0.371–0.403 s warm on the same endpoint.
+
+| Segment | Cold | Warm |
+|---|---|---|
+| DNS | 2.180 s | 0.003 s |
+| TCP + TLS | 0.159 s | 0.195 s |
+| Server (TTFB − TLS) | **4.421 s** | 0.205 s |
+| **Total** | **6.763 s** | 0.371–0.403 s |
+
+The 2.18 s of DNS is client-side resolution of a brand-new hostname and is
+**not** a platform cost — the earlier fresh-hostname run resolved in
+negligible time, so it is variable and machine-dependent. Server-side is the
+platform number: **4.42 s**, of which roughly 0.5 s is the function (from the
+warm-database cold start already measured) leaving **~3.9 s for Neon waking
+up**. The database, not the compute, dominates the first click.
+
+**The prediction going in was that this would still beat ADR 004's ~15 s by an
+order of magnitude. It does not, and the number is reported as measured.**
+First click to first click: 6.76 s vs ~15 s, about **2.2×**. Resume to resume:
+~3.9 s vs ~15 s, about **3.8×**. Against Serverless v2's documented 30 s+
+after 24 h idle it widens to roughly 4.5×. The rejection in ADR 004 stands —
+6.76 s reads as slow where 15 s reads as broken, and the two other arguments in
+that ADR (RDS Proxy and auto-pause being mutually exclusive, and the
+~$43.80/month floor) never depended on latency at all — but the margin was
+overstated and an addendum now says so on the ADR itself.
+
+The generalization worth keeping: **this stack has an autosuspend cliff too.**
+It chose a smaller one, not the absence of one. Any scale-to-zero database
+makes a first click after idleness cost seconds rather than milliseconds.
+
+Nothing keyless remains. Every open item — the accuracy run, live extraction
+and mapping, data-bearing queries over the URL, production promotion — is
+behind the single funded-model-key blocker.

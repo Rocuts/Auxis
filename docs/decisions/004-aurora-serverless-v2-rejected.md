@@ -75,3 +75,33 @@ For this project, at 10,000 documents/day, (1) plausibly becomes true while
 (2) does not — the fan-out is the reason the proxy exists. That is the honest
 summary: the workload that would justify Serverless v2 is the same workload
 that prevents it from pausing.
+
+## Addendum (2026-08-26) — the comparator, measured on both sides
+
+This ADR was written against a documented figure on one side and nothing on
+the other. Phase 3.5 supplied the missing half: the chosen stack's true first
+click — cold function plus **Neon resuming from autosuspend** — was measured by
+leaving a preview deployment untouched for 430 s (past Neon's 5-minute
+autosuspend) and then issuing exactly one request to a data-path endpoint.
+
+**6.76 s end to end**, of which 4.42 s is server-side and roughly **3.9 s is
+the database waking**; warm requests on the same endpoint run 0.37–0.43 s.
+
+That result **weakens one claim in this ADR without changing its conclusion.**
+The rejection reasoned that a ~15 s resume "breaks a demo URL", carrying an
+implicit assumption that the alternative was in a different class. It is not:
+resume-to-resume the comparison is **~3.9 s vs ~15 s (about 3.8×)**, and first
+click to first click **6.76 s vs ~15 s (about 2.2×)**, widening to roughly
+4.5× against the documented 30 s+ that Serverless v2 costs after 24 h of
+idleness. A 2–4× margin is decisive for this decision — 6.76 s reads as slow
+where 15 s reads as broken, and the deeper-sleep case is worse still — but it
+is not the order of magnitude the reasoning implicitly assumed.
+
+The honest generalization, which the original text did not state: **every
+scale-to-zero database has a first-click cliff**, and this design has one too.
+It chose a smaller cliff, not the absence of one. What actually makes the
+decision safe is not the size of the gap but the two independent arguments
+above it — that RDS Proxy and auto-pause are mutually exclusive, so Serverless
+v2's headline benefit is unavailable in this architecture at all, and that
+holding `MinCapacity` above zero costs ~$43.80/month for a 128-record
+database.

@@ -589,16 +589,36 @@ nowhere near deploy-correct. See [`docs/audit/`](docs/audit/) for the full
 >
 > | Measurement | Result |
 > |---|---|
-> | Cold start (first-ever invocation, incl. Neon connect) | **0.67 s** |
+> | **True first click** — cold function **+ Neon resume** from autosuspend | **6.76 s** (server 4.42 s; DNS 2.18 s) |
+> | Cold function, database already active | **0.67 s** |
 > | Warm requests | **0.37–0.43 s** (median ~0.39 s) |
-> | Cold-start penalty | **~0.28 s** |
 > | Request-body cap | **~4.5 MB** (4,482,662 B accepted / 4,495,769 B rejected) |
 >
-> That 0.67 s is worth holding next to
-> [ADR 004](docs/decisions/004-aurora-serverless-v2-rejected.md): the reason
-> Aurora Serverless v2 was rejected is a 15 s resume on a cold first hit. The
-> chosen stack's cold first hit is **two orders of magnitude** cheaper, which
-> is the trade that ADR was buying.
+> The first two rows are **different measurements and only the first is what an
+> evaluator's first click costs.** The 0.67 s figure was taken minutes after a
+> seed run, so the function was cold but Neon was still active. The 6.76 s
+> figure comes from leaving the deployment completely untouched for 430 s —
+> past Neon's 5-minute autosuspend — and then issuing exactly one request to a
+> data-path endpoint. Splitting it by `curl`'s timings: 2.18 s client-side DNS
+> for a brand-new hostname (variable, and near-zero on the earlier
+> fresh-hostname run), 0.16 s TCP+TLS, and **4.42 s server-side** — of which
+> roughly 0.5 s is the function and the remaining **~3.9 s is Neon waking up**.
+>
+> **A prediction this measurement did not confirm.**
+> [ADR 004](docs/decisions/004-aurora-serverless-v2-rejected.md) rejected
+> Aurora Serverless v2 over its documented ~15 s resume, and the expectation
+> going in was that the chosen stack would win by an order of magnitude. It
+> does not. First click against first click it is **6.76 s vs ~15 s — about
+> 2.2×**; comparing resume to resume it is **~3.9 s vs ~15 s, about 3.8×**.
+> Still a decisive win, and it widens to roughly 4.5× against Serverless v2's
+> documented 30 s+ after a day of idleness — but "an order of magnitude" was
+> the guess and ~2–4× is the measurement. The ADR's conclusion survives; its
+> margin was overstated, and both numbers are now measured rather than one
+> being argued.
+>
+> The honest reading is that **this stack has an autosuspend cliff too** — it
+> is simply a much smaller one. A first click after idleness costs seconds, not
+> milliseconds, on any scale-to-zero database.
 >
 > Endpoint sweep against the preview: every `GET` returns correctly, unknown
 > ids 404, `/records/resolve` 422s without a chain, unauthenticated and
