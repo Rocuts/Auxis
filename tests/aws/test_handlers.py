@@ -83,7 +83,7 @@ class TestTemplateContract:
             if resource["Type"] == "AWS::Lambda::Function"
             and str(resource["Properties"].get("Handler", "")).startswith("tax_tables.")
         ]
-        assert len(handler_strings) == 5
+        assert len(handler_strings) == 6
         for spec in handler_strings:
             module_path, _, attr = spec.rpartition(".")
             assert module_path == "tax_tables.aws.handlers"
@@ -353,3 +353,82 @@ class TestApiHandler:
         response = handlers.api(event, _Context())
         assert response["statusCode"] == 200
         assert json.loads(response["body"])["openapi"].startswith("3.1")
+
+
+class TestMarkJobFailed:
+    """The failure twin of ``_finish_job``.
+
+    ``tolerated_failure_percentage=100`` makes the Distributed Map absorb a
+    failed document so its siblings finish — AWS: "the workflow won't fail
+    even if all child workflow executions fail." That is a deliberate
+    transport choice, and it is only safe because the job row records the
+    failure. This handler is what writes it.
+    """
+
+    def test_a_failed_step_closes_the_job_with_its_reason(self) -> None:
+        _document_id, job_id, repository = _seed_document_and_job()
+        repository.connection.execute(
+            "UPDATE jobs SET status = 'running', started_at = now() WHERE id = %s", (job_id,)
+        )
+        repository.connection.commit()
+        event = {
+            "job_id": str(job_id),
+            "error": {
+                "Error": "Lambda.Unknown",
+                "Cause": '{"errorMessage": "Textract throttled", "errorType": "RuntimeError"}',
+            },
+        }
+        with repository:
+            handlers.mark_job_failed(event, repository=repository)
+
+        with psycopg.connect(TEST_DSN) as conn:
+            row = conn.execute(
+                "SELECT status, error, finished_at FROM jobs WHERE id = %s", (job_id,)
+            ).fetchone()
+        assert row is not None
+        status, error, finished_at = row
+        assert status == "failed"
+        assert finished_at is not None
+        assert error["type"] == "pipeline_step_failed"
+        assert error["error_class"] == "Lambda.Unknown"
+        assert "Textract throttled" in error["message"]
+
+    def test_a_job_that_already_succeeded_is_never_reopened(self) -> None:
+        """AdjudicateStep runs *after* PersistStep. If adjudication fails,
+        the records are already in the fact table and the job genuinely
+        succeeded — the open queue items are the honest signal, and
+        rewriting the job to 'failed' would misreport persisted data as
+        lost."""
+        _document_id, job_id, repository = _seed_document_and_job()
+        repository.connection.execute(
+            "UPDATE jobs SET status = 'succeeded', records_persisted = 7 WHERE id = %s", (job_id,)
+        )
+        repository.connection.commit()
+        with repository:
+            handlers.mark_job_failed(
+                {"job_id": str(job_id), "error": {"Error": "States.TaskFailed", "Cause": "{}"}},
+                repository=repository,
+            )
+
+        with psycopg.connect(TEST_DSN) as conn:
+            row = conn.execute(
+                "SELECT status, records_persisted, error FROM jobs WHERE id = %s", (job_id,)
+            ).fetchone()
+        assert row == ("succeeded", 7, None)
+
+    def test_the_stored_cause_is_bounded(self) -> None:
+        """A Step Functions Cause carries a Lambda stack trace. It is
+        error text, not a value store — cap it rather than letting an
+        unbounded string into a row the API serves."""
+        _document_id, job_id, repository = _seed_document_and_job()
+        repository.connection.execute("UPDATE jobs SET status = 'running' WHERE id = %s", (job_id,))
+        repository.connection.commit()
+        with repository:
+            handlers.mark_job_failed(
+                {"job_id": str(job_id), "error": {"Error": "E", "Cause": "x" * 10_000}},
+                repository=repository,
+            )
+        with psycopg.connect(TEST_DSN) as conn:
+            row = conn.execute("SELECT error FROM jobs WHERE id = %s", (job_id,)).fetchone()
+        assert row is not None
+        assert len(row[0]["message"]) <= handlers.MAX_STORED_CAUSE_CHARS

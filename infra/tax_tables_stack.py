@@ -36,13 +36,17 @@ from pathlib import Path
 
 import aws_cdk as cdk
 from aws_cdk import aws_apigateway as apigw
+from aws_cdk import aws_cloudwatch as cloudwatch
+from aws_cdk import aws_cloudwatch_actions as cw_actions
 from aws_cdk import aws_ec2 as ec2
 from aws_cdk import aws_iam as iam
+from aws_cdk import aws_kms as kms
 from aws_cdk import aws_lambda as lambda_
 from aws_cdk import aws_logs as logs
 from aws_cdk import aws_rds as rds
 from aws_cdk import aws_s3 as s3
 from aws_cdk import aws_secretsmanager as secretsmanager
+from aws_cdk import aws_sns as sns
 from aws_cdk import aws_stepfunctions as sfn
 from aws_cdk import aws_stepfunctions_tasks as tasks
 from aws_cdk import aws_wafv2 as wafv2
@@ -71,6 +75,14 @@ APP_DB_USER = "app_ingest"
 #: The Distributed Map fan-out ceiling — the knob the README's bottleneck
 #: section reasons about, alongside RDS Proxy connection pooling.
 MAX_CONCURRENT_DOCUMENTS = 8
+
+#: Names the Map Run, and with it the CloudWatch dimension its child
+#: executions report under. AWS: child workflow executions emit metrics
+#: with a labelled State Machine ARN of the form
+#: ``…:stateMachine:{stateMachineName}/{MapRunLabel or UUID}``. Unlabelled,
+#: that dimension is a per-run UUID and no alarm can name it at synth time
+#: — which is why the failure alarm below exists only because this is set.
+MAP_RUN_LABEL = "PerDocument"
 
 #: Bedrock model family for the three semantic roles. Scoped to Anthropic
 #: foundation models; per-role overrides ride Lambda env, mirroring the
@@ -332,6 +344,16 @@ class TaxTablesStack(cdk.Stack):
             env={"ADJUDICATOR_MODEL": BEDROCK_MODEL_ID},
         )
 
+        # The Catch target for every pipeline step. Small and DB-only: its
+        # single job is to make a failed document visible (see the fan-out
+        # justification below).
+        mark_failed_fn = function(
+            "MarkFailed",
+            "tax_tables.aws.handlers.mark_job_failed",
+            timeout_seconds=30,
+            memory_mb=512,
+        )
+
         documents.grant_put(api_fn)
         documents.grant_read(extract_fn)
         extract_fn.add_to_role_policy(
@@ -351,37 +373,106 @@ class TaxTablesStack(cdk.Stack):
         )
         semantic_fn.add_to_role_policy(bedrock_models)
         adjudicate_fn.add_to_role_policy(bedrock_models)
-        for fn in (api_fn, persist_fn, adjudicate_fn):
+        for fn in (api_fn, persist_fn, adjudicate_fn, mark_failed_fn):
             proxy.grant_connect(fn, APP_DB_USER)
 
         # -- Step Functions: Distributed Map fan-out ----------------------
         def invoke(name: str, fn: lambda_.Function) -> tasks.LambdaInvoke:
-            return tasks.LambdaInvoke(
+            task = tasks.LambdaInvoke(
                 self,
                 name,
                 lambda_function=fn,
                 payload_response_only=True,
                 retry_on_service_exceptions=True,
             )
+            # `retry_on_service_exceptions` covers exactly four errors in
+            # aws-cdk-lib 2.266 — ClientExecutionTimeout, Service,
+            # AWSLambda, SdkClient (verified against
+            # aws-stepfunctions-tasks/lib/lambda/invoke.js). A throttle is
+            # not among them, and a throttle is the EXPECTED failure at
+            # MaxConcurrency 8 against an account-wide concurrency pool.
+            # Unretried, an ordinary burst costs a whole document.
+            task.add_retry(
+                errors=["Lambda.TooManyRequestsException"],
+                interval=cdk.Duration.seconds(5),
+                max_attempts=6,
+                backoff_rate=2,
+            )
+            return task
 
-        per_document = (
-            invoke("ExtractStep", extract_fn)
-            .next(invoke("MapAndVerifyStep", semantic_fn))
-            .next(invoke("PersistStep", persist_fn))
-            .next(invoke("AdjudicateStep", adjudicate_fn))
+        steps = [
+            invoke("ExtractStep", extract_fn),
+            invoke("MapAndVerifyStep", semantic_fn),
+            invoke("PersistStep", persist_fn),
+            invoke("AdjudicateStep", adjudicate_fn),
+        ]
+        # The failure path. Record the reason against the job row, THEN
+        # fail the child execution: marking the job alone would leave the
+        # item counted as succeeded, and the batch-level metric below would
+        # never see it.
+        on_failure = invoke("MarkFailedStep", mark_failed_fn).next(
+            sfn.Fail(
+                self,
+                "DocumentFailed",
+                error="DocumentPipelineFailed",
+                cause="A pipeline step failed; jobs.error carries the reason.",
+            )
         )
+        for step in steps:
+            step.add_catch(on_failure, errors=["States.ALL"], result_path="$.error")
+        per_document = steps[0].next(steps[1]).next(steps[2]).next(steps[3])
+
         fan_out = sfn.DistributedMap(
             self,
             "PerDocument",
+            # Names the Map Run so its child executions report under a
+            # dimension this stack can alarm on (MAP_RUN_LABEL).
+            label=MAP_RUN_LABEL,
             # The bottleneck knob: concurrent branches multiply Bedrock
             # TPS and proxy connections; 8 is sized in the README's
             # bottleneck section.
             max_concurrency=MAX_CONCURRENT_DOCUMENTS,
             items_path="$.documents",
-            # One bad document must never abort the batch (audit critical):
-            # failed items are recorded in the map result while siblings
-            # finish — the same per-document isolation the local pipeline
-            # and the accuracy gate enforce.
+            #
+            # ---- Why the fan-out tolerates 100% failure ----------------
+            #
+            # AWS is precise about what this setting does: "The default
+            # percentage value is zero, which means that the workflow fails
+            # if any one of its child workflow executions fails or times
+            # out. If you specify the percentage as 100, the workflow won't
+            # fail even if all child workflow executions fail."
+            #
+            # That is chosen, not conceded. The Map is TRANSPORT: it exists
+            # to run N documents concurrently, and one malformed PDF in a
+            # batch of 500 must not abort the 499 that are fine (the audit
+            # critical this replaced). Batch-atomic semantics would be
+            # actively wrong here — documents are independent, and a
+            # rejected one is a data-quality event, not a system fault.
+            #
+            # The setting is therefore paired, never standalone. Because
+            # the Map Run's own status is uninformative by construction,
+            # failure has to be legible somewhere else, at both grains:
+            #
+            #   per document — the `jobs` row is the source of truth. Every
+            #     step's Catch routes to MarkFailedStep, which writes
+            #     status='failed' with the reason, and `GET /jobs/{id}`
+            #     serves it. Without that Catch this setting would convert
+            #     a loud batch abort into a job stuck at 'running' forever:
+            #     silent loss, the worst failure mode this product defines
+            #     (anti-goal #8).
+            #
+            #   per batch — the child executions of a labelled Map Run emit
+            #     AWS/States ExecutionsFailed under
+            #     `<state-machine-arn>/PerDocument`; one datapoint per
+            #     failed document. DocumentFailuresAlarm (below) watches it
+            #     and notifies the PipelineAlerts topic. The per-run report
+            #     is the Map Run's own item counts — Failed/Aborted/
+            #     Pending/Succeeded via DescribeMapRun and the Map Run
+            #     Details page.
+            #
+            # So: the Map never fails, every failed document does — once in
+            # the database the API serves, once in a metric an operator is
+            # paged on.
             tolerated_failure_percentage=100,
         )
         fan_out.item_processor(per_document)
@@ -401,6 +492,61 @@ class TaxTablesStack(cdk.Stack):
         )
         state_machine.grant_start_execution(api_fn)
         api_fn.add_environment("PIPELINE_STATE_MACHINE_ARN", state_machine.state_machine_arn)
+
+        # -- Failure visibility -------------------------------------------
+        # The other half of tolerated_failure_percentage=100 (justified at
+        # the Map above): the jobs table carries the per-document truth,
+        # these carry the batch-level signal.
+        alerts = sns.Topic(
+            self,
+            "PipelineAlerts",
+            display_name="Tax table pipeline failures",
+            # The AWS-managed SNS key: an alias reference, not a lookup —
+            # nothing here calls an AWS API at synth time (anti-goal #4).
+            master_key=kms.Alias.from_alias_name(self, "SnsManagedKey", "alias/aws/sns"),
+            enforce_ssl=True,
+        )
+        failed_documents = cloudwatch.Alarm(
+            self,
+            "DocumentFailures",
+            metric=cloudwatch.Metric(
+                namespace="AWS/States",
+                metric_name="ExecutionsFailed",
+                # Child executions of a labelled Map Run report under
+                # `<state-machine-arn>/<label>` — one datapoint per failed
+                # document. The parent execution stays green (the Map
+                # tolerates the failure), so this is the ONLY metric that
+                # shows a document was lost.
+                dimensions_map={
+                    "StateMachineArn": f"{state_machine.state_machine_arn}/{MAP_RUN_LABEL}"
+                },
+                statistic="Sum",
+                period=cdk.Duration.minutes(5),
+            ),
+            threshold=0,
+            evaluation_periods=1,
+            comparison_operator=cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+            treat_missing_data=cloudwatch.TreatMissingData.NOT_BREACHING,
+            alarm_description=(
+                "One or more documents failed inside the fan-out. The Map "
+                "tolerates them by design; jobs.error carries each reason."
+            ),
+        )
+        failed_documents.add_alarm_action(cw_actions.SnsAction(alerts))
+        pipeline_failures = cloudwatch.Alarm(
+            self,
+            "PipelineFailures",
+            # The parent execution: transport itself broke (bad input
+            # shape, IAM, the Map never started). Disjoint from the alarm
+            # above, which fires while the parent succeeds.
+            metric=state_machine.metric_failed(period=cdk.Duration.minutes(5), statistic="Sum"),
+            threshold=0,
+            evaluation_periods=1,
+            comparison_operator=cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+            treat_missing_data=cloudwatch.TreatMissingData.NOT_BREACHING,
+            alarm_description="A pipeline execution failed outside the per-document fan-out.",
+        )
+        pipeline_failures.add_alarm_action(cw_actions.SnsAction(alerts))
 
         # -- API Gateway ---------------------------------------------------
         apigw_logs = logs.LogGroup(

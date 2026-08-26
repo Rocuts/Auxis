@@ -39,6 +39,8 @@ from typing import TYPE_CHECKING, Any
 from urllib.parse import quote
 from uuid import UUID
 
+from psycopg.types.json import Jsonb
+
 from tax_tables.adapters.bedrock import bedrock_adjudicator, bedrock_mapper, bedrock_verifier
 from tax_tables.adapters.pdfplumber_extractor import PdfplumberExtractor
 from tax_tables.adapters.postgres import PostgresRecordRepository
@@ -116,6 +118,37 @@ def _mark_running(conn: psycopg.Connection[Any], job_id: str) -> None:
             "UPDATE jobs SET status = 'running', attempt = attempt + 1,"
             " started_at = now() WHERE id = %s AND status IN ('queued', 'running')",
             (job_id,),
+        )
+
+
+#: Upper bound on the Step Functions ``Cause`` text stored in ``jobs.error``.
+#: A Cause carries a Lambda stack trace; the column is a failure report the
+#: API serves, not a log sink.
+MAX_STORED_CAUSE_CHARS = 2000
+
+
+def _fail_job(conn: psycopg.Connection[Any], job_id: str, error: Mapping[str, Any]) -> None:
+    """Record a failed pipeline step against the job row.
+
+    The guard is the point: ``AdjudicateStep`` runs after ``PersistStep``,
+    so an adjudication failure finds a job that already succeeded with its
+    records in the fact table. Reopening it would report persisted data as
+    lost; the open review-queue items are that failure's honest signal.
+    Only a job still queued or running is closed here.
+
+    Shape matches ``service.jobs._safe_error`` — the single-process
+    targets' twin — so ``GET /jobs/{id}`` reads the same on every target.
+    """
+    payload = {
+        "type": "pipeline_step_failed",
+        "error_class": str(error.get("Error", "Unknown")),
+        "message": str(error.get("Cause", ""))[:MAX_STORED_CAUSE_CHARS],
+    }
+    with conn.transaction():
+        conn.execute(
+            "UPDATE jobs SET status = 'failed', error = %s, finished_at = now()"
+            " WHERE id = %s AND status IN ('queued', 'running')",
+            (Jsonb(payload), job_id),
         )
 
 
@@ -351,4 +384,29 @@ def adjudicate_queue(
             {"item_id": str(o.item_id), "disposition": o.disposition, "error": o.error}
             for o in outcomes
         ],
+    }
+
+
+def mark_job_failed(
+    event: dict[str, Any],
+    context: Any = None,
+    *,
+    repository: PostgresRecordRepository | None = None,
+) -> dict[str, Any]:
+    """Every pipeline step's ``Catch`` target: close the job with its reason.
+
+    ``tolerated_failure_percentage=100`` on the Distributed Map is a
+    deliberate transport choice — AWS documents that at 100 "the workflow
+    won't fail even if all child workflow executions fail", which is
+    exactly the per-document isolation the local pipeline enforces. It is
+    only safe because the failure is recorded elsewhere: this handler
+    writes it to the job row, and the state that follows still fails the
+    child execution so the batch-level metric and its alarm can see it.
+    """
+    repository = repository or _repository(None)
+    _fail_job(repository.connection, str(event["job_id"]), event.get("error") or {})
+    return {
+        "job_id": str(event["job_id"]),
+        "document_id": str(event.get("document_id", "")),
+        "status": "failed",
     }

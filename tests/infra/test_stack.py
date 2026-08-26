@@ -91,7 +91,9 @@ class TestProxyPort:
             for f in functions.values()
             if "DB_PROXY_ENDPOINT" in f["Properties"].get("Environment", {}).get("Variables", {})
         ]
-        assert len(app_fns) == 5
+        # Six app functions since the failure path landed: api, extract,
+        # map+verify, persist, adjudicate, mark-failed.
+        assert len(app_fns) == 6
         assert all(env["DB_PORT"] == "5432" for env in app_fns)
 
     def test_proxy_still_reaches_the_instance_on_its_port(self, template: Template) -> None:
@@ -175,3 +177,125 @@ class TestPipelineReliability:
         definition = json.dumps(machine["Properties"]["DefinitionString"])
         assert "ToleratedFailurePercentage" in definition
         assert "100" in definition
+
+
+def _definition(template: Template) -> dict[str, Any]:
+    """The state machine's ASL, parsed.
+
+    ``DefinitionString`` is an ``Fn::Join`` of literal JSON fragments and
+    unresolved tokens (ARNs). Substituting a placeholder for every token
+    yields valid JSON, so these tests assert on structure rather than on
+    substring presence in a serialized blob.
+    """
+    (machine,) = _resources(template, "AWS::StepFunctions::StateMachine").values()
+    body = machine["Properties"]["DefinitionString"]
+    if isinstance(body, str):
+        return dict(json.loads(body))
+    parts = body["Fn::Join"][1]
+    return dict(json.loads("".join(p if isinstance(p, str) else "TOKEN" for p in parts)))
+
+
+def _per_document_states(template: Template) -> dict[str, Any]:
+    definition = _definition(template)
+    (map_state,) = [s for s in definition["States"].values() if s["Type"] == "Map"]
+    return dict(map_state["ItemProcessor"]["States"])
+
+
+class TestPerDocumentFailurePath:
+    """The other half of ``tolerated_failure_percentage=100``.
+
+    AWS documents the setting precisely: "If you specify the percentage as
+    100, the workflow won't fail even if all child workflow executions
+    fail." So the Map Run's own status carries no failure information by
+    construction — which is only a design if some other artifact carries
+    it. These tests pin the three places that do: the jobs table (per
+    document), a failed child execution (per document, in CloudWatch), and
+    an alarm over that metric (per batch).
+    """
+
+    def test_every_step_retries_lambda_throttling(self, template: Template) -> None:
+        """``retry_on_service_exceptions`` covers exactly four errors in
+        aws-cdk-lib 2.266 (verified by decompiling
+        aws-stepfunctions-tasks/lib/lambda/invoke.js):
+        ClientExecutionTimeout, Service, AWSLambda, SdkClient. A throttle
+        is NOT among them — and a throttle is the *expected* failure at
+        MaxConcurrency 8, so without this an ordinary burst silently
+        drops a document."""
+        states = _per_document_states(template)
+        tasks = {name: s for name, s in states.items() if s["Type"] == "Task"}
+        assert tasks, "no Task states in the item processor"
+        for name, state in tasks.items():
+            errors = {e for retrier in state.get("Retry", []) for e in retrier["ErrorEquals"]}
+            assert "Lambda.TooManyRequestsException" in errors, name
+
+    def test_every_pipeline_step_catches_into_the_failure_path(self, template: Template) -> None:
+        """Without a Catch, a failed step ends the child execution with the
+        job row still 'running' — GET /jobs/{id} reports a document as in
+        progress forever, and the loss is invisible (anti-goal #8)."""
+        states = _per_document_states(template)
+        pipeline_steps = {
+            name: s
+            for name, s in states.items()
+            if s["Type"] == "Task" and not name.startswith("MarkFailed")
+        }
+        assert len(pipeline_steps) == 4
+        for name, state in pipeline_steps.items():
+            catchers = state.get("Catch", [])
+            assert catchers, f"{name} has no Catch"
+            assert any("States.ALL" in c["ErrorEquals"] for c in catchers), name
+            assert all(c["Next"].startswith("MarkFailed") for c in catchers), name
+
+    def test_the_failure_path_records_then_fails_the_item(self, template: Template) -> None:
+        """Marking the job is not enough: the child execution must still
+        FAIL, or the item counts as succeeded and the batch-level metric
+        below never fires."""
+        states = _per_document_states(template)
+        (mark_failed,) = [name for name in states if name.startswith("MarkFailed")]
+        following = states[mark_failed]["Next"]
+        assert states[following]["Type"] == "Fail"
+
+    def test_map_run_is_labelled_so_child_failures_are_alarmable(self, template: Template) -> None:
+        """Child executions emit metrics under
+        ``stateMachine:{name}/{MapRunLabel or UUID}``. Unlabelled, the
+        dimension is a per-run UUID and no alarm can name it at synth
+        time."""
+        definition = _definition(template)
+        (map_state,) = [s for s in definition["States"].values() if s["Type"] == "Map"]
+        assert map_state["Label"] == "PerDocument"
+
+    def test_an_alarm_watches_failed_child_executions(self, template: Template) -> None:
+        alarms = _resources(template, "AWS::CloudWatch::Alarm")
+        child = [
+            a
+            for a in alarms.values()
+            if a["Properties"].get("MetricName") == "ExecutionsFailed"
+            and a["Properties"].get("Namespace") == "AWS/States"
+            and any(
+                "PerDocument" in json.dumps(d.get("Value"))
+                for d in a["Properties"].get("Dimensions", [])
+            )
+        ]
+        assert len(child) == 1, "no alarm on the labelled child-execution metric"
+        (alarm,) = child
+        assert alarm["Properties"]["AlarmActions"], "the alarm notifies nobody"
+
+    def test_the_failure_path_can_reach_the_database(self, template: Template) -> None:
+        """A mark-failed Lambda that cannot connect records nothing."""
+        functions = _resources(template, "AWS::Lambda::Function")
+        mark_failed = [
+            name
+            for name, fn in functions.items()
+            if fn["Properties"].get("Handler") == "tax_tables.aws.handlers.mark_job_failed"
+        ]
+        assert len(mark_failed) == 1
+        role = functions[mark_failed[0]]["Properties"]["Role"]["Fn::GetAtt"][0]
+        connects = [
+            policy
+            for policy in _resources(template, "AWS::IAM::Policy").values()
+            if any(
+                "rds-db:connect" in json.dumps(statement.get("Action"))
+                for statement in policy["Properties"]["PolicyDocument"]["Statement"]
+            )
+            and any(r["Ref"] == role for r in policy["Properties"].get("Roles", []))
+        ]
+        assert connects, "mark_job_failed cannot authenticate to the database"
