@@ -1,6 +1,6 @@
 """Canonical record model.
 
-Conventions mirror fixtures/ground_truth.json:
+Conventions mirror the fixture corpus's documented target schema:
 - rate is a decimal fraction (0.22 = 22%); *_pct attributes are percentages
 - bracket bounds are inclusive whole-currency integers; upper_bound None on a
   bracket record means the bracket is open-ended ("and over")
