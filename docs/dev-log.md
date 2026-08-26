@@ -128,6 +128,19 @@ a Postgres 18 service container. Gate: `make check` green — ruff, mypy strict,
 commutativity. Pending: the same migrations against the Neon branch (needs
 DATABASE_URL in .env, user-supplied) to close the Neon half of the gate.
 
+**Phase 1 gate closed against Neon (2026-08-25).** Direct endpoint: cold
+connect 1.40s (scale-to-zero resume — the latency the Serverless v2 ADR is
+about), `server_version` **18.6**, confirming the validator's PG18 finding and
+the local `postgres:18` pin. All four migrations applied via the runner over
+the direct endpoint; `btree_gist` v1.8 installed with no friction. The three
+gate probes were re-proven ON the Neon branch inside a rolled-back
+transaction (overlap rejected, open-ended top accepted, negative rate
+accepted; zero rows left behind). Pooled endpoint: connect 0.55s,
+`psycopg.capabilities.has_send_close_prepared()` = True — the modern
+prepared-statements path is active, and 8 repeated parameterized queries
+(crossing prepare_threshold=5) executed through PgBouncer without error.
+No `prepare_threshold=None` workaround needed, as researched.
+
 **CI failure worth recording:** the Phase 1 push failed lint in CI while local
 `make check` was green. Creating `tests/__init__.py` mid-session changed how
 ruff's isort classifies `tests.*` imports (third-party -> first-party), but
