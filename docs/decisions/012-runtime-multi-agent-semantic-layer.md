@@ -93,8 +93,14 @@ failing one. Disagreements route to the review queue, not to a conversation.
 
 ## Consequences
 
-Two more paid calls per document ceiling (verifier; adjudicator only when the
-queue is non-empty), itemized in every report. The accuracy gate is unchanged —
+Added spend per document: one verifier call, plus one adjudicator call per
+open queue item — bounded by queue length, not a constant (items 2..n of a
+document read the grid context from cache; the itemized report shows every
+call). A clean document costs exactly one extra call. Auto-resolution is
+further restricted to items whose record actually persisted: a queue row born
+from a REJECT, an ingest refusal, or a mapping issue is the only live signal
+of absent data and only ever receives a stored proposal (adversarial-review
+correction, same day). The accuracy gate is unchanged —
 128/128 judged on the mapper's raw output — with a new per-document
 disagreement column making verifier friction visible instead of averaged away.
 Live behavior stays behind the credential smoke test; unit tests run on

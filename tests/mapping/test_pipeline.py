@@ -9,8 +9,10 @@ entry, never dropped.
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from decimal import Decimal
 from typing import Any
+from uuid import UUID, uuid4
 
 import psycopg
 
@@ -40,6 +42,7 @@ from tax_tables.ports.adjudicator import (
     ReviewItem,
 )
 from tax_tables.ports.mapper import MappingCost, MappingIssue, MappingResult
+from tax_tables.ports.repository import DocumentHandle, IngestOutcome
 from tax_tables.ports.verifier import RecordVerdict, Verdict, VerificationResult
 from tests.conftest import TEST_DSN
 
@@ -469,3 +472,219 @@ class TestAdjudicatorPass:
         )
         assert adjudicator.seen == []
         assert result.adjudications == []
+
+
+# ---------------------------------------------------------------------------
+# Adjudicator-pass containment and eligibility (adversarial-review fixes):
+# an in-memory repository lets these pin races and non-port exceptions that
+# the real database cannot stage deterministically.
+# ---------------------------------------------------------------------------
+
+
+class _MemoryRepository:
+    """RecordRepository fake, faithful to the port for the adjudication path:
+    resolve/propose raise ValueError on a not-open item, exactly like the
+    Postgres adapter."""
+
+    def __init__(self) -> None:
+        self.status: dict[UUID, str] = {}
+        self.items: list[ReviewItem] = []
+        self.proposals: dict[UUID, dict[str, Any]] = {}
+        self.resolutions: dict[UUID, tuple[dict[str, Any], str]] = {}
+        self.fail_resolves: bool = False
+
+    def register_document(
+        self,
+        *,
+        sha256: str,
+        filename: str,
+        byte_size: int,
+        content_type: str = "application/pdf",
+        page_count: int | None = None,
+        source_kind: str | None = None,
+    ) -> DocumentHandle:
+        self.document_id = uuid4()
+        return DocumentHandle(id=self.document_id, created=True)
+
+    def ingest(self, document_id: UUID, records: Sequence[CanonicalRecord]) -> IngestOutcome:
+        return IngestOutcome(
+            persisted=len(records), cross_document_conflicts=0, overlap_rejections=0
+        )
+
+    def queue_review(self, document_id: UUID, entries: Sequence[Mapping[str, Any]]) -> int:
+        for entry in entries:
+            item = ReviewItem(
+                id=uuid4(),
+                document_id=document_id,
+                source_page=entry.get("source_page"),
+                table_id=entry.get("table_id"),
+                row_index=entry.get("row_index"),
+                col_index=entry.get("col_index"),
+                raw_value=entry.get("raw_value"),
+                reason=str(entry["reason"]),
+            )
+            self.items.append(item)
+            self.status[item.id] = "open"
+        return len(entries)
+
+    def list_open_reviews(self, document_id: UUID) -> list[ReviewItem]:
+        return [item for item in self.items if self.status[item.id] == "open"]
+
+    def resolve_review(
+        self, item_id: UUID, *, resolution: Mapping[str, Any], resolved_by: str
+    ) -> None:
+        if self.fail_resolves or self.status.get(item_id) != "open":
+            raise ValueError(f"review item {item_id} is not open")
+        self.status[item_id] = "resolved"
+        self.resolutions[item_id] = (dict(resolution), resolved_by)
+
+    def propose_resolution(self, item_id: UUID, proposal: Mapping[str, Any]) -> None:
+        if self.status.get(item_id) != "open":
+            raise ValueError(f"review item {item_id} is not open")
+        self.proposals[item_id] = dict(proposal)
+
+
+class _ConfidentAdjudicator:
+    """Returns a high-confidence, validly-cited adjudication for EVERY item —
+    the eligibility gate, not the adjudication, must hold the line."""
+
+    def adjudicate(self, item: ReviewItem, extracted: ExtractedDocument) -> Adjudication:
+        return Adjudication(
+            item_id=item.id,
+            resolution="the page settles this item",
+            citations=[
+                {
+                    "kind": "prose",
+                    "page": 1,
+                    "table_id": None,
+                    "row": None,
+                    "col": None,
+                    "prose_index": 1,
+                }
+            ],
+            confidence=Decimal("0.97"),
+            citations_valid=True,
+            cost=MappingCost(engine="test-model", api_calls=1),
+        )
+
+
+class _TransportFailingAdjudicator(_ConfidentAdjudicator):
+    """Raises a NON-port exception (an SDK transport failure stand-in) for
+    one designated reason prefix; adjudicates the rest normally."""
+
+    def __init__(self, failing_prefix: str) -> None:
+        self._prefix = failing_prefix
+
+    def adjudicate(self, item: ReviewItem, extracted: ExtractedDocument) -> Adjudication:
+        if item.reason.startswith(self._prefix):
+            raise ConnectionError("simulated transport failure after retries")
+        return super().adjudicate(item, extracted)
+
+
+def _run_with(
+    repository: _MemoryRepository, adjudicator: Adjudicator, mapping: MappingResult
+) -> list[str]:
+    result = run_document(
+        b"%PDF-fake",
+        filename="doc.pdf",
+        router=_FakeRouter(_stamped_scan_extracted()),
+        mapper=_FakeMapper(mapping),
+        repository=repository,
+        adjudicator=adjudicator,
+    )
+    return [outcome.disposition for outcome in result.adjudications]
+
+
+class TestAdjudicatorContainment:
+    def _mapping_with_reject_and_flags(self) -> MappingResult:
+        """Findings this batch triages to, deterministically:
+
+        - bracket_overlap REJECT on index 2 ([500, 8000] into [0, 9000]) —
+          the record is ABSENT from the fact table;
+        - bracket_gap FLAGs on indexes 1 and 2 (the hole the reject leaves);
+        - confidence_floor FLAG on index 3 (separate chain, lone bracket).
+
+        Four queue entries: one REJECT-born, three FLAG-born.
+        """
+        return MappingResult(
+            records=[
+                _record(0, 9000),
+                _record(9001, None),
+                _record(500, 8000),
+                _record(
+                    0,
+                    9000,
+                    filing_status=FilingStatus.MARRIED_FILING_JOINTLY,
+                    confidence=Decimal("0.5"),
+                ),
+            ],
+            issues=[],
+        )
+
+    def test_reject_class_items_never_auto_resolve(self) -> None:
+        repository = _MemoryRepository()
+        dispositions = _run_with(
+            repository, _ConfidentAdjudicator(), self._mapping_with_reject_and_flags()
+        )
+        # Every FLAG-born item auto-resolved; the REJECT-born item stayed
+        # open with the proposal stored — its open row is the lost record's
+        # only trace, whatever the adjudicator's confidence.
+        assert sorted(dispositions) == [
+            "auto_resolved",
+            "auto_resolved",
+            "auto_resolved",
+            "proposal_stored",
+        ]
+        overlap_item = next(i for i in repository.items if i.reason.startswith("bracket_overlap"))
+        assert repository.status[overlap_item.id] == "open"
+        assert overlap_item.id in repository.proposals
+        floor_item = next(i for i in repository.items if i.reason.startswith("confidence_floor"))
+        assert repository.status[floor_item.id] == "resolved"
+        assert repository.resolutions[floor_item.id][1] == "adjudicator:test-model"
+
+    def test_unknown_reason_is_denied_by_default(self) -> None:
+        repository = _MemoryRepository()
+        handle = repository.register_document(sha256="ab" * 32, filename="x.pdf", byte_size=1)
+        repository.queue_review(
+            handle.id, [{"reason": "future_writer: something new", "source_page": 1}]
+        )
+        from tax_tables.pipeline import _adjudicate_queue
+
+        outcomes = _adjudicate_queue(
+            repository,
+            _ConfidentAdjudicator(),
+            handle.id,
+            _stamped_scan_extracted(),
+            Decimal("0.9"),
+        )
+        assert [o.disposition for o in outcomes] == ["proposal_stored"]
+        assert repository.status[repository.items[0].id] == "open"
+
+    def test_transport_failure_is_contained_per_item(self) -> None:
+        repository = _MemoryRepository()
+        dispositions = _run_with(
+            repository,
+            _TransportFailingAdjudicator("confidence_floor"),
+            self._mapping_with_reject_and_flags(),
+        )
+        # The failed item is an error outcome; every other item still got
+        # its write; nothing raised past the pass (a raise here would
+        # discard a result whose records are already committed).
+        assert sorted(dispositions) == [
+            "auto_resolved",
+            "auto_resolved",
+            "error",
+            "proposal_stored",
+        ]
+        floor_item = next(i for i in repository.items if i.reason.startswith("confidence_floor"))
+        assert repository.status[floor_item.id] == "open"  # untouched by the failure
+
+    def test_write_race_is_contained_per_item(self) -> None:
+        repository = _MemoryRepository()
+        repository.fail_resolves = True  # every resolve loses the race
+        dispositions = _run_with(
+            repository, _ConfidentAdjudicator(), self._mapping_with_reject_and_flags()
+        )
+        # The three eligible items' resolves race and are reported as
+        # errors; the REJECT item's proposal write still happens.
+        assert sorted(dispositions) == ["error", "error", "error", "proposal_stored"]

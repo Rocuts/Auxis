@@ -377,3 +377,102 @@ checks closed before any paid mapping run:
    overlap probe was then run against Neon in a rollback transaction:
    identical rejection (23P01, no_overlapping_brackets), zero rows left
    behind. Local and Neon enforce the same bracket integrity.
+
+## 2026-08-25 — Phase 2 amendment: runtime multi-agent, bounded (mapper + verifier + adjudicator)
+
+**Directed by the user before any code:** amend CLAUDE.md and write the ADRs
+first. The semantic layer becomes a mapper + independent verifier pair; the
+review queue gains an adjudicator; extraction and routing stay deterministic.
+
+**Docs first.** A best-practices validation agent (Opus 5, web-sourced)
+pinned every Anthropic citation against the live pages before the ADRs were
+written. Three corrections it forced: "Building Effective Agents" now carries
+a staleness banner (its principles are cited, its currency is not claimed);
+the published multi-agent conditions are one three-item sentence plus a
+separate breadth-first sentence, not a four-item list; and the
+Opus-lead/Sonnet-workers mix is published *without rationale* — so the
+orchestration-alignment ADR labels our all-Opus-workers reasoning as our own,
+not Anthropic's. It also surfaced the Aug 2026 conformity-risk post ("when
+one agent makes a bad decision, it is likely that many agents will make that
+same bad decision"), which became the stated justification for the verifier's
+different-model config rung. Committed: the CLAUDE.md amendment, ADR 012, and
+adr-orchestration-alignment.md (every build-time and runtime orchestration
+choice mapped to its published criterion; two deliberate deviations recorded).
+
+**Build, key-less, same discipline as 2a.** Contracts first (ports, migration
+0007's audit-trail columns and CHECK, triage's extra_findings entry, the
+mapper's conventions/provenance law made shareable) so the fan-out had
+disjoint files — the alignment ADR's deviation #2 applied to itself. Two Opus
+5 builders in parallel: the verifier adapter (35 unit tests, fail-closed
+verdict assembly, mapper confidence withheld to avoid anchoring) and the
+adjudicator adapter (48 tests, the stamped-scan document as the unit
+fixture; citation problems degrade, envelope problems raise). The
+orchestrator did the pipeline wiring, per-role cost itemization, and the
+accuracy harness's disagreement column.
+
+**The stamped-scan test caught a real defect, twice independently.** The new
+pipeline test (stamped-scan document through mapper -> verifier -> persist ->
+adjudicate) failed: auto-resolutions vanished on connection close. Cause:
+`list_open_reviews` ran a bare `execute` on the non-autocommit connection,
+leaving it INTRANS; every later `transaction()` block silently degraded to a
+savepoint and `close()` rolled the lot back — the pipeline would have
+reported "auto_resolved" while the database kept the item open with no audit
+trail. Minutes later the adjudicator builder reproduced the same bug
+independently against the docker Postgres and reported it mid-flight. Fix:
+the read commits its own transaction; the pipeline test and 13 DB tests pin
+list -> resolve -> visible-from-a-fresh-connection, and migration 0007's
+CHECK makes an unaudited resolved row unrepresentable.
+
+**Adversarial review outcome (same day).** The same find-then-refute pattern
+as 2a/2b: five Opus 5 finder lenses (correctness, anti-goals, API usage,
+contract coherence, test honesty) produced 24 findings over the diff;
+refute-by-default verifiers examined the 12 highest-severity and confirmed
+3, each with a runnable reproduction or textual proof:
+
+1. *Adjudication-pass containment (major).* Only `AdjudicationError` was
+   caught, and only around the model call. Two unguarded routes — an SDK
+   transport failure (`RateLimitError` is not a `RuntimeError`), and the
+   repository's documented `ValueError` when an item stops being open
+   between list and write — aborted the pass and discarded a PipelineResult
+   whose records were already committed. Fix: per-item containment around
+   both the call and the write; `disposition="error"` names the exception;
+   four new tests on a port-faithful in-memory repository pin transport
+   failure, the write race, and continuation.
+2. *REJECT-class auto-close (major).* The pass applied one uniform rule to
+   every open item, but a queue row born from a triage REJECT, an ingest
+   refusal, or a mapping issue is the only live signal that a record is
+   ABSENT from the fact table — and the adjudicator cannot restore records,
+   so a truthful, well-cited, high-confidence adjudication would have closed
+   the loss silently (anti-goal #8's exact shape, proven with an in-memory
+   reproduction ending at 0 open rows and a missing record). Fix:
+   auto-resolution restricted to items born from FLAG rules (record
+   persisted as needs_review), default-deny on unknown reasons; everything
+   else only ever receives a stored proposal. `FLAG_RULES` exported from
+   validators and pinned; the adjudicator prompt now says when a proposal is
+   advisory-only.
+3. *ADR 012 cost overclaim (major).* The ADR stated a two-paid-calls-per-
+   document ceiling; the code is one verifier call plus one adjudicator call
+   per open queue item, unbounded in queue length. The ADR now states the
+   per-item economics honestly (cached document context for items 2..n) and
+   records the correction.
+
+Nine findings were refuted with evidence (several were independent spellings
+of the confirmed three, judged separately); twelve minors were reported
+unverified and left unfixed, named in the workflow output — among them this
+dev-log entry's own absence, which this entry closes.
+
+**Design decisions worth recording:** verifier disputes are FLAGs, never
+corrections (silence is never assent — an uncovered record comes back
+DISPUTED "no verdict"); the mapper's confidence is withheld from the
+verifier while the canonical conventions are shared verbatim (a dispute must
+be about the document, never a prompt divergence about the target); the
+adjudicator never decides — it returns a citated proposal and the pipeline
+applies the threshold, with dangling citations never auto-resolving. The 2b
+fan-out scope is updated: each per-fixture agent exercises the full
+mapper+verifier path, the accuracy table carries the disagree column, and a
+verifier outage fails the gate like a mapper outage.
+
+**Gate state.** `make check`: 316 passed + the credential skip, ruff + mypy
+strict clean. The accuracy run itself still waits on the funded API key
+(`make accuracy` once it lands in .env) — unchanged from 2b, now through the
+two-agent layer.

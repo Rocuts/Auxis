@@ -23,6 +23,7 @@ from tax_tables.domain.records import (
     ReviewStatus,
 )
 from tax_tables.validation.validators import (
+    FLAG_RULES,
     RULE_BRACKET_BOTTOM,
     RULE_BRACKET_GAP,
     RULE_BRACKET_OVERLAP,
@@ -446,3 +447,39 @@ class TestTriageExtraFindings:
         result = triage(records, extra_findings=[self._dispute(0)])
         keys = [(f.record_index, f.rule) for f in result.findings]
         assert keys == sorted(keys)
+
+
+class TestFlagRules:
+    """FLAG_RULES gates adjudicator auto-resolution (pipeline): only items
+    whose record persisted may auto-close, so the set must track severities
+    exactly (found by the adversarial review of the ADR 012 diff)."""
+
+    def test_flag_rules_are_exactly_the_non_reject_rules(self) -> None:
+        assert {
+            RULE_BRACKET_GAP,
+            RULE_BRACKET_BOTTOM,
+            RULE_OPEN_TOP,
+            RULE_RATE_PLAUSIBILITY,
+            RULE_CONFIDENCE_FLOOR,
+            RULE_DERIVED_SUM,
+            RULE_VERIFIER_DISPUTE,
+        } == FLAG_RULES
+        assert RULE_BRACKET_OVERLAP not in FLAG_RULES
+
+    def test_membership_tracks_the_severity_each_rule_emits(self) -> None:
+        records = [
+            bracket(0, 12250),
+            bracket(10000, 20000),  # overlap: the one REJECT rule
+            bracket(12300, 49800),  # gap + no open top
+            scalar(rate="0.9"),  # rate plausibility
+            bracket(
+                20000, 30000, filing_status=FilingStatus.MARRIED_FILING_JOINTLY, confidence="0.3"
+            ),
+        ]
+        findings = validate_batch(records)
+        assert findings
+        for finding in findings:
+            if finding.severity is Severity.REJECT:
+                assert finding.rule not in FLAG_RULES, finding.rule
+            else:
+                assert finding.rule in FLAG_RULES, finding.rule

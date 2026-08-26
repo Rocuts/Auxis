@@ -67,6 +67,26 @@ RULE_DERIVED_SUM = "derived_sum"
 #: rides the same FLAG machinery — persisted as needs_review, reason queued.
 RULE_VERIFIER_DISPUTE = "verifier_dispute"
 
+#: Rules whose findings are always FLAG severity: the record they indict IS
+#: in the fact table, marked needs_review. Only review-queue items born from
+#: these rules are eligible for adjudicator auto-resolution — every other
+#: queue entry (the bracket_overlap REJECT, ingest-side refusals, mapping
+#: issues) stands for data ABSENT from the fact table, and its open row is
+#: the only live signal of that absence. The adjudicator cannot restore a
+#: record, so auto-closing such an item would silence the loss (anti-goal
+#: #8; found by the adversarial review of the ADR 012 diff).
+FLAG_RULES = frozenset(
+    {
+        RULE_BRACKET_GAP,
+        RULE_BRACKET_BOTTOM,
+        RULE_OPEN_TOP,
+        RULE_RATE_PLAUSIBILITY,
+        RULE_CONFIDENCE_FLOOR,
+        RULE_DERIVED_SUM,
+        RULE_VERIFIER_DISPUTE,
+    }
+)
+
 
 class Severity(StrEnum):
     """REJECT: the database would refuse this row. FLAG: keep it, review it."""

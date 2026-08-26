@@ -22,10 +22,14 @@ The semantic-layer amendment (ADR 012) adds two bounded roles:
   never settled by the models talking.
 - The adjudicator runs once per open queue item, after persistence. At or
   above ``auto_resolve_threshold`` (with valid citations) the item resolves
-  with its audit trail; otherwise the proposal is stored and the item stays
-  human. A failed adjudication leaves its item open and is reported, never
-  raised past the pass. Without a repository (dry run) there is no queue,
-  so the adjudicator is not consulted.
+  with its audit trail — but only when the item's record actually persisted
+  (a FLAG finding): a queue row born from a triage REJECT, an ingest-side
+  refusal, or a mapping issue is the only live signal that data is absent
+  from the fact table, and the adjudicator cannot restore a record, so such
+  items only ever receive a stored proposal. A failed adjudication — the
+  model call, or the write racing a human — leaves its item open and is
+  reported, never raised past the pass. Without a repository (dry run)
+  there is no queue, so the adjudicator is not consulted.
 """
 
 from __future__ import annotations
@@ -39,14 +43,15 @@ from tax_tables.extraction.model import ExtractedDocument, ExtractionMethod
 from tax_tables.ports.adjudicator import (
     DEFAULT_AUTO_RESOLVE_THRESHOLD,
     Adjudication,
-    AdjudicationError,
     Adjudicator,
+    ReviewItem,
 )
 from tax_tables.ports.mapper import MappingIssue, MappingResult, SchemaMapper
 from tax_tables.ports.repository import IngestOutcome, RecordRepository
 from tax_tables.ports.verifier import RecordVerifier, VerificationResult
 from tax_tables.validation.validators import (
     DEFAULT_CONFIDENCE_FLOOR,
+    FLAG_RULES,
     RULE_VERIFIER_DISPUTE,
     Finding,
     Severity,
@@ -67,10 +72,12 @@ class DocumentExtractor(Protocol):
 class AdjudicationOutcome:
     """What the adjudicator pass did with one queued item.
 
-    ``auto_resolved``: threshold met with valid citations, item resolved
-    with its audit trail. ``proposal_stored``: below threshold or citations
-    invalid — the proposal awaits a human, item still open. ``error``: the
-    adjudication call itself failed; the item is untouched and stays open.
+    ``auto_resolved``: threshold met, citations valid, and the item's record
+    persisted — resolved with its audit trail. ``proposal_stored``: below
+    threshold, citations invalid, or the item stands for absent data — the
+    proposal awaits a human, item still open. ``error``: the adjudication
+    call failed, or the write found the item no longer open (a human or a
+    concurrent run got there first); this pass left the item untouched.
     """
 
     item_id: UUID
@@ -124,6 +131,23 @@ def _dispute_findings(verification: VerificationResult) -> list[Finding]:
     ]
 
 
+def _may_auto_resolve(item: ReviewItem) -> bool:
+    """Only an item whose record actually persisted may auto-close.
+
+    FLAG findings queue under ``"<rule>: <detail>"`` with the record in the
+    fact table as ``needs_review`` — closing such an item loses nothing.
+    Every other reason (the ``bracket_overlap`` REJECT in either spelling,
+    ``cross_document_natural_key_conflict``, ``"mapping: ..."`` issues, or
+    anything a future writer invents) stands for data ABSENT from the fact
+    table, and the open row is the only live signal of that absence. The
+    adjudicator cannot restore a record, so those items never auto-resolve;
+    the proposal is stored for the human instead. Default-deny: an
+    unrecognized reason is treated as absent data.
+    """
+    rule, sep, _ = item.reason.partition(": ")
+    return bool(sep) and rule in FLAG_RULES
+
+
 def _adjudicate_queue(
     repository: RecordRepository,
     adjudicator: Adjudicator,
@@ -135,24 +159,50 @@ def _adjudicate_queue(
     for item in repository.list_open_reviews(document_id):
         try:
             adjudication = adjudicator.adjudicate(item, extracted)
-        except AdjudicationError as exc:
+        except Exception as exc:
+            # AdjudicationError, an SDK transport failure (rate limit,
+            # connection loss), anything: one item's failure is reported and
+            # the pass continues. Persistence already committed; a raise here
+            # would discard the whole PipelineResult for data that is
+            # already in the database (anti-goal #8; adversarial review).
             outcomes.append(
                 AdjudicationOutcome(
-                    item_id=item.id, disposition="error", adjudication=None, error=str(exc)
+                    item_id=item.id,
+                    disposition="error",
+                    adjudication=None,
+                    error=f"{type(exc).__name__}: {exc}",
                 )
             )
             continue
         payload = adjudication.audit_payload()
-        if adjudication.citations_valid and adjudication.confidence >= threshold:
-            repository.resolve_review(
-                item.id,
-                resolution=payload,
-                resolved_by=f"adjudicator:{payload['engine'] or 'unknown'}",
+        try:
+            if (
+                adjudication.citations_valid
+                and adjudication.confidence >= threshold
+                and _may_auto_resolve(item)
+            ):
+                repository.resolve_review(
+                    item.id,
+                    resolution=payload,
+                    resolved_by=f"adjudicator:{payload['engine'] or 'unknown'}",
+                )
+                disposition: Literal["auto_resolved", "proposal_stored"] = "auto_resolved"
+            else:
+                repository.propose_resolution(item.id, payload)
+                disposition = "proposal_stored"
+        except ValueError as exc:
+            # The item stopped being open between listing and writing — a
+            # human or a concurrent run resolved it first. Their audit
+            # record stands; this pass reports the race and moves on.
+            outcomes.append(
+                AdjudicationOutcome(
+                    item_id=item.id,
+                    disposition="error",
+                    adjudication=adjudication,
+                    error=str(exc),
+                )
             )
-            disposition: Literal["auto_resolved", "proposal_stored"] = "auto_resolved"
-        else:
-            repository.propose_resolution(item.id, payload)
-            disposition = "proposal_stored"
+            continue
         outcomes.append(
             AdjudicationOutcome(item_id=item.id, disposition=disposition, adjudication=adjudication)
         )

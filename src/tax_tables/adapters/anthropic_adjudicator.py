@@ -208,7 +208,13 @@ value. You produce a proposal; someone else applies it.
 3. A flagged item is not presumed wrong. Confirming that the pipeline read
    the page correctly is a resolution like any other, and needs the same
    citations.
-4. The conventions below define the canonical target the pipeline maps to.
+4. Some items stand for records the pipeline REFUSED to persist (bracket
+   overlaps, cross-document conflicts, unmappable cells). For those your
+   proposal informs the human reviewer only — the pipeline never auto-closes
+   them, because the open item is the record's only remaining trace. Write
+   the resolution accordingly: state what the document prints and what the
+   reviewer should do about the missing record.
+5. The conventions below define the canonical target the pipeline maps to.
    Judge the finding against them, not against a schema you would prefer.
 
 """

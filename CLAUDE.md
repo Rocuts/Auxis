@@ -237,6 +237,10 @@ else in the pipeline is an agent:
   resolution; at or above a confidence threshold the item auto-resolves with a
   full audit trail (resolution, citations, `resolved_by`, `resolved_at`);
   below it the item stays with a human, the proposal stored for the reviewer.
+  Auto-resolution applies only to items whose record actually persisted
+  (FLAG findings): a queue row standing for data the fact table refused or
+  never received (rejects, conflicts, mapping issues) is the only live signal
+  of the loss and never auto-closes.
   *Specialization*: queue triage over one item with full evidence is a
   different task than batch mapping, with a different prompt objective.
   Citations are validated against the extracted document; a resolution with a
