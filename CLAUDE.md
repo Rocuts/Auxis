@@ -129,6 +129,8 @@ implementations, selected by configuration:
 | `BlobStore` | S3 | Postgres `bytea` (default; see ADR) or Vercel Blob | local filesystem |
 | `TableExtractor` | Textract (`AnalyzeDocument`, TABLES) | `pdfplumber` (digital) / **vision-OCR via Anthropic API** (scanned) | `pdfplumber` (digital) / Tesseract (scanned) |
 | `SchemaMapper` | Bedrock | Anthropic API | Anthropic API |
+| `RecordVerifier` | Bedrock | Anthropic API | Anthropic API |
+| `Adjudicator` | Bedrock | Anthropic API | Anthropic API |
 | `JobRunner` | Step Functions Distributed Map | **Vercel Queues** (fallback: cron sweep) | in-process worker pool |
 | `RecordRepository` | psycopg → RDS Proxy | psycopg → Neon (pooled endpoint) | psycopg → Postgres container |
 
@@ -197,7 +199,8 @@ otherwise
 Then, for **both** paths:
 
 ```
-extracted cell grid -> LLM maps cells to canonical schema -> validators -> persist
+extracted cell grid -> mapper (LLM) -> independent verifier (LLM) -> validators
+  -> persist / review queue -> adjudicator (LLM, single pass over the queue)
 ```
 
 **The `SchemaMapper` never reads a number off an image and never invents a
@@ -206,8 +209,52 @@ means* — which column is a rate, which is a bound, which filing status a colum
 belongs to, whether a dash means null. Semantic mapping only. Every numeric value
 must trace to a cell the extraction layer produced.
 
-Track per-document extraction cost. "4 of 5 documents cost $0 on every target" is
-a headline finding for the README, not a footnote.
+Track per-document cost itemized by role — extraction, mapper, verifier,
+adjudicator — separately. "4 of 5 documents cost $0 to extract on every target"
+is a headline finding for the README, not a footnote.
+
+### The semantic layer — bounded runtime multi-agent (amended 2026-08-25)
+
+The semantic layer is a **mapper + independent verifier pair**, and the review
+queue gains an **adjudicator**. Exactly three model roles, each justified
+against Anthropic's published criteria for multi-agent systems —
+parallelizable work, specialization, context isolation (ADR 012) — and nothing
+else in the pipeline is an agent:
+
+- **`SchemaMapper`** (as above): semantic mapping only. Unchanged contract.
+- **`RecordVerifier`**: receives each document's mapped records plus the *same*
+  grid/prose context the mapper saw — in its own context window, under a
+  skeptic prompt, with no access to the mapper's reasoning. It confirms or
+  disputes each record's values and provenance citations. *Context isolation*
+  is the point: an independent re-derivation that agrees is evidence; a model
+  reviewing its own transcript is an echo. A dispute is a FLAG, never a
+  correction — the record persists as `needs_review` and the dispute reaches
+  the review queue with its reason (anti-goal #8: the verifier also never
+  drops or rewrites a value). Config permits a cheaper or different-family
+  model than the mapper (`RECORD_VERIFIER_*` env).
+- **`Adjudicator`**: a single pass over open review-queue items. It re-examines
+  one item at a time with the full extracted evidence and proposes a citated
+  resolution; at or above a confidence threshold the item auto-resolves with a
+  full audit trail (resolution, citations, `resolved_by`, `resolved_at`);
+  below it the item stays with a human, the proposal stored for the reviewer.
+  *Specialization*: queue triage over one item with full evidence is a
+  different task than batch mapping, with a different prompt objective.
+  Citations are validated against the extracted document; a resolution with a
+  dangling citation never auto-resolves.
+
+**Why extraction and routing stay deterministic:** the simplest thing that
+works is not an agent (Anthropic's first published criterion). The router is a
+two-branch rule over measurable page properties; `pdfplumber` reads actual PDF
+structure with higher fidelity than any model inferring it from pixels, at $0
+and reproducibly. An agent there would add nondeterminism, latency, and
+per-document token cost with no accuracy left to buy. Model spend is reserved
+for the one layer where semantic judgment lives.
+
+**Bounds, explicitly:** three roles, each single-pass — no loops, no
+agent-to-agent negotiation, no self-correction cycles. A mapper/verifier
+disagreement is never settled by the models talking; it routes to the review
+queue. The adjudicator never edits records — it resolves queue items,
+auditably, or leaves them for a human.
 
 ### Data model
 
@@ -286,11 +333,14 @@ the database *rejects* an overlapping bracket insert; a test proves an open-ende
 top bracket is accepted; a test proves a negative rate is accepted.
 
 ### Phase 2 — Extraction pipeline + accuracy harness
-Router, all `TableExtractor` adapters, `SchemaMapper` adapters, validators,
+Router, all `TableExtractor` adapters, `SchemaMapper` adapters, the
+`RecordVerifier` and `Adjudicator` (semantic-layer amendment above), validators,
 confidence scoring, review queue. Build the accuracy harness **alongside** the
 pipeline, not after.
 **Gate:** field-level accuracy report printed as a table by document and by record
-type. Target 128/128. Below that, name every failing record and the reason.
+type, with a per-document verifier-disagreement column and cost itemized by role.
+Target 128/128, through the mapper+verifier layer. Below that, name every failing
+record and the reason.
 
 ### Phase 3 — API
 FastAPI implementation of the surface above. Export OpenAPI 3.1 to

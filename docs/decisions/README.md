@@ -16,3 +16,5 @@ CLAUDE.md), in rough phase order:
 | 009 | Cron-sweep JobRunner on request-scoped compute (Queues unavailable on this account) | 3.5 |
 | 010 | Vision-OCR as the Vercel extractor for scanned input | 3.5 |
 | 011 | Blob-in-Postgres (bytea) vs Vercel Blob | 3.5 |
+| 012 | [Runtime multi-agent semantic layer: mapper + verifier + adjudicator](012-runtime-multi-agent-semantic-layer.md) | 2 |
+| — | [Orchestration alignment with Anthropic's published criteria](adr-orchestration-alignment.md) | all |
