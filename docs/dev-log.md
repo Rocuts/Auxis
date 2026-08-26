@@ -319,3 +319,39 @@ Claude model, and topping up credits is a human decision. Asked; decision:
 continue everything credential-independent, run the accuracy gate when the
 key lands. `make check`: 208 passed + the credential skip, ruff + mypy
 strict clean.
+
+**Adversarial review outcome (same day).** The same find-then-refute
+pattern as 2a, run over the 2b diff before any API spend: five Opus 5
+finders (correctness, harness-contract fit, anti-goals, API usage, test
+honesty) produced 35 findings; refute-by-default verifiers examined the 18
+highest-severity and confirmed 10, which collapse to three distinct
+defects — every one caught before it could burn a paid mapping run:
+
+1. *Harness contract (critical).* The oracle asserts the sub-discriminator
+   twice: as identity (attribute_key) and as a per-type attrs field
+   (condition/component/category/surtax/item/payroll_period). The mapper
+   wrote only the typed field, so 6 of 11 record types would have
+   mismatched with `<absent>` even when mapped perfectly. Fix:
+   ATTRIBUTE_KEY_FIELD now lives in domain/records.py (a naming
+   convention, not oracle data) and the adapter mirrors the slug into
+   attrs; a test pins the domain and harness maps equal.
+2. *Persistence (major).* Mapper attrs are Decimal by construction
+   (parse_float=Decimal), and psycopg's stock JSONB dumper cannot
+   serialize Decimal — every _pct/prior-year record would have aborted its
+   whole ingest batch with TypeError. Fix: Decimal-aware Jsonb dumps
+   (default=str, exact digits), pinned by a pipeline test that round-trips
+   a Decimal attr through the database.
+3. *Robustness (major).* Model-emitted issues were constructed untrusted
+   and unguarded — one negative row_index would have aborted the document.
+   Fix: issues are sanitized (bad coordinates degrade to None, reason
+   survives) and can never kill a run.
+
+Review-tail hardening in the same commit: MapperConfig repr hides the key
+(anti-goal #10), FLAG findings now reach the review queue with reasons (a
+needs_review row without its why is useless to a reviewer),
+pipeline_report and the accuracy gate both survive per-document mapper
+failures and name them, SCHEMA_MAPPER_MAX_OUTPUT_TOKENS is honored, and
+cache-read tokens count in the cost report. Post-fix: make check 214
+passed + the credential skip, ruff + mypy strict clean. Phase 2b code is
+gate-ready; the accuracy run itself waits on the API key (`make accuracy`
+once it lands in .env).
