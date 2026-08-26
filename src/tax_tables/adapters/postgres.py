@@ -26,7 +26,7 @@ Conflict policy (decided at DDL review, tested in test_conflict_policy.py):
 from __future__ import annotations
 
 import json
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from types import TracebackType
 from typing import Any
 from uuid import UUID
@@ -74,6 +74,13 @@ RETURNING id
 _INSERT_REVIEW = """
 INSERT INTO review_queue (document_id, source_page, table_id, raw_value, reason)
 VALUES (%(document_id)s, %(source_page)s, %(table_id)s, %(raw_value)s, %(reason)s)
+"""
+
+_INSERT_REVIEW_ENTRY = """
+INSERT INTO review_queue
+    (document_id, source_page, table_id, row_index, col_index, raw_value, reason)
+VALUES (%(document_id)s, %(source_page)s, %(table_id)s, %(row_index)s, %(col_index)s,
+        %(raw_value)s, %(reason)s)
 """
 
 
@@ -156,6 +163,27 @@ class PostgresRecordRepository:
             cross_document_conflicts=conflicts,
             overlap_rejections=overlaps,
         )
+
+    def queue_review(self, document_id: UUID, entries: Sequence[Mapping[str, Any]]) -> int:
+        """Insert pipeline-produced review entries (mapping issues, triage
+        rejections) with their cell/record provenance."""
+        inserted = 0
+        with self._conn.transaction():
+            for entry in entries:
+                self._conn.execute(
+                    _INSERT_REVIEW_ENTRY,
+                    {
+                        "document_id": document_id,
+                        "source_page": entry.get("source_page"),
+                        "table_id": entry.get("table_id"),
+                        "row_index": entry.get("row_index"),
+                        "col_index": entry.get("col_index"),
+                        "raw_value": entry.get("raw_value"),
+                        "reason": entry["reason"],
+                    },
+                )
+                inserted += 1
+        return inserted
 
     def _queue_for_review(self, document_id: UUID, record: CanonicalRecord, reason: str) -> None:
         self._conn.execute(

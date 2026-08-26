@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Accept tax-table PDFs, extract and normalize tabular data, persist it, and expose it over a REST API."
 requires-python = ">=3.12"
 dependencies = [
+    "anthropic>=1.0.0",
     "pdfplumber>=0.11.10",
     "psycopg[binary]>=3.2",
     "pydantic>=2.9",
@@ -40,6 +41,13 @@ src = ["src", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "SIM", "C4", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+# The mapper prompt and its tests deliberately contain en/em dashes: dash
+# semantics ("— means no tax imposed") and range separators ("$0 – $9,000")
+# are the subject matter, not typos.
+"src/tax_tables/adapters/anthropic_mapper.py" = ["RUF001"]
+"tests/mapping/test_anthropic_mapper.py" = ["RUF001"]
 
 [tool.ruff.lint.isort]
 # Explicit so local and CI never disagree on import classification.

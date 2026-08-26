@@ -7,9 +7,9 @@ which is why the port is one class deep.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Any, Protocol
 from uuid import UUID
 
 from tax_tables.domain.records import CanonicalRecord
@@ -48,3 +48,12 @@ class RecordRepository(Protocol):
     ) -> DocumentHandle: ...
 
     def ingest(self, document_id: UUID, records: Sequence[CanonicalRecord]) -> IngestOutcome: ...
+
+    def queue_review(self, document_id: UUID, entries: Sequence[Mapping[str, Any]]) -> int:
+        """Insert review-queue entries (mapping issues, triage rejections).
+
+        Each entry carries the ``review_queue`` column values: source_page,
+        table_id, row_index, col_index, raw_value, reason. Returns how many
+        were inserted.
+        """
+        ...

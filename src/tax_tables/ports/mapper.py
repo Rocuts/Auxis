@@ -25,12 +25,30 @@ from extracted content; neither may ever read the oracle.
 
 from __future__ import annotations
 
+from decimal import Decimal
 from typing import Protocol
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from tax_tables.domain.records import CanonicalRecord
 from tax_tables.extraction.model import ExtractedDocument
+
+
+class MappingCost(BaseModel):
+    """What mapping this document spent — the semantic-layer sibling of
+    ``ExtractionCost``. Token counts are reported even when the model is
+    unpriced, so cost is never silently zero without the evidence to check."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    engine: str = Field(min_length=1)  # model id the call ran on
+    api_calls: int = Field(default=0, ge=0)
+    input_tokens: int = Field(default=0, ge=0)
+    output_tokens: int = Field(default=0, ge=0)
+    cache_write_tokens: int = Field(default=0, ge=0)
+    cache_read_tokens: int = Field(default=0, ge=0)
+    usd: Decimal = Field(default=Decimal(0))
+    wall_seconds: float = Field(default=0.0, ge=0)
 
 
 class MappingIssue(BaseModel):
@@ -52,6 +70,7 @@ class MappingResult(BaseModel):
 
     records: list[CanonicalRecord]
     issues: list[MappingIssue]
+    cost: MappingCost | None = None
 
 
 class SchemaMapper(Protocol):
