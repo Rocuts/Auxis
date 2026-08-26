@@ -29,6 +29,14 @@ from tax_tables.ports.mapper import MappingCost
 DEFAULT_AUTO_RESOLVE_THRESHOLD = Decimal("0.9")
 
 
+class AdjudicationError(RuntimeError):
+    """An adjudication call failed (truncated, refused, malformed). Raised by
+    adapters; the pipeline catches it PER ITEM — one failed adjudication
+    leaves its item open and named, and never aborts the pass (anti-goal #8:
+    the queue is the safety net, so the safety net must not have a crash
+    path through it)."""
+
+
 class ReviewItem(BaseModel):
     """One open ``review_queue`` row, as the adjudicator sees it."""
 

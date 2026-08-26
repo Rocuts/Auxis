@@ -195,16 +195,20 @@ class PostgresRecordRepository:
         return inserted
 
     def list_open_reviews(self, document_id: UUID) -> list[ReviewItem]:
-        rows = self._conn.execute(
-            """
-            SELECT id, document_id, source_page, table_id, row_index, col_index,
-                   raw_value, reason
-            FROM review_queue
-            WHERE document_id = %s AND status = 'open'
-            ORDER BY created_at, id
-            """,
-            (document_id,),
-        ).fetchall()
+        # transaction() even for a read: a bare execute would open psycopg's
+        # implicit transaction and silently demote every later transaction()
+        # to a savepoint inside it — rolled back, not committed, on close.
+        with self._conn.transaction():
+            rows = self._conn.execute(
+                """
+                SELECT id, document_id, source_page, table_id, row_index, col_index,
+                       raw_value, reason
+                FROM review_queue
+                WHERE document_id = %s AND status = 'open'
+                ORDER BY created_at, id
+                """,
+                (document_id,),
+            ).fetchall()
         return [
             ReviewItem(
                 id=row[0],
