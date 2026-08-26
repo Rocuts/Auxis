@@ -39,6 +39,9 @@ class FilingStatus(StrEnum):
     MARRIED_FILING_JOINTLY = "married_filing_jointly"
     MARRIED_FILING_SEPARATELY = "married_filing_separately"
     HEAD_OF_HOUSEHOLD = "head_of_household"
+    # Documents 02 and 04 carry "Qualifying surviving spouse" rows; missing
+    # this member made two legitimate records unpersistable (migration 0005).
+    QUALIFYING_SURVIVING_SPOUSE = "qualifying_surviving_spouse"
 
 
 class LifecycleStatus(StrEnum):
