@@ -355,3 +355,25 @@ cache-read tokens count in the cost report. Post-fix: make check 214
 passed + the credential skip, ruff + mypy strict clean. Phase 2b code is
 gate-ready; the accuracy run itself waits on the API key (`make accuracy`
 once it lands in .env).
+
+**Pre-spend verification of the 2a tail (user-requested, same day).** Three
+checks closed before any paid mapping run:
+
+1. *Post-0006 exclusion, demonstrated live.* Two overlapping estates/trusts
+   brackets (filing_status NULL, same chain) inserted in a rollback
+   transaction: the second insert fails with sqlstate 23P01 on
+   `no_overlapping_brackets` — the COALESCE(filing_status,'') arm is
+   covering, so no migration 0007 is needed. The permanent pin already
+   exists: `test_estate_trust_brackets_chain_without_filing_status`
+   (tests/test_bracket_integrity.py:98) inserts the four-row estate chain
+   and asserts the ExclusionViolation.
+2. *Oracle-guard location.* The constructibility guard that maps all 128
+   oracle entries onto CanonicalRecord lives at
+   tests/accuracy/test_harness.py:157 — under tests/accuracy/ as anti-goal
+   #1 requires; grep confirms no copy exists elsewhere.
+3. *Neon parity restored.* Neon had 0001–0004; the runner applied
+   0005_filing_status_qss and 0006_bracket_chain_taxpayer_class over the
+   direct endpoint (schema_migrations now lists all six). The same
+   overlap probe was then run against Neon in a rollback transaction:
+   identical rejection (23P01, no_overlapping_brackets), zero rows left
+   behind. Local and Neon enforce the same bracket integrity.
