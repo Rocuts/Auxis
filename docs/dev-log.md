@@ -1082,3 +1082,100 @@ mentions `aws-xray-sdk` by name. A package *named in prose* is not a package
 Post-item-0: `make check` **489 passed** + the credential skip; synth exit 0
 credential-stripped; cfn-lint clean; nag 58 compliant / 53 suppressed / 0
 non-compliant.
+
+## 2026-08-26 — Phase 3.5 structural: adapters built, build proven, deploy blocked on operator env
+
+Everything Phase 3.5 needs that does not require a credential or a platform
+mutation is built, tested, and committed. The preview deploy and its
+measurements are blocked on two operator actions, named at the end.
+
+**Vision-OCR TableExtractor** (ADR 010), 26 tests, keyless. Deliberately the
+same shape as the Textract adapter so the two stay comparable — one call per
+page, through a renderer both now import instead of duplicating
+(`extraction/render.py`, extracted in this pass; the 137 existing extraction
+tests passed unchanged across the refactor). The fidelity rules are mirrored
+exactly: merged continuation `None` vs genuinely empty `""`, unreadable ink
+flagged rather than dropped, prose travelling in full because doc 05's surtax
+rate exists only in a NOTE block, ragged rows recorded rather than force-fit.
+It fails closed on truncation, refusal, non-JSON, and a table with no rows.
+
+Two differences from Textract are real and are written into the module
+docstring rather than glossed. **Geometry is model-estimated**: a vision model
+judges boxes by eye, so they are requested normalized, validated, and treated
+as advisory — an unusable box degrades to the full page rather than raising,
+because a bad rectangle must never cost a table, and no value that reaches a
+record derives from a box anyway (provenance is page/table/row/column).
+**Confidences are self-reported**, which is weaker evidence than Tesseract's
+or Textract's per-word engine numbers — which is exactly why `word_count`
+still counts real tokens: a page that comes back confident and mostly empty is
+caught by coverage even when the model claims certainty.
+
+**Adapters behind config.** `EXTRACTION_OCR_ENGINE` (tesseract / vision /
+textract) and `JOB_RUNNER` (none / vercel), with branch-local imports so
+choosing one target never drags another's dependency into the bundle. An
+unknown value raises rather than defaulting: a silent fallback to a local
+binary that is not installed would surface as an empty document at high
+confidence, which is anti-goal #8's silent loss wearing a success badge.
+
+**The self-kick, and the defect testing it found.** `VercelJobRunner` fires
+one authenticated request at its own `POST /internal/sweep` so an upload does
+not wait up to a minute for cron. Running `scripts/seed_remote.sh` against
+localhost proved the path end to end — all five fixtures 202, the kick fired,
+and every job reached the honest `missing_credentials` terminal state — and
+also exposed that **the kick was blocking the 202 for its entire timeout**:
+measured 3.01s per upload. Worse, on a single-worker server it self-deadlocked,
+because the sweep request cannot be served while the upload handler waiting on
+it is still running. The port contract says a runner "must not block". Moved to
+a daemon thread: **3.01s → 0.01s**, jobs still processed, and a test now pins
+the non-blocking property directly.
+
+**The build is proven, not assumed.** Running `vercel build` locally before
+spending a deploy caught three things:
+
+1. `functions: {"app/main.py"}` was rejected — with no framework preset the
+   project used the api-directory convention, so globs had to target `api/`.
+   Declaring `"framework": "fastapi"` fixed it and is also what makes the whole
+   app a single Function with no rewrites.
+2. The shim's `try/except` import hid `app` from Vercel's *static* detector.
+   The defensive version looked strictly safer and was not; the import is now
+   unconditional, with a comment saying why.
+3. The build's `filePathMap` listed `.env`, `.env.local`, `.env.preview`,
+   `fixtures/ground_truth.json`, and all of `infra/cdk.out`. The built output
+   turned out to be **7 files** containing none of it — verified by grepping
+   the output for the oracle's own marker and finding nothing, so the map is a
+   source manifest rather than the bundle. A manifest naming `.env` is still
+   not something to leave to interpretation: `.vercelignore` now excludes
+   secrets, the corpus, the oracle, and the CDK assembly, `excludeFiles` was
+   widened to match, and deploys will be non-prebuilt so `.vercelignore`
+   governs the upload.
+
+Confirmed in the local build output: Python 3.12 from `.python-version`,
+dependencies from `uv.lock` (so boto3, mangum, powertools and pytesseract all
+stay out of the Vercel bundle), `maxDuration: 300` applied, crons present, and
+`/(.*)` routed to the app with the path preserved.
+
+**`maxDuration` is provisional.** CLAUDE.md says size it to the slowest
+single-document path and measure rather than guess; the slowest path runs the
+mapper and verifier, which is credential-blocked. 300 is the platform default
+ceiling and is recorded as a number to revisit with the 2b-live measurement,
+not as a measured one.
+
+**Blocked on two operator actions**, both deliberately not taken here — the
+first because it writes secrets, the second because it changes a security
+posture:
+
+1. Four preview environment variables (`API_KEY`, `CRON_SECRET`,
+   `JOB_RUNNER=vercel`, `EXTRACTION_OCR_ENGINE=vision`). Without the first two
+   `ApiSettings.from_env` raises at import and every request 500s, so
+   deploying before they exist would waste the deploy.
+2. Deployment Protection off for the project (operator's choice, recorded);
+   the Vercel MCP path returned 403 for this account, so it is a dashboard or
+   CLI action.
+
+Gate **3.5-structural remains OPEN**: preview deploy, endpoint sweep,
+unauthenticated-POST rejection, sweep auth, and the three empirical
+measurements (request-body cap probed past 4.5 MB, cold-start first-hit
+latency, and the 202-then-`missing_credentials` path on the real platform) all
+follow those two actions. Gate **3.5-LIVE** stays open behind the credential
+as before: fixture seed with real mapping, data-bearing queries over the URL,
+and production promotion.
