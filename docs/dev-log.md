@@ -1346,3 +1346,48 @@ makes a first click after idleness cost seconds rather than milliseconds.
 Nothing keyless remains. Every open item — the accuracy run, live extraction
 and mapping, data-bearing queries over the URL, production promotion — is
 behind the single funded-model-key blocker.
+
+## 2026-08-26 — The AI Gateway key: valid, but Claude is paywalled (and a structured-outputs finding)
+
+An AI Gateway key (`vck_…`) arrived. It is **not** an Anthropic key, so it
+routes through the gateway's Anthropic-compatible endpoint —
+`base_url=https://ai-gateway.vercel.sh` with model ids prefixed
+`anthropic/`. The mapper already supports exactly this shape
+(`SCHEMA_MAPPER_BASE_URL` + `SCHEMA_MAPPER_API_KEY` + `SCHEMA_MAPPER_MODEL`),
+and the verifier and adjudicator inherit the model from
+`SCHEMA_MAPPER_MODEL`, so one setting covers all three roles.
+
+Four things established, each tested rather than assumed:
+
+1. **The key is valid.** Distinguished from "the endpoint is public" properly:
+   `/v1/models` returns 200 with no auth header at all, **401 with a bogus
+   key**, and 200 with this one. A 200 alone would have proved nothing.
+2. **Claude invocation is blocked by billing, not auth.** `messages.create`
+   on `anthropic/claude-opus-5` returns **403**: *"Free tier users do not have
+   access to this model. Upgrade to paid credits."* This is the same wall
+   recorded before the key arrived — the key changes nothing about it.
+3. **The free tier does invoke other models.** `alibaba/qwen-3-14b`,
+   `qwen-3-235b` and `qwen-3-30b` all returned real completions. So the
+   gateway plumbing, the SDK wiring, and this project's config chain are all
+   working end to end; only the Claude family is paywalled.
+4. **`output_config` passes through the gateway but is NOT enforced for a
+   non-Claude model.** Sending the mapper's exact structured-output request to
+   `qwen-3-235b` returned `stop_reason=end_turn` and valid JSON — that did not
+   match the schema: asked for `{answer, confidence}`, returned
+   `{"four": "four"}`. The request is accepted and the constraint is silently
+   dropped.
+
+Point 4 is the one worth keeping. It settles, for the gateway, the same
+question flagged as a deploy-time verification item for Bedrock: whether a
+transport actually honours structured outputs or merely tolerates the
+parameter. Here it tolerates it. The mapper's fail-closed parser would reject
+the result loudly rather than persist garbage — which is the design working —
+but it means **running the accuracy gate against a non-Claude model through
+this gateway is not an option**: it would fail on almost every document for
+transport reasons, and any number it produced would measure the wrong thing.
+
+So the blocker is unchanged in substance and now precisely diagnosed: the
+128/128 accuracy run needs **either paid Vercel AI credits** (unblocking
+`anthropic/claude-opus-5` on the key already configured) **or a direct
+Anthropic API key** (`sk-ant-…`, which bypasses the gateway entirely — set
+`ANTHROPIC_API_KEY` and unset `SCHEMA_MAPPER_BASE_URL`).
