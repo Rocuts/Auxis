@@ -21,7 +21,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from tax_tables.adapters.anthropic_mapper import AnthropicSchemaMapper, MapperConfig
+from tax_tables.adapters.anthropic_mapper import AnthropicSchemaMapper, MapperConfig, MapperError
 from tax_tables.adapters.pdfplumber_extractor import PdfplumberExtractor
 from tax_tables.adapters.postgres import PostgresRecordRepository
 from tax_tables.adapters.tesseract_extractor import TesseractExtractor
@@ -85,16 +85,23 @@ def run(paths: list[Path], dsn: str | None, artifacts: Path | None) -> int:
         "wall_s",
     )
     rows: list[tuple[str, ...]] = [header]
-    failures = 0
+    errors: list[str] = []
     try:
         for path in paths:
-            result = run_document(
-                path.read_bytes(),
-                filename=path.name,
-                router=router,
-                mapper=mapper,
-                repository=repository,
-            )
+            try:
+                result = run_document(
+                    path.read_bytes(),
+                    filename=path.name,
+                    router=router,
+                    mapper=mapper,
+                    repository=repository,
+                )
+            except MapperError as exc:
+                # One document's failure must not silence the report for the
+                # rest; it is named below and reflected in the exit code.
+                errors.append(f"{path.name}: {exc}")
+                rows.append((path.name, *("!",) * (len(header) - 1)))
+                continue
             if artifacts is not None:
                 _write_artifacts(artifacts, path.stem, result)
             cost = result.mapping.cost
@@ -113,7 +120,9 @@ def run(paths: list[Path], dsn: str | None, artifacts: Path | None) -> int:
                     "-" if result.ingest is None else str(result.ingest.persisted),
                     "-" if result.ingest is None else str(result.ingest.cross_document_conflicts),
                     "-" if result.ingest is None else str(result.ingest.overlap_rejections),
-                    "-" if cost is None else str(cost.input_tokens + cost.cache_write_tokens),
+                    "-"
+                    if cost is None
+                    else str(cost.input_tokens + cost.cache_write_tokens + cost.cache_read_tokens),
                     "-" if cost is None else str(cost.output_tokens),
                     "-" if cost is None else f"{cost.usd:.4f}",
                     "-" if cost is None else f"{cost.wall_seconds:.1f}",
@@ -128,7 +137,11 @@ def run(paths: list[Path], dsn: str | None, artifacts: Path | None) -> int:
         print("  ".join(cell.ljust(widths[i]) for i, cell in enumerate(row)).rstrip())
         if index == 0:
             print("  ".join("-" * width for width in widths))
-    return 1 if failures else 0
+    if errors:
+        print("\nfailed documents:")
+        for error in errors:
+            print(f"  {error}")
+    return 1 if errors else 0
 
 
 def main() -> None:

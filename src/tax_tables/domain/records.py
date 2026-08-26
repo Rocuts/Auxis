@@ -12,10 +12,11 @@ Conventions mirror the fixture corpus's documented target schema:
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import date
 from decimal import Decimal
 from enum import StrEnum
-from typing import Any
+from typing import Any, Final
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -32,6 +33,23 @@ class RecordType(StrEnum):
     WAGE_BASE = "wage_base"
     SURTAX_THRESHOLD = "surtax_threshold"
     WITHHOLDING_ALLOWANCE = "withholding_allowance"
+
+
+#: The per-type field name under which the ``attribute_key``
+#: sub-discriminator also rides in a record's ``attrs`` tail, mirroring the
+#: DDL comment on migration 0003 (employment component, wage-base item,
+#: surtax name, payroll period, deduction condition, gain category). The
+#: mapper writes the same slug in both places, so the JSONB tail is
+#: self-describing and consumers never need the type-to-meaning table to
+#: read a record. Record types absent here have no sub-discriminator.
+ATTRIBUTE_KEY_FIELD: Final[Mapping[RecordType, str]] = {
+    RecordType.ADDITIONAL_STANDARD_DEDUCTION: "condition",
+    RecordType.EMPLOYMENT_TAX_RATE: "component",
+    RecordType.SPECIAL_GAIN_RATE: "category",
+    RecordType.SURTAX_THRESHOLD: "surtax",
+    RecordType.WAGE_BASE: "item",
+    RecordType.WITHHOLDING_ALLOWANCE: "payroll_period",
+}
 
 
 class FilingStatus(StrEnum):

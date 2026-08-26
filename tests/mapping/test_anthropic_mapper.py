@@ -158,6 +158,17 @@ class TestMapperConfig:
         with pytest.raises(MapperConfigError):
             MapperConfig.from_env({})
 
+    def test_repr_never_renders_the_key(self) -> None:
+        config = MapperConfig.from_env({"ANTHROPIC_API_KEY": "sk-secret-value"})
+        assert "sk-secret-value" not in repr(config)
+        assert "sk-secret-value" not in str(config)
+
+    def test_max_output_tokens_from_env(self) -> None:
+        config = MapperConfig.from_env(
+            {"ANTHROPIC_API_KEY": "k", "SCHEMA_MAPPER_MAX_OUTPUT_TOKENS": "32000"}
+        )
+        assert config.max_output_tokens == 32000
+
     def test_price_overrides(self) -> None:
         config = MapperConfig.from_env(
             {
@@ -286,6 +297,77 @@ class TestParseMappingPayload:
         )
         assert not result.records
         assert len(result.issues) == 1
+
+    def test_attribute_key_mirrored_into_attrs(self) -> None:
+        """The harness compares the sub-discriminator under its per-type
+        field name out of attrs; the adapter must make natural-key identity
+        imply that field's equality (found by adversarial review)."""
+        result = parse_mapping_payload(
+            _payload_text(
+                _payload_record(
+                    record_type="employment_tax_rate",
+                    attribute_key="social_security",
+                    filing_status=None,
+                    lower_bound=None,
+                    upper_bound=None,
+                    rate=0.062,
+                )
+            ),
+            extracted=_document(),
+        )
+        (record,) = result.records
+        assert record.attrs["component"] == "social_security"
+
+    def test_attribute_key_mirror_wins_over_model_supplied_extra(self) -> None:
+        result = parse_mapping_payload(
+            _payload_text(
+                _payload_record(
+                    record_type="wage_base",
+                    attribute_key="social_security_wage_base",
+                    filing_status=None,
+                    lower_bound=None,
+                    upper_bound=None,
+                    rate=None,
+                    amount=176100,
+                    extra_attrs=[{"key": "item", "value": "a different spelling"}],
+                )
+            ),
+            extracted=_document(),
+        )
+        (record,) = result.records
+        assert record.attrs["item"] == "social_security_wage_base"
+
+    def test_mirror_map_matches_the_harness(self) -> None:
+        from tax_tables.domain.records import ATTRIBUTE_KEY_FIELD as DOMAIN_MAP
+        from tests.accuracy.harness import ATTRIBUTE_KEY_FIELD as HARNESS_MAP
+
+        assert dict(DOMAIN_MAP) == dict(HARNESS_MAP)
+
+    def test_malformed_model_issue_degrades_never_aborts(self) -> None:
+        """A model-emitted issue with out-of-range coordinates must not kill
+        the document run (found by adversarial review)."""
+        result = parse_mapping_payload(
+            _payload_text(
+                _payload_record(),
+                issues=[
+                    {
+                        "source_page": 0,
+                        "table_id": None,
+                        "row_index": -1,
+                        "col_index": -3,
+                        "raw_value": None,
+                        "reason": "dash cell ambiguous",
+                    }
+                ],
+            ),
+            extracted=_document(),
+        )
+        assert len(result.records) == 1  # the good record survives
+        (issue,) = result.issues
+        assert issue.source_page == 1
+        assert issue.row_index is None
+        assert issue.col_index is None
+        assert issue.reason == "dash cell ambiguous"
 
     def test_model_issues_pass_through(self) -> None:
         result = parse_mapping_payload(

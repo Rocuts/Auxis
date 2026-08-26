@@ -72,7 +72,11 @@ def _record(lower: int, upper: int | None, **overrides: Any) -> CanonicalRecord:
         "upper_bound": upper,
         "rate": Decimal("0.1"),
         "currency": "USD",
-        "attrs": {"source_table_label": "table_1"},
+        # A Decimal attr, exactly as the real mapper produces them
+        # (parse_float=Decimal): the persistence path must serialize it.
+        # (Not a *_rate_pct name — a partial derived triple would rightly
+        # draw derived_sum flags and muddy the queue accounting below.)
+        "attrs": {"source_table_label": "table_1", "prior_year_amount": Decimal("3.25")},
         "confidence": Decimal("0.95"),
     }
     values.update(overrides)
@@ -134,14 +138,20 @@ class TestRunDocument:
 
         rows = db.execute("SELECT count(*) FROM records").fetchone()
         assert rows is not None and rows[0] == 2
-        # The rejected record carries every finding the validators recorded
-        # (its overlap AND the gap it creates), one queue entry per finding,
-        # plus the mapper's own issue.
+        # The Decimal attr survived JSONB serialization with its digits.
+        stored = db.execute(
+            "SELECT attrs->>'prior_year_amount' FROM records WHERE lower(bracket) = 0"
+        ).fetchone()
+        assert stored is not None and Decimal(stored[0]) == Decimal("3.25")
+        # Every finding reaches the queue with its reason: the rejected
+        # record's two (overlap + the gap it creates), the persisted
+        # neighbour's FLAG (a needs_review row without its why would be
+        # useless to a reviewer), plus the mapper's own issue.
         queue = db.execute("SELECT reason FROM review_queue ORDER BY reason").fetchall()
         reasons = [row[0] for row in queue]
-        assert len(reasons) == 3
+        assert len(reasons) == 4
         assert any(reason.startswith("bracket_overlap:") for reason in reasons)
-        assert any(reason.startswith("bracket_gap:") for reason in reasons)
+        assert sum(reason.startswith("bracket_gap:") for reason in reasons) == 2
         assert "mapping: unreadable cell" in reasons
 
     def test_dry_run_without_repository(self) -> None:
@@ -168,6 +178,9 @@ class TestRunDocument:
             )
         row = db.execute("SELECT review_status FROM records").fetchone()
         assert row is not None and row[0] == ReviewStatus.NEEDS_REVIEW.value
+        # The reason the record needs review is queued alongside it.
+        reason = db.execute("SELECT reason FROM review_queue").fetchone()
+        assert reason is not None and reason[0].startswith("confidence_floor:")
 
 
 class TestQueueReview:

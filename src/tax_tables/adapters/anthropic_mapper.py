@@ -31,7 +31,7 @@ import json
 import os
 import time
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal, InvalidOperation
 from typing import Any
@@ -40,6 +40,7 @@ import anthropic
 from pydantic import ValidationError
 
 from tax_tables.domain.records import (
+    ATTRIBUTE_KEY_FIELD,
     CanonicalRecord,
     FilingStatus,
     LifecycleStatus,
@@ -76,7 +77,9 @@ class MapperError(RuntimeError):
 
 @dataclass(frozen=True)
 class MapperConfig:
-    api_key: str
+    # repr=False: a traceback or log line carrying the config must never
+    # render the credential (anti-goal #10).
+    api_key: str = field(repr=False)
     model: str = _DEFAULT_MODEL
     base_url: str | None = None
     usd_per_mtok_in: Decimal = _DEFAULT_USD_PER_MTOK_IN
@@ -100,6 +103,9 @@ class MapperConfig:
             ),
             usd_per_mtok_out=Decimal(
                 source.get("SCHEMA_MAPPER_USD_PER_MTOK_OUT") or str(_DEFAULT_USD_PER_MTOK_OUT)
+            ),
+            max_output_tokens=int(
+                source.get("SCHEMA_MAPPER_MAX_OUTPUT_TOKENS") or _MAX_OUTPUT_TOKENS
             ),
         )
 
@@ -379,7 +385,10 @@ document prints):
   The typed "rate" slot carries the combined (total) rate converted to a
   decimal fraction, or null if the combined value is null. Map a derived
   or computed column like any other column — downstream validators check
-  its arithmetic; you do not.
+  its arithmetic; you do not. When the document marks a jurisdiction as
+  imposing no state sales tax (a dash plus an explanatory note), also emit
+  the boolean extra attr "imposes_state_sales_tax": false on that record,
+  with provenance to the note.
 - employment_tax_rate: attribute_key = the tax component slug (as printed,
   e.g. social security / medicare variants). A single-rate row puts the
   fraction in "rate"; parallel columns for different payer sides become
@@ -510,11 +519,20 @@ def _build_record(raw: Mapping[str, Any], extracted: ExtractedDocument) -> Canon
     provenance = list(raw.get("provenance") or [])
     _check_provenance(provenance, extracted)
 
+    record_type = RecordType(raw["record_type"])
+    attribute_key = None if raw.get("attribute_key") is None else str(raw["attribute_key"])
+
     attrs: dict[str, Any] = {}
     for pair in raw.get("extra_attrs") or []:
         attrs[str(pair["key"])] = pair["value"]
     attrs["source_table_label"] = str(raw["source_table_label"])
     attrs["provenance"] = provenance
+    # Mirror the sub-discriminator into the attrs tail under its per-type
+    # field name, overriding any model-supplied spelling: identity and tail
+    # must agree, and both derive from the same source cell.
+    mirror_name = ATTRIBUTE_KEY_FIELD.get(record_type)
+    if mirror_name is not None and attribute_key is not None:
+        attrs[mirror_name] = attribute_key
 
     table_id = str(raw["table_id"])
     confidence = _as_decimal(raw["confidence"], "confidence")
@@ -526,9 +544,9 @@ def _build_record(raw: Mapping[str, Any], extracted: ExtractedDocument) -> Canon
     return CanonicalRecord(
         source_page=_as_int(raw["source_page"], "source_page") or 0,
         table_id=table_id,
-        record_type=RecordType(raw["record_type"]),
+        record_type=record_type,
         jurisdiction=str(raw["jurisdiction"]),
-        attribute_key=None if raw.get("attribute_key") is None else str(raw["attribute_key"]),
+        attribute_key=attribute_key,
         filing_status=None if filing_status is None else FilingStatus(filing_status),
         taxpayer_class=(None if raw.get("taxpayer_class") is None else str(raw["taxpayer_class"])),
         tax_year=_as_int(raw.get("tax_year"), "tax_year"),
@@ -578,20 +596,50 @@ def parse_mapping_payload(text: str, *, extracted: ExtractedDocument) -> Mapping
     for raw in payload["records"]:
         try:
             records.append(_build_record(raw, extracted))
-        except (ValidationError, ValueError, KeyError, TypeError, InvalidOperation) as exc:
+        except (
+            ValidationError,
+            ValueError,
+            KeyError,
+            TypeError,
+            AttributeError,
+            InvalidOperation,
+        ) as exc:
             issues.append(_issue_from_failure(raw, f"unmappable record: {exc}"))
-    for raw_issue in payload["issues"]:
-        issues.append(
-            MappingIssue(
-                source_page=raw_issue.get("source_page") or 1,
-                table_id=raw_issue.get("table_id"),
-                row_index=raw_issue.get("row_index"),
-                col_index=raw_issue.get("col_index"),
-                raw_value=raw_issue.get("raw_value"),
-                reason=raw_issue.get("reason") or "unspecified",
-            )
-        )
+    issues.extend(_sanitize_issue(raw_issue) for raw_issue in payload["issues"])
     return MappingResult(records=records, issues=issues)
+
+
+def _sanitize_issue(raw: Any) -> MappingIssue:
+    """A model-emitted issue with out-of-range coordinates is degraded, not
+    fatal: the reason survives, the bad coordinates do not — one malformed
+    issue must never abort a document run (anti-goal #8 both ways)."""
+
+    def _coord(value: object) -> int | None:
+        return (
+            value if isinstance(value, int) and not isinstance(value, bool) and value >= 0 else None
+        )
+
+    try:
+        page = raw.get("source_page")
+        table_id = raw.get("table_id")
+        raw_value = raw.get("raw_value")
+        reason = raw.get("reason")
+        return MappingIssue(
+            source_page=page if isinstance(page, int) and page >= 1 else 1,
+            table_id=table_id if isinstance(table_id, str) and table_id else None,
+            row_index=_coord(raw.get("row_index")),
+            col_index=_coord(raw.get("col_index")),
+            raw_value=raw_value
+            if raw_value is None or isinstance(raw_value, str)
+            else str(raw_value),
+            reason=reason if isinstance(reason, str) and reason else "unspecified",
+        )
+    except (ValidationError, ValueError, TypeError, AttributeError) as exc:
+        return MappingIssue(
+            source_page=1,
+            raw_value=json.dumps(raw, default=str, ensure_ascii=False)[:2000],
+            reason=f"malformed issue from mapper: {exc}",
+        )
 
 
 # ---------------------------------------------------------------------------

@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Mapping, Sequence
+from functools import partial
 from types import TracebackType
 from typing import Any
 from uuid import UUID
@@ -37,6 +38,13 @@ from psycopg.types.json import Jsonb
 
 from tax_tables.domain.records import CanonicalRecord
 from tax_tables.ports.repository import DocumentHandle, IngestOutcome
+
+#: The mapper produces Decimal attr values (its JSON is parsed with
+#: parse_float=Decimal — no float ever touches a value), and the stdlib
+#: dumper behind Jsonb cannot serialize Decimal. default=str keeps the
+#: exact digits ("3.25" stays "3.25"); the validators' _attr_decimal reads
+#: either representation back losslessly.
+_JSONB_DUMPS = partial(json.dumps, sort_keys=True, default=str)
 
 _INSERT_RECORD = """
 INSERT INTO records (
@@ -217,7 +225,7 @@ def _record_params(document_id: UUID, record: CanonicalRecord) -> dict[str, Any]
         "rate": record.rate,
         "amount": record.amount,
         "currency": record.currency,
-        "attrs": Jsonb(record.attrs),
+        "attrs": Jsonb(record.attrs, dumps=_JSONB_DUMPS),
         "confidence": record.confidence,
         "review_status": record.review_status.value,
     }

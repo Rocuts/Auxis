@@ -439,6 +439,7 @@ def test_end_to_end_accuracy() -> None:
         AnthropicSchemaMapper,
         MapperConfig,
         MapperConfigError,
+        MapperError,
     )
     from tax_tables.adapters.pdfplumber_extractor import PdfplumberExtractor
     from tax_tables.adapters.tesseract_extractor import TesseractExtractor
@@ -464,8 +465,18 @@ def test_end_to_end_accuracy() -> None:
     cost_rows: list[tuple[str, ...]] = [
         ("document", "tok_in", "tok_out", "cache_w", "cache_r", "usd", "wall_s")
     ]
+    mapper_failures: list[str] = []
     for path in iter_source_documents(truth):
-        result = run_document(path.read_bytes(), filename=path.name, router=router, mapper=mapper)
+        try:
+            result = run_document(
+                path.read_bytes(), filename=path.name, router=router, mapper=mapper
+            )
+        except MapperError as exc:
+            # One document's failure must not discard the report for the
+            # other four; it is named and fails the gate below.
+            mapper_failures.append(f"{path.name}: {exc}")
+            cost_rows.append((path.name, "!", "!", "!", "!", "!", "!"))
+            continue
         actuals.extend((path.name, record) for record in result.mapping.records)
         cost = result.mapping.cost
         assert cost is not None  # the real adapter always reports its spend
@@ -497,6 +508,7 @@ def test_end_to_end_accuracy() -> None:
         if index == 0:
             print("  ".join("-" * width for width in widths))
 
+    assert not mapper_failures, "mapping failed for: " + "; ".join(mapper_failures)
     assert comparison.is_perfect, (
         f"accuracy {len(comparison.matched)}/{comparison.expected_count} with "
         f"{len(comparison.spurious)} spurious — every failing record is named above"

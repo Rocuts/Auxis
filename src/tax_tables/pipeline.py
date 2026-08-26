@@ -96,10 +96,12 @@ def run_document(
         source_kind=("scanned" if ExtractionMethod.OCR in extracted.methods else "digital"),
     )
     outcome = repository.ingest(handle.id, triaged.persistable)
+    # Every finding is queued with its reason — REJECTs explain why a record
+    # is absent from the fact table, FLAGs explain why a persisted row says
+    # needs_review. A flag without its why is useless to a reviewer.
     entries = [
-        review_queue_entry(rejected.record, finding)
-        for rejected in triaged.rejected
-        for finding in rejected.findings
+        review_queue_entry(mapping.records[finding.record_index], finding)
+        for finding in triaged.findings
     ]
     entries.extend(_issue_entry(issue) for issue in mapping.issues)
     queued = repository.queue_review(handle.id, entries) if entries else 0
