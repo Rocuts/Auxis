@@ -96,13 +96,30 @@ VALUES (%(document_id)s, %(source_page)s, %(table_id)s, %(row_index)s, %(col_ind
 class PostgresRecordRepository:
     def __init__(self, conninfo: str) -> None:
         self._conn: psycopg.Connection[Any] = psycopg.connect(conninfo, connect_timeout=30)
+        self._owns_conn = True
         if not psycopg.capabilities.has_send_close_prepared():
             # Old libpq behind a transaction pooler: keep preparing, never
             # send DEALLOCATE (which SQL-level poolers reject).
             self._conn.prepared_max = None
 
+    @classmethod
+    def from_connection(cls, conn: psycopg.Connection[Any]) -> PostgresRecordRepository:
+        """Wrap an existing connection (e.g. the API's request-scoped one).
+        The caller keeps ownership: ``close()`` on this instance is a no-op."""
+        repository = cls.__new__(cls)
+        repository._conn = conn
+        repository._owns_conn = False
+        return repository
+
     def close(self) -> None:
-        self._conn.close()
+        if self._owns_conn:
+            self._conn.close()
+
+    @property
+    def connection(self) -> psycopg.Connection[Any]:
+        """The underlying connection, for same-database service SQL (the
+        jobs table) that must share this adapter's transactional context."""
+        return self._conn
 
     def __enter__(self) -> PostgresRecordRepository:
         return self
@@ -251,6 +268,28 @@ class PostgresRecordRepository:
             )
             if cursor.rowcount != 1:
                 raise ValueError(f"review item {item_id} is not open")
+
+    # -- BlobStore port (same database, same connection) ------------------
+
+    def store_blob(self, document_id: UUID, content: bytes) -> None:
+        with self._conn.transaction():
+            self._conn.execute(
+                """
+                INSERT INTO document_blobs (document_id, content)
+                VALUES (%s, %s)
+                ON CONFLICT (document_id) DO UPDATE SET content = EXCLUDED.content
+                """,
+                (document_id, content),
+            )
+
+    def load_blob(self, document_id: UUID) -> bytes:
+        with self._conn.transaction():
+            row = self._conn.execute(
+                "SELECT content FROM document_blobs WHERE document_id = %s", (document_id,)
+            ).fetchone()
+        if row is None:
+            raise KeyError(f"document {document_id} has no stored blob")
+        return bytes(row[0])
 
     def _queue_for_review(self, document_id: UUID, record: CanonicalRecord, reason: str) -> None:
         self._conn.execute(
