@@ -186,6 +186,19 @@ wheels = [
 ]
 
 [[package]]
+name = "aws-lambda-powertools"
+version = "3.34.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "jmespath" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/6b/d2/ead05769a42baf2c01e9e8909b5b7a0a42b0798ab2d0eccacdef3d1f009d/aws_lambda_powertools-3.34.0.tar.gz", hash = "sha256:75f2c65a5997630666c9c3c495002c1f9d1e9defd3cb6d5d9fc7272b7dc9ef54", size = 800151, upload-time = "2026-08-10T11:26:10.742Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b3/d1/9e9433f99d8c9084d3bc831900f1ce7a99b0a2c153d9223e46839d8cc665/aws_lambda_powertools-3.34.0-py3-none-any.whl", hash = "sha256:ab1354c58085ccecf92e9c548b1336ad5bae72c7ae23e61d2aa0ff15520d679c", size = 957321, upload-time = "2026-08-10T11:26:09.002Z" },
+]
+
+[[package]]
 name = "boto3"
 version = "1.43.80"
 source = { registry = "https://pypi.org/simple" }
@@ -1595,6 +1608,7 @@ dependencies = [
 
 [package.optional-dependencies]
 aws = [
+    { name = "aws-lambda-powertools" },
     { name = "boto3" },
     { name = "mangum" },
 ]
@@ -1604,6 +1618,7 @@ ocr = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "aws-lambda-powertools" },
     { name = "boto3" },
     { name = "httpx" },
     { name = "mangum" },
@@ -1624,6 +1639,7 @@ infra = [
 [package.metadata]
 requires-dist = [
     { name = "anthropic", specifier = ">=1.0.0" },
+    { name = "aws-lambda-powertools", marker = "extra == 'aws'", specifier = ">=3.0" },
     { name = "boto3", marker = "extra == 'aws'", specifier = ">=1.34" },
     { name = "fastapi", specifier = ">=0.132" },
     { name = "mangum", marker = "extra == 'aws'", specifier = ">=0.17" },
@@ -1637,6 +1653,7 @@ provides-extras = ["ocr", "aws"]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "aws-lambda-powertools", specifier = ">=3.0" },
     { name = "boto3", specifier = ">=1.34" },
     { name = "httpx", specifier = ">=0.27" },
     { name = "mangum", specifier = ">=0.17" },

@@ -56,3 +56,35 @@ and to stop recommending the wrapper of the thing it forbids. The stack
 docstring now states the truth: tracing is the platform's, the `POWERTOOLS_*`
 variables configure Logger for the dependency layer a deploy pipeline would
 add, and Tracer is excluded by name.
+
+## Addendum (2026-08-26) — what the Lambda toolkit row actually covers
+
+Resolving the tracing contradiction exposed the same defect one level up, in
+the settled-constraints table itself: it named Powertools as the Lambda toolkit
+for "idempotency, structured logging, batch partial failure", while `uv.lock`
+held zero occurrences of it and nothing in `src/` imported it. Checked utility
+by utility, two of those three responsibilities were already met — better, and
+somewhere else. **Idempotency** lives at the data layer and is transactional
+with the write it protects: SHA-256 of the document bytes as its natural key,
+the `jobs_one_live_per_document` partial unique index that makes a second live
+job *unrepresentable* rather than merely prevented, and `UNIQUE NULLS NOT
+DISTINCT` on records. Powertools' Idempotency utility would need a DynamoDB or
+Redis persistence store this stack does not have, to re-solve a problem
+Postgres already solves across all three targets. **Batch partial failure** has
+nothing to attach to: that utility exists for `ReportBatchItemFailures` on
+event-source mappings, and this stack has none — per-document isolation is the
+Distributed Map's `tolerated_failure_percentage=100` plus the per-step Catch
+into `mark_job_failed`. **Structured logging** was the one genuine gap, so it
+is the one thing adopted: the handlers now use Powertools `Logger`, bound with
+`job_id` / `document_id` correlation keys, which is what makes a fan-out
+failure traceable to a document and a step — and it also makes the
+`POWERTOOLS_SERVICE_NAME` / `POWERTOOLS_LOG_LEVEL` variables the stack was
+already setting configure something real. `@logger.inject_lambda_context` is
+deliberately not used: it makes `context` a required positional argument
+(verified empirically), which would break the keyword-injectable collaborators
+every handler test depends on, and `append_keys` buys the same correlation
+without touching the signatures. The constraints row is amended to say exactly
+this, the dependency sits in the `aws` extra so it never reaches the Vercel
+bundle, and `tests/test_tracing_policy.py` now checks both directions — that
+the forbidden SDK is absent, and that the declared toolkit is actually
+imported.

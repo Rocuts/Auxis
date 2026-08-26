@@ -489,7 +489,10 @@ uninformative by construction, failure is made legible at both grains:
   step catches into a `MarkFailed` step that writes `status='failed'` with the
   reason, and `GET /jobs/{id}` serves it. Without that catch, this setting
   would convert a loud batch abort into a job stuck at `running` forever:
-  silent loss, the worst failure mode this product defines.
+  silent loss, the worst failure mode this product defines. Every handler binds
+  `job_id` and `document_id` as Powertools `Logger` keys, so all five steps'
+  log lines grep back to one document — which is the question a fan-out
+  actually poses.
 - **per batch — a metric and an alarm.** The Map Run is *labelled*, so its
   child executions emit `AWS/States ExecutionsFailed` under
   `<state-machine-arn>/PerDocument` — one datapoint per failed document, while
@@ -609,7 +612,8 @@ Consolidated, and deliberately specific. If something is unproven, it says so.
    has met a real control plane.
 4. **The Lambda deploy artifact is incomplete by design.** The functions ship
    the real `src/` tree and the handlers are real, unit-tested code — but the
-   runtime dependency layer (psycopg, pydantic, anthropic, boto3, mangum) is a
+   runtime dependency layer (psycopg, pydantic, anthropic, boto3, mangum,
+   aws-lambda-powertools) is a
    deploy-pipeline build step that intentionally does not exist. Likewise the
    `app_ingest` database role the Lambdas IAM-auth into is created by a
    deploy-time migration, not by the stack, and `API_KEY` / `CRON_SECRET` are

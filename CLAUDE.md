@@ -32,7 +32,7 @@ unless told otherwise.
 | Migrations | Plain versioned `.sql` + tiny runner | The DDL is itself a deliverable; keep it readable |
 | IaC | **AWS CDK v2 in Python** | `cdk synth` runs with no credentials; Terraform's `plan` requires provider auth, and `validate` alone proves far less than a full synth |
 | AWS target | Lambda + Step Functions + S3 + RDS PostgreSQL + RDS Proxy + API Gateway | Matches AWS's own IDP reference architecture |
-| Lambda toolkit | Powertools for AWS Lambda (Python) | Idempotency, structured logging, batch partial failure |
+| Lambda toolkit | Powertools for AWS Lambda (Python) — **Logger only**, base extras | Structured logging with per-document correlation keys, in the AWS handlers. Narrowed from the original row after a claim-vs-lockfile check (ADR 013 addendum): **idempotency** already lives at the data layer (SHA-256 natural key, `jobs_one_live_per_document`, `UNIQUE NULLS NOT DISTINCT`) and **batch partial failure** at the Distributed Map (`tolerated_failure_percentage` + per-step Catch), so neither of those utilities has anything here to attach to. Never the `tracer` or `all` extras — they pull the SDK anti-goal #6 forbids. |
 | Live demo host | **Vercel — Python/FastAPI on Fluid compute** | Named in the brief itself; already licensed (Pro); Git integration gives a preview deploy per PR |
 | Demo database | Neon Postgres via the Vercel Marketplace integration | Standard Postgres with `btree_gist`; free tier; connection env vars injected by Vercel |
 | Async jobs on the demo | Vercel Queues (Python SDK); cron-sweep fallback | Closest platform analog to the Step Functions fan-out; keeps `POST → 202` honest on request-scoped compute |

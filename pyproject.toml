@@ -25,6 +25,11 @@ ocr = [
 aws = [
     "boto3>=1.34",
     "mangum>=0.17",
+    # Structured logging for the Lambda handlers (CLAUDE.md's Lambda-toolkit
+    # row, narrowed — see ADR 013's addendum). BASE EXTRAS ONLY: the `tracer`
+    # and `all` extras pull aws-xray-sdk, which anti-goal #6 forbids and
+    # tests/test_tracing_policy.py rejects.
+    "aws-lambda-powertools>=3.0",
 ]
 
 [dependency-groups]
@@ -44,6 +49,7 @@ dev = [
     # pytesseract above); runtime images use the `aws` extra instead.
     "boto3>=1.34",
     "mangum>=0.17",
+    "aws-lambda-powertools>=3.0",
 ]
 # Phase 4: the CDK stack synthesizes offline; none of this ever reaches a
 # runtime bundle. cfn-lint validates the synthesized template in CI.

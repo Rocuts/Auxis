@@ -1019,3 +1019,66 @@ it empirically during 3.5 and land the number next to the AWS entry.
 Post-dispositions: `make check` **487 passed** + the credential skip;
 `make diagrams` 2/2 under both Mermaid majors; synth exit 0 credential-stripped;
 cfn-lint clean; cdk-nag 58 compliant / 53 suppressed / 0 non-compliant.
+
+## 2026-08-26 — Item 0: the Lambda-toolkit row, held to the tracer standard
+
+The tracing fix produced a standard; applied one level up, the settled-
+constraints table failed it. The row named Powertools as the Lambda toolkit for
+"idempotency, structured logging, batch partial failure", while `uv.lock` had
+zero occurrences and nothing in `src/` imported it — the same claim-vs-lockfile
+class as the tracer docstring, pointing the other way.
+
+**What the shipped handlers used for logging: stdlib `logging`.** One module
+(`aws/handlers.py`), one `getLogger(__name__)`, two call sites, both inside
+`StepFunctionsJobRunner.notify`. Nothing else in `src/` logged at all.
+
+Checked utility by utility, two of the three claimed responsibilities were
+already met elsewhere and better:
+
+- **Idempotency** is at the data layer and transactional with the write it
+  protects — SHA-256 as the document's natural key, `jobs_one_live_per_document`
+  making a second live job *unrepresentable* rather than merely prevented, and
+  `UNIQUE NULLS NOT DISTINCT` on records. Powertools' Idempotency utility needs
+  a DynamoDB or Redis persistence store this stack does not have, to re-solve a
+  problem Postgres already solves on all three targets.
+- **Batch partial failure** has nothing to attach to: that utility exists for
+  `ReportBatchItemFailures` on event-source mappings, and the stack has none
+  (grepped: zero SQS/Kinesis/DynamoDB-stream sources). Per-document isolation is
+  the Distributed Map's `tolerated_failure_percentage=100` plus the per-step
+  Catch into `mark_job_failed`.
+
+**Structured logging was the one genuine gap, so it is the one thing adopted.**
+`aws-lambda-powertools` in the `aws` extra (mirrored in dev, like boto3 and
+mangum), base extras only — the lock resolves it to 3.34.0 with `jmespath` and
+`typing-extensions` and nothing else, and `aws-xray-sdk` stays at zero
+occurrences. The handlers bind `job_id` / `document_id` correlation keys and log
+the things worth logging at each state boundary: the router's economics
+(engine, api_calls, usd — a text-layer document must show zero Textract calls),
+the accounting invariant (mapped / persisted / queued / rejected), the
+adjudication dispositions, and a warning on the failure path. It also makes the
+`POWERTOOLS_SERVICE_NAME` / `POWERTOOLS_LOG_LEVEL` variables the stack was
+already setting configure something real.
+
+`@logger.inject_lambda_context` is deliberately **not** used. Probed rather than
+assumed: it makes `context` a required positional argument, so
+`handlers.extract_document(event, repository=repository)` — the calling
+convention every handler test depends on — raises `TypeError`. `append_keys`
+buys the same correlation without touching the signatures or the injectable-
+collaborator seam.
+
+The constraints row is amended to say exactly that, with a one-paragraph
+addendum to ADR 013. `tests/test_tracing_policy.py` now checks **both**
+directions: the forbidden SDK is absent, and the declared toolkit is actually
+imported by the handlers — plus that it never reaches the shared dependency
+list, which would put it in the Vercel bundle.
+
+One correction worth recording: the policy test's first version grepped
+`pyproject.toml` as raw text and failed on its own explanatory comment, which
+mentions `aws-xray-sdk` by name. A package *named in prose* is not a package
+*depended on*; the check now parses the declared requirement lists with
+`tomllib`. The lockfile check stays a text search, which is sound there because
+`uv.lock` is generated and carries no prose.
+
+Post-item-0: `make check` **489 passed** + the credential skip; synth exit 0
+credential-stripped; cfn-lint clean; nag 58 compliant / 53 suppressed / 0
+non-compliant.

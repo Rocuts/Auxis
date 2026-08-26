@@ -33,12 +33,12 @@ extracted JSON approaches the Step Functions 256 KB payload cap.
 from __future__ import annotations
 
 import json
-import logging
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 from urllib.parse import quote
 from uuid import UUID
 
+from aws_lambda_powertools import Logger
 from psycopg.types.json import Jsonb
 
 from tax_tables.adapters.bedrock import bedrock_adjudicator, bedrock_mapper, bedrock_verifier
@@ -58,7 +58,35 @@ if TYPE_CHECKING:
 
 from tax_tables.domain.records import CanonicalRecord
 
-logger = logging.getLogger(__name__)
+#: Powertools Logger — the one part of the Lambda toolkit this project
+#: actually adopts (ADR 013 addendum): JSON lines keyed by service, with
+#: per-document correlation keys bound by ``_bind`` below. Idempotency lives
+#: at the data layer and batch semantics at the Distributed Map, so neither
+#: of the toolkit's other two utilities has anything here to attach to.
+#:
+#: Deliberately NOT ``@logger.inject_lambda_context``: that decorator makes
+#: ``context`` a required positional argument (verified), which would break
+#: the keyword-injectable collaborators every handler test depends on.
+#: ``_bind`` buys the same correlation without touching the signatures.
+logger = Logger(service="tax-tables")
+
+
+def _bind(event: Mapping[str, Any], context: Any = None) -> None:
+    """Attach this document's identity to every subsequent log line.
+
+    In a Distributed Map fan-out the hard question is never "did something
+    fail" — the alarm answers that — but "which document, in which step".
+    These keys are that answer.
+    """
+    keys: dict[str, Any] = {}
+    for name in ("job_id", "document_id"):
+        if event.get(name) is not None:
+            keys[name] = str(event[name])
+    request_id = getattr(context, "aws_request_id", None)
+    if request_id is not None:
+        keys["function_request_id"] = request_id
+    if keys:
+        logger.append_keys(**keys)
 
 
 # ---------------------------------------------------------------------------
@@ -277,6 +305,7 @@ def extract_document(
     exactly as everywhere else: a text-layer document never reaches the
     paid Textract path (a test pins zero Textract calls for digital
     input)."""
+    _bind(event, context)
     if s3 is None:
         import boto3
 
@@ -286,6 +315,17 @@ def extract_document(
     body = s3.get_object(Bucket=event["bucket"], Key=event["key"])["Body"].read()
     router = ExtractionRouter(digital=PdfplumberExtractor(), ocr=TextractExtractor(client=textract))
     extracted = router.extract(body, filename=event["filename"])
+    # The router's economics, per document and in the log: a text-layer
+    # document must show engine=pdfplumber and api_calls=0.
+    logger.info(
+        "extracted",
+        extra={
+            "engine": extracted.cost.engine,
+            "api_calls": extracted.cost.api_calls,
+            "usd": str(extracted.cost.usd),
+            "pages": len(extracted.pages),
+        },
+    )
     return {**event, "extracted": extracted.model_dump(mode="json")}
 
 
@@ -298,10 +338,11 @@ def map_and_verify(
 ) -> dict[str, Any]:
     """Bedrock mapper + independent verifier over the extracted grid — the
     bounded ADR 012 pair, unchanged; only the client transport differs."""
+    _bind(event, context)
     extracted = ExtractedDocument.model_validate(event["extracted"])
     mapping = (mapper or bedrock_mapper()).map_document(extracted)
     verification = (verifier or bedrock_verifier()).verify(extracted, mapping)
-    return {
+    payload = {
         **event,
         "mapping": {
             "records": [r.model_dump(mode="json") for r in mapping.records],
@@ -310,6 +351,15 @@ def map_and_verify(
         },
         "verification": verification.model_dump(mode="json"),
     }
+    logger.info(
+        "mapped and verified",
+        extra={
+            "records": len(mapping.records),
+            "mapping_issues": len(mapping.issues),
+            "disputes": sum(1 for v in verification.verdicts if v.verdict == "disputed"),
+        },
+    )
+    return payload
 
 
 def persist_records(
@@ -321,6 +371,7 @@ def persist_records(
     """Triage + persist + queue — the persist half of ``run_document``,
     recomposed from the same public pieces, same accounting invariant:
     every record persists or lands in the queue with its reason."""
+    _bind(event, context)
     repository = repository or _repository(None)
     # CanonicalRecord is strict: python-mode validation refuses the JSON
     # dump's strings ("0.95", "clean"), so the round-trip goes through JSON
@@ -349,6 +400,18 @@ def persist_records(
         records_persisted=outcome.persisted,
         review_count=queued,
     )
+    # The accounting invariant, in the log: every mapped record is either
+    # persisted or queued, and this line is where an operator sees it hold.
+    logger.info(
+        "persisted",
+        extra={
+            "mapped": len(mapping.records),
+            "persisted": outcome.persisted,
+            "queued_for_review": queued,
+            "overlap_rejections": outcome.overlap_rejections,
+            "cross_document_conflicts": outcome.cross_document_conflicts,
+        },
+    )
     return {
         **event,
         "persisted": outcome.persisted,
@@ -368,6 +431,7 @@ def adjudicate_queue(
     """The single adjudication pass over the document's open queue items —
     ``adjudicate_open_items`` with Bedrock behind it; per-item containment
     and the FLAG-only auto-resolve rule are the shared pipeline's."""
+    _bind(event, context)
     repository = repository or _repository(None)
     extracted = ExtractedDocument.model_validate(event["extracted"])
     outcomes = adjudicate_open_items(
@@ -377,6 +441,10 @@ def adjudicate_queue(
         extracted,
         DEFAULT_AUTO_RESOLVE_THRESHOLD,
     )
+    dispositions: dict[str, int] = {}
+    for outcome in outcomes:
+        dispositions[outcome.disposition] = dispositions.get(outcome.disposition, 0) + 1
+    logger.info("adjudicated", extra={"items": len(outcomes), "dispositions": dispositions})
     return {
         "job_id": event["job_id"],
         "document_id": str(event["document_id"]),
@@ -403,8 +471,12 @@ def mark_job_failed(
     writes it to the job row, and the state that follows still fails the
     child execution so the batch-level metric and its alarm can see it.
     """
+    _bind(event, context)
     repository = repository or _repository(None)
-    _fail_job(repository.connection, str(event["job_id"]), event.get("error") or {})
+    error = event.get("error") or {}
+    # The one line an operator greps for after the DocumentFailures alarm.
+    logger.warning("document failed", extra={"error_type": str(error.get("Error", "Unknown"))})
+    _fail_job(repository.connection, str(event["job_id"]), error)
     return {
         "job_id": str(event["job_id"]),
         "document_id": str(event.get("document_id", "")),
