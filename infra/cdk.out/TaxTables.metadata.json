@@ -218,6 +218,19 @@
       ]
     }
   ],
+  "/TaxTables/DbSg/from TaxTablesRotationSg9A36268B:5433": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "DbSgfromTaxTablesRotationSg9A36268B5433B315E2BB"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib, jsii runtime, node internals...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
   "/TaxTables/DbSg/from TaxTablesProxySgC8BAAA63:{IndirectPort}": [
     {
       "type": "aws:cdk:logicalId",
@@ -244,10 +257,10 @@
       ]
     }
   ],
-  "/TaxTables/ProxySg/from TaxTablesLambdaSg4993A0C0:5433": [
+  "/TaxTables/ProxySg/from TaxTablesLambdaSg4993A0C0:5432": [
     {
       "type": "aws:cdk:logicalId",
-      "data": "ProxySgfromTaxTablesLambdaSg4993A0C05433EAF6C8E1"
+      "data": "ProxySgfromTaxTablesLambdaSg4993A0C05432D1D65AA7"
     },
     {
       "type": "aws:cdk:creationStack",
@@ -287,6 +300,19 @@
     {
       "type": "aws:cdk:logicalId",
       "data": "LambdaSg30A6108C"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib, jsii runtime, node internals...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/TaxTables/RotationSg/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RotationSg6ED4EECB"
     },
     {
       "type": "aws:cdk:creationStack",
@@ -577,7 +603,7 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        ".../var/folders/q7/vqkr6z_53zv5lwdxt31637dh0000gn/T/jsii-kernel-UT1HVV/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:272 in aws-cdk-lib...",
+        ".../var/folders/q7/vqkr6z_53zv5lwdxt31637dh0000gn/T/jsii-kernel-BXRku6/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:272 in aws-cdk-lib...",
         "Array.forEach (:)",
         "...aws-cdk-lib..."
       ]
@@ -591,7 +617,7 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        ".../var/folders/q7/vqkr6z_53zv5lwdxt31637dh0000gn/T/jsii-kernel-UT1HVV/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:272 in aws-cdk-lib...",
+        ".../var/folders/q7/vqkr6z_53zv5lwdxt31637dh0000gn/T/jsii-kernel-BXRku6/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:272 in aws-cdk-lib...",
         "Array.forEach (:)",
         "...aws-cdk-lib..."
       ]
@@ -605,7 +631,7 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        ".../var/folders/q7/vqkr6z_53zv5lwdxt31637dh0000gn/T/jsii-kernel-UT1HVV/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:272 in aws-cdk-lib...",
+        ".../var/folders/q7/vqkr6z_53zv5lwdxt31637dh0000gn/T/jsii-kernel-BXRku6/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:272 in aws-cdk-lib...",
         "Array.forEach (:)",
         "...aws-cdk-lib..."
       ]
@@ -619,7 +645,7 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        ".../var/folders/q7/vqkr6z_53zv5lwdxt31637dh0000gn/T/jsii-kernel-UT1HVV/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:272 in aws-cdk-lib...",
+        ".../var/folders/q7/vqkr6z_53zv5lwdxt31637dh0000gn/T/jsii-kernel-BXRku6/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:272 in aws-cdk-lib...",
         "Array.forEach (:)",
         "...aws-cdk-lib..."
       ]
@@ -633,7 +659,7 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        ".../var/folders/q7/vqkr6z_53zv5lwdxt31637dh0000gn/T/jsii-kernel-UT1HVV/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:272 in aws-cdk-lib...",
+        ".../var/folders/q7/vqkr6z_53zv5lwdxt31637dh0000gn/T/jsii-kernel-BXRku6/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:272 in aws-cdk-lib...",
         "Array.forEach (:)",
         "...aws-cdk-lib..."
       ]
@@ -647,7 +673,7 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        ".../var/folders/q7/vqkr6z_53zv5lwdxt31637dh0000gn/T/jsii-kernel-UT1HVV/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:272 in aws-cdk-lib...",
+        ".../var/folders/q7/vqkr6z_53zv5lwdxt31637dh0000gn/T/jsii-kernel-BXRku6/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:272 in aws-cdk-lib...",
         "Array.forEach (:)",
         "...aws-cdk-lib..."
       ]
@@ -942,7 +968,7 @@
   "/TaxTables/Api/Deployment/Resource": [
     {
       "type": "aws:cdk:logicalId",
-      "data": "ApiDeploymentB17BE62Dc031f5e4faf2c233d034239e0d74a8a9"
+      "data": "ApiDeploymentB17BE62Dc5bb186226d1f0df5f8fc5d00ca89c0b"
     },
     {
       "type": "aws:cdk:creationStack",

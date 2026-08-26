@@ -77,7 +77,7 @@ known-first-party = ["tax_tables", "tests"]
 strict = true
 files = ["src", "tests", "infra"]
 exclude = "infra/cdk\\.out"
-mypy_path = "src"
+mypy_path = "src:infra"
 
 [[tool.mypy.overrides]]
 # None of the PDF/OCR libraries ship type stubs.

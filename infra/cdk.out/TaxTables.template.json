@@ -1322,6 +1322,106 @@
       {
        "Action": "s3:PutObject",
        "Condition": {
+        "StringEquals": {
+         "s3:x-amz-acl": "bucket-owner-full-control",
+         "aws:SourceAccount": {
+          "Ref": "AWS::AccountId"
+         }
+        },
+        "ArnLike": {
+         "aws:SourceArn": {
+          "Fn::Join": [
+           "",
+           [
+            "arn:",
+            {
+             "Ref": "AWS::Partition"
+            },
+            ":logs:",
+            {
+             "Ref": "AWS::Region"
+            },
+            ":",
+            {
+             "Ref": "AWS::AccountId"
+            },
+            ":*"
+           ]
+          ]
+         }
+        }
+       },
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "delivery.logs.amazonaws.com"
+       },
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          {
+           "Fn::GetAtt": [
+            "AccessLogs8B620ECA",
+            "Arn"
+           ]
+          },
+          "/vpc-flow-logs/AWSLogs/",
+          {
+           "Ref": "AWS::AccountId"
+          },
+          "/*"
+         ]
+        ]
+       }
+      },
+      {
+       "Action": [
+        "s3:GetBucketAcl",
+        "s3:ListBucket"
+       ],
+       "Condition": {
+        "StringEquals": {
+         "aws:SourceAccount": {
+          "Ref": "AWS::AccountId"
+         }
+        },
+        "ArnLike": {
+         "aws:SourceArn": {
+          "Fn::Join": [
+           "",
+           [
+            "arn:",
+            {
+             "Ref": "AWS::Partition"
+            },
+            ":logs:",
+            {
+             "Ref": "AWS::Region"
+            },
+            ":",
+            {
+             "Ref": "AWS::AccountId"
+            },
+            ":*"
+           ]
+          ]
+         }
+        }
+       },
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "delivery.logs.amazonaws.com"
+       },
+       "Resource": {
+        "Fn::GetAtt": [
+         "AccessLogs8B620ECA",
+         "Arn"
+        ]
+       }
+      },
+      {
+       "Action": "s3:PutObject",
+       "Condition": {
         "ArnLike": {
          "aws:SourceArn": {
           "Fn::GetAtt": [
@@ -1505,6 +1605,30 @@
     "aws:cdk:path": "TaxTables/DbSg/from TaxTablesProxySgC8BAAA63:5433"
    }
   },
+  "DbSgfromTaxTablesRotationSg9A36268B5433B315E2BB": {
+   "Type": "AWS::EC2::SecurityGroupIngress",
+   "Properties": {
+    "Description": "hosted rotation to database",
+    "FromPort": 5433,
+    "GroupId": {
+     "Fn::GetAtt": [
+      "DbSg495F8305",
+      "GroupId"
+     ]
+    },
+    "IpProtocol": "tcp",
+    "SourceSecurityGroupId": {
+     "Fn::GetAtt": [
+      "RotationSg6ED4EECB",
+      "GroupId"
+     ]
+    },
+    "ToPort": 5433
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/DbSg/from TaxTablesRotationSg9A36268B:5433"
+   }
+  },
   "DbSgfromTaxTablesProxySgC8BAAA63IndirectPort2AFA5668": {
    "Type": "AWS::EC2::SecurityGroupIngress",
    "Properties": {
@@ -1551,11 +1675,11 @@
     "aws:cdk:path": "TaxTables/ProxySg/Resource"
    }
   },
-  "ProxySgfromTaxTablesLambdaSg4993A0C05433EAF6C8E1": {
+  "ProxySgfromTaxTablesLambdaSg4993A0C05432D1D65AA7": {
    "Type": "AWS::EC2::SecurityGroupIngress",
    "Properties": {
     "Description": "lambdas to proxy",
-    "FromPort": 5433,
+    "FromPort": 5432,
     "GroupId": {
      "Fn::GetAtt": [
       "ProxySgDFD428A2",
@@ -1569,10 +1693,10 @@
       "GroupId"
      ]
     },
-    "ToPort": 5433
+    "ToPort": 5432
    },
    "Metadata": {
-    "aws:cdk:path": "TaxTables/ProxySg/from TaxTablesLambdaSg4993A0C0:5433"
+    "aws:cdk:path": "TaxTables/ProxySg/from TaxTablesLambdaSg4993A0C0:5432"
    }
   },
   "ProxySgtoTaxTablesDbSg4F8049DC5433156F895B": {
@@ -1652,6 +1776,25 @@
     "aws:cdk:path": "TaxTables/LambdaSg/Resource"
    }
   },
+  "RotationSg6ED4EECB": {
+   "Type": "AWS::EC2::SecurityGroup",
+   "Properties": {
+    "GroupDescription": "TaxTables/RotationSg",
+    "SecurityGroupEgress": [
+     {
+      "CidrIp": "0.0.0.0/0",
+      "Description": "Allow all outbound traffic by default",
+      "IpProtocol": "-1"
+     }
+    ],
+    "VpcId": {
+     "Ref": "Vpc8378EB38"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/RotationSg/Resource"
+   }
+  },
   "DatabaseSubnetGroup7D60F180": {
    "Type": "AWS::RDS::DBSubnetGroup",
    "Properties": {
@@ -1719,7 +1862,7 @@
      "RotationType": "PostgreSQLSingleUser",
      "VpcSecurityGroupIds": {
       "Fn::GetAtt": [
-       "LambdaSg30A6108C",
+       "RotationSg6ED4EECB",
        "GroupId"
       ]
      },
@@ -2083,7 +2226,7 @@
             }
            ]
           },
-          "/tax_ingest"
+          "/app_ingest"
          ]
         ]
        }
@@ -2135,9 +2278,9 @@
         "Endpoint"
        ]
       },
-      "DB_PORT": "5433",
+      "DB_PORT": "5432",
       "DB_NAME": "tax",
-      "DB_USER": "tax_ingest",
+      "DB_USER": "app_ingest",
       "DOCUMENTS_BUCKET": {
        "Ref": "Documents7E5B2978"
       },
@@ -2350,9 +2493,9 @@
         "Endpoint"
        ]
       },
-      "DB_PORT": "5433",
+      "DB_PORT": "5432",
       "DB_NAME": "tax",
-      "DB_USER": "tax_ingest",
+      "DB_USER": "app_ingest",
       "DOCUMENTS_BUCKET": {
        "Ref": "Documents7E5B2978"
       },
@@ -2551,9 +2694,9 @@
         "Endpoint"
        ]
       },
-      "DB_PORT": "5433",
+      "DB_PORT": "5432",
       "DB_NAME": "tax",
-      "DB_USER": "tax_ingest",
+      "DB_USER": "app_ingest",
       "DOCUMENTS_BUCKET": {
        "Ref": "Documents7E5B2978"
       },
@@ -2730,7 +2873,7 @@
             }
            ]
           },
-          "/tax_ingest"
+          "/app_ingest"
          ]
         ]
        }
@@ -2775,9 +2918,9 @@
         "Endpoint"
        ]
       },
-      "DB_PORT": "5433",
+      "DB_PORT": "5432",
       "DB_NAME": "tax",
-      "DB_USER": "tax_ingest",
+      "DB_USER": "app_ingest",
       "DOCUMENTS_BUCKET": {
        "Ref": "Documents7E5B2978"
       }
@@ -2971,7 +3114,7 @@
             }
            ]
           },
-          "/tax_ingest"
+          "/app_ingest"
          ]
         ]
        }
@@ -3016,9 +3159,9 @@
         "Endpoint"
        ]
       },
-      "DB_PORT": "5433",
+      "DB_PORT": "5432",
       "DB_NAME": "tax",
-      "DB_USER": "tax_ingest",
+      "DB_USER": "app_ingest",
       "DOCUMENTS_BUCKET": {
        "Ref": "Documents7E5B2978"
       },
@@ -3273,7 +3416,7 @@
          "Arn"
         ]
        },
-       "\"}}},\"MaxConcurrency\":8}}}"
+       "\"}}},\"MaxConcurrency\":8,\"ToleratedFailurePercentage\":100}}}"
       ]
      ]
     },
@@ -3431,6 +3574,9 @@
   "ApiF70053CD": {
    "Type": "AWS::ApiGateway::RestApi",
    "Properties": {
+    "BinaryMediaTypes": [
+     "application/pdf"
+    ],
     "Name": "Api"
    },
    "Metadata": {
@@ -3540,7 +3686,7 @@
     }
    }
   },
-  "ApiDeploymentB17BE62Dc031f5e4faf2c233d034239e0d74a8a9": {
+  "ApiDeploymentB17BE62Dc5bb186226d1f0df5f8fc5d00ca89c0b": {
    "Type": "AWS::ApiGateway::Deployment",
    "Properties": {
     "Description": "Automatically created by the RestApi construct",
@@ -3587,7 +3733,7 @@
      "Format": "{\"requestId\":\"$context.requestId\",\"ip\":\"$context.identity.sourceIp\",\"requestTime\":\"$context.requestTime\",\"httpMethod\":\"$context.httpMethod\",\"resourcePath\":\"$context.resourcePath\",\"status\":\"$context.status\",\"protocol\":\"$context.protocol\",\"responseLength\":\"$context.responseLength\"}"
     },
     "DeploymentId": {
-     "Ref": "ApiDeploymentB17BE62Dc031f5e4faf2c233d034239e0d74a8a9"
+     "Ref": "ApiDeploymentB17BE62Dc5bb186226d1f0df5f8fc5d00ca89c0b"
     },
     "MethodSettings": [
      {
@@ -4032,6 +4178,14 @@
       "Statement": {
        "ManagedRuleGroupStatement": {
         "Name": "AWSManagedRulesCommonRuleSet",
+        "RuleActionOverrides": [
+         {
+          "ActionToUse": {
+           "Count": {}
+          },
+          "Name": "SizeRestrictions_BODY"
+         }
+        ],
         "VendorName": "AWS"
        }
       },

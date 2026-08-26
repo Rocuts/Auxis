@@ -30,7 +30,12 @@ jobs:
           enable-cache: true
       - run: uv python install
       - run: sudo apt-get update -qq && sudo apt-get install -y -qq tesseract-ocr
-      - run: uv sync
+      # --group infra: tests/infra synthesizes the stack in-process; without
+      # the group those tests would skip and the audit pins would not run.
+      - run: uv sync --group infra
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
       - run: make check
 
   # Phase 4 gate on every push: cdk synth with NO AWS credentials (cdk-nag

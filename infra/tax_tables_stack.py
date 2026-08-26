@@ -52,8 +52,19 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 #: The nonstandard port every target of this project uses (docker-compose
 #: publishes 5433 locally); also satisfies AwsSolutions-RDS11.
 DB_PORT = 5433
+#: RDS Proxy for PostgreSQL listens on 5432 ALWAYS, whatever port its
+#: target instance uses — wiring clients to the instance port was audit
+#: critical #2 (confirmed by four agents): nothing could ever connect.
+PROXY_PORT = 5432
 DB_NAME = "tax"
-DB_USER = "tax_ingest"
+#: The master user. Owned by the proxy's secret and the rotation schedule;
+#: application Lambdas NEVER authenticate as it (audit critical: master on
+#: RDS PostgreSQL is an rds_superuser member).
+DB_MASTER_USER = "tax_ingest"
+#: The least-privilege application role the Lambdas IAM-auth into. Created
+#: by the deploy-time migration step (GRANT on the records/jobs/review
+#: tables only) — recorded in the README's honest-limitations section.
+APP_DB_USER = "app_ingest"
 
 #: The Distributed Map fan-out ceiling — the knob the README's bottleneck
 #: section reasons about, alongside RDS Proxy connection pooling.
@@ -155,8 +166,15 @@ class TaxTablesStack(cdk.Stack):
         db_sg = ec2.SecurityGroup(self, "DbSg", vpc=vpc, allow_all_outbound=False)
         proxy_sg = ec2.SecurityGroup(self, "ProxySg", vpc=vpc, allow_all_outbound=False)
         lambda_sg = ec2.SecurityGroup(self, "LambdaSg", vpc=vpc, allow_all_outbound=True)
+        # The hosted rotation Lambda gets its own group: it is the ONLY
+        # thing besides the proxy allowed to reach the database directly
+        # (audit finding, five agents independently: rotation in the shared
+        # Lambda group could never reach the DB, so the 30-day schedule
+        # would fail forever, silently).
+        rotation_sg = ec2.SecurityGroup(self, "RotationSg", vpc=vpc, allow_all_outbound=True)
         db_sg.add_ingress_rule(proxy_sg, ec2.Port.tcp(DB_PORT), "proxy to database")
-        proxy_sg.add_ingress_rule(lambda_sg, ec2.Port.tcp(DB_PORT), "lambdas to proxy")
+        db_sg.add_ingress_rule(rotation_sg, ec2.Port.tcp(DB_PORT), "hosted rotation to database")
+        proxy_sg.add_ingress_rule(lambda_sg, ec2.Port.tcp(PROXY_PORT), "lambdas to proxy")
         proxy_sg.add_egress_rule(db_sg, ec2.Port.tcp(DB_PORT), "proxy to database")
 
         database = rds.DatabaseInstance(
@@ -175,7 +193,7 @@ class TaxTablesStack(cdk.Stack):
             security_groups=[db_sg],
             port=DB_PORT,
             database_name=DB_NAME,
-            credentials=rds.Credentials.from_generated_secret(DB_USER),
+            credentials=rds.Credentials.from_generated_secret(DB_MASTER_USER),
             multi_az=True,
             storage_encrypted=True,
             deletion_protection=True,
@@ -189,7 +207,7 @@ class TaxTablesStack(cdk.Stack):
             "Rotation",
             automatically_after=cdk.Duration.days(30),
             hosted_rotation=secretsmanager.HostedRotation.postgre_sql_single_user(
-                vpc=vpc, vpc_subnets=isolated, security_groups=[lambda_sg]
+                vpc=vpc, vpc_subnets=isolated, security_groups=[rotation_sg]
             ),
         )
 
@@ -206,7 +224,12 @@ class TaxTablesStack(cdk.Stack):
         )
 
         # -- Lambda functions ---------------------------------------------
-        # The src/ tree IS the asset; dependencies layer at deploy time.
+        # The src/ tree IS the asset — the application code these handlers
+        # import is real and shipped. What does NOT exist is the runtime
+        # dependency layer (psycopg, pydantic, anthropic, boto3, mangum):
+        # producing it is a deploy-pipeline build step, and this stack is
+        # never deployed. Stated, not implied (audit finding); recorded in
+        # the README's honest-limitations section.
         code = lambda_.Code.from_asset(
             str(REPO_ROOT / "src"), exclude=["**/__pycache__", "**/*.pyc"]
         )
@@ -245,9 +268,9 @@ class TaxTablesStack(cdk.Stack):
                     "POWERTOOLS_SERVICE_NAME": "tax-tables",
                     "POWERTOOLS_LOG_LEVEL": "INFO",
                     "DB_PROXY_ENDPOINT": proxy.endpoint,
-                    "DB_PORT": str(DB_PORT),
+                    "DB_PORT": str(PROXY_PORT),
                     "DB_NAME": DB_NAME,
-                    "DB_USER": DB_USER,
+                    "DB_USER": APP_DB_USER,
                     "DOCUMENTS_BUCKET": documents.bucket_name,
                     **(env or {}),
                 },
@@ -327,7 +350,7 @@ class TaxTablesStack(cdk.Stack):
         semantic_fn.add_to_role_policy(bedrock_models)
         adjudicate_fn.add_to_role_policy(bedrock_models)
         for fn in (api_fn, persist_fn, adjudicate_fn):
-            proxy.grant_connect(fn, DB_USER)
+            proxy.grant_connect(fn, APP_DB_USER)
 
         # -- Step Functions: Distributed Map fan-out ----------------------
         def invoke(name: str, fn: lambda_.Function) -> tasks.LambdaInvoke:
@@ -353,6 +376,11 @@ class TaxTablesStack(cdk.Stack):
             # bottleneck section.
             max_concurrency=MAX_CONCURRENT_DOCUMENTS,
             items_path="$.documents",
+            # One bad document must never abort the batch (audit critical):
+            # failed items are recorded in the map result while siblings
+            # finish — the same per-document isolation the local pipeline
+            # and the accuracy gate enforce.
+            tolerated_failure_percentage=100,
         )
         fan_out.item_processor(per_document)
 
@@ -384,6 +412,9 @@ class TaxTablesStack(cdk.Stack):
             "Api",
             handler=api_fn,
             proxy=True,
+            # Without this, API Gateway UTF-8 mangles every PDF body before
+            # the handler sees a byte (audit critical).
+            binary_media_types=["application/pdf"],
             deploy_options=apigw.StageOptions(
                 stage_name="v1",
                 access_log_destination=apigw.LogGroupLogDestination(apigw_logs),
@@ -425,7 +456,21 @@ class TaxTablesStack(cdk.Stack):
                     override_action=wafv2.CfnWebACL.OverrideActionProperty(none={}),
                     statement=wafv2.CfnWebACL.StatementProperty(
                         managed_rule_group_statement=wafv2.CfnWebACL.ManagedRuleGroupStatementProperty(
-                            vendor_name="AWS", name="AWSManagedRulesCommonRuleSet"
+                            vendor_name="AWS",
+                            name="AWSManagedRulesCommonRuleSet",
+                            # SizeRestrictions_BODY blocks any body over
+                            # 8 KB — i.e. every real PDF upload (audit
+                            # critical). Count, don't block: the app's own
+                            # guards enforce the 10 MB cap, the %PDF magic,
+                            # and the page cap before a byte reaches the
+                            # pipeline (Phase 3, contract-tested), and API
+                            # Gateway hard-caps payloads at 10 MB anyway.
+                            rule_action_overrides=[
+                                wafv2.CfnWebACL.RuleActionOverrideProperty(
+                                    name="SizeRestrictions_BODY",
+                                    action_to_use=wafv2.CfnWebACL.RuleActionProperty(count={}),
+                                )
+                            ],
                         )
                     ),
                     visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(

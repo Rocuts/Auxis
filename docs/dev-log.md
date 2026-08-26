@@ -666,3 +666,65 @@ retires the legacy ACL property.
 deploy-time artifact contract, tracked with Phase 5's hexagonal proof; the
 stack docstring and the README will keep saying the design synthesizes and
 validates but was never deployed. ADR 007 (CDK over Terraform) written.
+
+## 2026-08-26 — Phase 4 ultracode audit: 23 agents, 14 confirmed, 0 refuted
+
+The operator-triggered audit workflow ran over the committed tree: six
+resource-type auditors + three directed lenses (suppression justifications,
+currency of hardcoded facts, isolated-VPC completeness), then
+refute-by-default verification. 75 raw findings; the 14 highest-severity all
+CONFIRMED — an 0-for-14 refutation rate that says the finder pool was
+precise, and that synth+cfn-lint+nag green is nowhere near deploy-correct.
+The 14 collapse to eight distinct defects, every one foreclosed test-first
+(tests/infra/test_stack.py, aws_cdk.assertions over the same feature-flag
+context cdk.json synthesizes under; all eight failed red before the fixes):
+
+1. *Flow-log delivery grant missing (critical).* The verifier decompiled
+   aws-cdk-lib 2.266's vpc-flow-logs.js to prove the mechanism: the
+   delivery.logs.amazonaws.com statements are gated on the
+   createDefaultLoggingPolicy feature flag, not on who created the bucket —
+   and the flag was unset. Per AWS docs (quoted verbatim in the finding),
+   deploy either fails CreateFlowLogs or the service OVERWRITES the bucket
+   policy, silently destroying the stack's own enforce-SSL Deny and the
+   access-log grant. Fix: the flag, now set; the template carries both
+   delivery statements.
+2. *RDS Proxy port mismatch (critical; four agents independently).* RDS
+   Proxy for PostgreSQL listens on 5432 regardless of the target's port;
+   wiring lambdas to 5433 meant nothing could ever connect. Fix: PROXY_PORT
+   constant, lambda->proxy on 5432, proxy->instance stays 5433, DB_PORT env
+   corrected.
+3. *Rotation could never reach the database (five agents).* The hosted
+   rotation Lambda sat in the shared Lambda SG with no path to the DB — the
+   30-day schedule would fail forever, silently. Fix: dedicated RotationSg,
+   the only non-proxy principal the DB admits.
+4. *Master-user authentication (critical).* Every Lambda held
+   rds-db:connect on the MASTER user (an rds_superuser member on RDS
+   Postgres). Fix: grants and env moved to the least-privilege app_ingest
+   role; the role's creation is a deploy-time migration, recorded in the
+   README limitations.
+5. *WAF blocked every real upload (critical).* SizeRestrictions_BODY
+   blocks bodies over 8 KB in Block mode — in front of a 10 MB PDF intake.
+   Fix: rule override to Count, justification in source (the app's own
+   guards enforce the cap before a byte reaches the pipeline).
+6. *PDF bodies UTF-8-mangled (critical).* No BinaryMediaTypes on the REST
+   API. Fix: application/pdf declared.
+7. *One bad document aborted the whole batch (critical).* No
+   tolerated-failure on the Distributed Map. Fix:
+   tolerated_failure_percentage=100 — the same per-document isolation the
+   local pipeline enforces.
+8. *The deploy-artifact contradiction (critical).* The source claimed a
+   dependency layer that exists nowhere. Fix: the comment now states the
+   truth (the layer is a deploy-pipeline step that intentionally does not
+   exist), and the limitation ships in the README; the handler half closes
+   with the deploy-time contract work below.
+
+The completeness lens produced a 33-row endpoint inventory (every runtime
+AWS call vs the seven endpoints, local-signing paths called out); its two
+deliberate gaps (bedrock:GetInferenceProfile, cloudwatch:PutMetricData) are
+documented in the README's honest-limitations section rather than papered
+over with endpoints nothing uses. 61 lower-severity findings reported
+unverified in the workflow output; the two unverified criticals duplicate
+defect 8. CI's check job now installs the infra group so the audit pins run
+(a skip in CI would be a silent lie); post-fix: synth exit 0 credential-
+stripped, cfn-lint clean, nag 51 compliant / 47 suppressed / 0
+non-compliant, make check 377 passed + the credential skip.
