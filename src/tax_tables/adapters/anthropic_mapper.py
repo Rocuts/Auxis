@@ -39,6 +39,7 @@ from typing import Any
 import anthropic
 from pydantic import ValidationError
 
+from tax_tables.adapters.pricing import ANTHROPIC_CACHE_FACTORS, cache_factors_for
 from tax_tables.domain.records import (
     ATTRIBUTE_KEY_FIELD,
     CanonicalRecord,
@@ -48,6 +49,7 @@ from tax_tables.domain.records import (
     ReviewStatus,
 )
 from tax_tables.extraction.model import ExtractedDocument
+from tax_tables.observability import conformance
 from tax_tables.ports.mapper import MappingCost, MappingIssue, MappingResult
 
 _DEFAULT_MODEL = "claude-opus-5"
@@ -55,9 +57,6 @@ _DEFAULT_MODEL = "claude-opus-5"
 #: any other model or a gateway with different billing.
 _DEFAULT_USD_PER_MTOK_IN = Decimal(5)
 _DEFAULT_USD_PER_MTOK_OUT = Decimal(25)
-#: Cache multipliers relative to the input price (Anthropic billing model).
-_CACHE_WRITE_FACTOR = Decimal("1.25")
-_CACHE_READ_FACTOR = Decimal("0.1")
 _MTOK = Decimal(1_000_000)
 
 _MAX_OUTPUT_TOKENS = 64_000
@@ -85,6 +84,12 @@ class MapperConfig:
     usd_per_mtok_in: Decimal = _DEFAULT_USD_PER_MTOK_IN
     usd_per_mtok_out: Decimal = _DEFAULT_USD_PER_MTOK_OUT
     max_output_tokens: int = _MAX_OUTPUT_TOKENS
+    #: Cache prices as multiples of the input price. Provider-aware rather
+    #: than Anthropic-shaped: see ``adapters.pricing``. Defaults follow the
+    #: configured model, so a gateway model id prices its own cache reads
+    #: correctly on the first run, with no extra environment.
+    cache_read_factor: Decimal = ANTHROPIC_CACHE_FACTORS.read
+    cache_write_factor: Decimal = ANTHROPIC_CACHE_FACTORS.write
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> MapperConfig:
@@ -94,9 +99,11 @@ class MapperConfig:
             raise MapperConfigError(
                 "no mapping API key: set SCHEMA_MAPPER_API_KEY or ANTHROPIC_API_KEY"
             )
+        model = source.get("SCHEMA_MAPPER_MODEL") or _DEFAULT_MODEL
+        factors = cache_factors_for(model)
         return cls(
             api_key=api_key,
-            model=source.get("SCHEMA_MAPPER_MODEL") or _DEFAULT_MODEL,
+            model=model,
             base_url=source.get("SCHEMA_MAPPER_BASE_URL") or source.get("ANTHROPIC_BASE_URL"),
             usd_per_mtok_in=Decimal(
                 source.get("SCHEMA_MAPPER_USD_PER_MTOK_IN") or str(_DEFAULT_USD_PER_MTOK_IN)
@@ -106,6 +113,12 @@ class MapperConfig:
             ),
             max_output_tokens=int(
                 source.get("SCHEMA_MAPPER_MAX_OUTPUT_TOKENS") or _MAX_OUTPUT_TOKENS
+            ),
+            cache_read_factor=Decimal(
+                source.get("SCHEMA_MAPPER_CACHE_READ_FACTOR") or str(factors.read)
+            ),
+            cache_write_factor=Decimal(
+                source.get("SCHEMA_MAPPER_CACHE_WRITE_FACTOR") or str(factors.write)
             ),
         )
 
@@ -609,6 +622,7 @@ def parse_mapping_payload(text: str, *, extracted: ExtractedDocument) -> Mapping
 
     records: list[CanonicalRecord] = []
     issues: list[MappingIssue] = []
+    conformance.LEDGER.record_items(conformance.MAPPER, len(payload["records"]))
     for raw in payload["records"]:
         try:
             records.append(_build_record(raw, extracted))
@@ -620,6 +634,11 @@ def parse_mapping_payload(text: str, *, extracted: ExtractedDocument) -> Mapping
             AttributeError,
             InvalidOperation,
         ) as exc:
+            # The envelope held and this item did not: a contract miss at the
+            # item level, which is exactly what the conformance rate measures.
+            conformance.LEDGER.record_malformed_item(
+                conformance.MAPPER, f"unmappable record: {type(exc).__name__}"
+            )
             issues.append(_issue_from_failure(raw, f"unmappable record: {exc}"))
     issues.extend(_sanitize_issue(raw_issue) for raw_issue in payload["issues"])
     return MappingResult(records=records, issues=issues)
@@ -651,6 +670,9 @@ def _sanitize_issue(raw: Any) -> MappingIssue:
             reason=reason if isinstance(reason, str) and reason else "unspecified",
         )
     except (ValidationError, ValueError, TypeError, AttributeError) as exc:
+        conformance.LEDGER.record_malformed_item(
+            conformance.MAPPER, f"malformed issue object: {type(exc).__name__}"
+        )
         return MappingIssue(
             source_page=1,
             raw_value=json.dumps(raw, default=str, ensure_ascii=False)[:2000],
@@ -661,6 +683,13 @@ def _sanitize_issue(raw: Any) -> MappingIssue:
 # ---------------------------------------------------------------------------
 # The adapter
 # ---------------------------------------------------------------------------
+
+
+def _clip_reason(exc: Exception, limit: int = 160) -> str:
+    """A failure reason short enough for a report line. The full message still
+    rides the exception the caller sees."""
+    text = " ".join(str(exc).split())
+    return text if len(text) <= limit else text[: limit - 1] + "…"
 
 
 class AnthropicSchemaMapper:
@@ -681,9 +710,24 @@ class AnthropicSchemaMapper:
             base_url=config.base_url,
             timeout=_REQUEST_TIMEOUT_SECONDS,
             max_retries=3,
+            # Every retry the SDK absorbs is one more request through this
+            # transport, which is the only place they are visible.
+            http_client=conformance.instrumented_http_client(
+                conformance.MAPPER, timeout=_REQUEST_TIMEOUT_SECONDS
+            ),
         )
 
     def map_document(self, extracted: ExtractedDocument) -> MappingResult:
+        conformance.LEDGER.record_call(conformance.MAPPER)
+        try:
+            return self._map_document(extracted)
+        except MapperError as exc:
+            # Counted at the single boundary every contract failure passes
+            # through, so the rate can never drift from the raise sites.
+            conformance.LEDGER.record_schema_failure(conformance.MAPPER, _clip_reason(exc))
+            raise
+
+    def _map_document(self, extracted: ExtractedDocument) -> MappingResult:
         started = time.perf_counter()
         # Streaming keeps long generations (document 03 maps 50+ records)
         # clear of HTTP timeouts; the shared system prompt carries a cache
@@ -730,8 +774,8 @@ class AnthropicSchemaMapper:
         cache_read = getattr(usage, "cache_read_input_tokens", 0) or 0
         usd = (
             Decimal(input_tokens) * self._config.usd_per_mtok_in
-            + Decimal(cache_write) * self._config.usd_per_mtok_in * _CACHE_WRITE_FACTOR
-            + Decimal(cache_read) * self._config.usd_per_mtok_in * _CACHE_READ_FACTOR
+            + Decimal(cache_write) * self._config.usd_per_mtok_in * self._config.cache_write_factor
+            + Decimal(cache_read) * self._config.usd_per_mtok_in * self._config.cache_read_factor
             + Decimal(output_tokens) * self._config.usd_per_mtok_out
         ) / _MTOK
         cost = MappingCost(

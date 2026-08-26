@@ -42,7 +42,9 @@ from tax_tables.adapters.anthropic_mapper import (
     check_provenance,
     serialize_document,
 )
+from tax_tables.adapters.pricing import ANTHROPIC_CACHE_FACTORS, cache_factors_for
 from tax_tables.extraction.model import ExtractedDocument
+from tax_tables.observability import conformance
 from tax_tables.ports.adjudicator import Adjudication, AdjudicationError, ReviewItem
 from tax_tables.ports.mapper import MappingCost
 
@@ -51,9 +53,6 @@ _DEFAULT_MODEL = "claude-opus-5"
 #: any other model or a gateway with different billing.
 _DEFAULT_USD_PER_MTOK_IN = Decimal(5)
 _DEFAULT_USD_PER_MTOK_OUT = Decimal(25)
-#: Cache multipliers relative to the input price (Anthropic billing model).
-_CACHE_WRITE_FACTOR = Decimal("1.25")
-_CACHE_READ_FACTOR = Decimal("0.1")
 _MTOK = Decimal(1_000_000)
 
 #: One item, one short prose disposition plus a handful of citations: an
@@ -90,6 +89,11 @@ class AdjudicatorConfig:
     usd_per_mtok_in: Decimal = _DEFAULT_USD_PER_MTOK_IN
     usd_per_mtok_out: Decimal = _DEFAULT_USD_PER_MTOK_OUT
     max_output_tokens: int = _MAX_OUTPUT_TOKENS
+    #: Cache prices as multiples of the input price, defaulted from THIS
+    #: role's model rather than Anthropic's ratios (see ``adapters.pricing``).
+    #: A role pointed at another family prices its own cache tokens.
+    cache_read_factor: Decimal = ANTHROPIC_CACHE_FACTORS.read
+    cache_write_factor: Decimal = ANTHROPIC_CACHE_FACTORS.write
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> AdjudicatorConfig:
@@ -116,6 +120,7 @@ class AdjudicatorConfig:
         # Mapper prices transfer only when this role runs the mapper's model
         # (see the same rule in VerifierConfig.from_env).
         same_engine = model == mapper_model
+        factors = cache_factors_for(model)
         return cls(
             api_key=api_key,
             model=model,
@@ -136,6 +141,16 @@ class AdjudicatorConfig:
             ),
             max_output_tokens=int(
                 source.get("ADJUDICATOR_MAX_OUTPUT_TOKENS") or _MAX_OUTPUT_TOKENS
+            ),
+            cache_read_factor=Decimal(
+                source.get("ADJUDICATOR_CACHE_READ_FACTOR")
+                or (source.get("SCHEMA_MAPPER_CACHE_READ_FACTOR") if same_engine else None)
+                or str(factors.read)
+            ),
+            cache_write_factor=Decimal(
+                source.get("ADJUDICATOR_CACHE_WRITE_FACTOR")
+                or (source.get("SCHEMA_MAPPER_CACHE_WRITE_FACTOR") if same_engine else None)
+                or str(factors.write)
             ),
         )
 
@@ -333,6 +348,12 @@ def parse_adjudication_payload(
 # ---------------------------------------------------------------------------
 
 
+def _clip_reason(exc: Exception, limit: int = 160) -> str:
+    """A failure reason short enough for a report line."""
+    text = " ".join(str(exc).split())
+    return text if len(text) <= limit else text[: limit - 1] + "…"
+
+
 class AnthropicAdjudicator:
     """Adjudicator over the Anthropic Messages API (or any endpoint that
     speaks it, such as the Vercel AI Gateway)."""
@@ -351,6 +372,9 @@ class AnthropicAdjudicator:
             base_url=config.base_url,
             timeout=_REQUEST_TIMEOUT_SECONDS,
             max_retries=3,
+            http_client=conformance.instrumented_http_client(
+                conformance.ADJUDICATOR, timeout=_REQUEST_TIMEOUT_SECONDS
+            ),
         )
 
     def adjudicate(self, item: ReviewItem, extracted: ExtractedDocument) -> Adjudication:
@@ -360,11 +384,21 @@ class AnthropicAdjudicator:
         serialized document. The second breakpoint is what makes per-item
         adjudication affordable — this role is invoked once per queued item
         of the same document, so items 2..n read the whole grid/prose
-        context out of cache at a tenth of the input price instead of
-        resending it. The itemized cost report shows that as cache-read
-        tokens, which is why the token counts travel even when the model is
-        unpriced.
+        context out of cache at this provider's cache-read rate instead of
+        resending it (a tenth of input on Anthropic, a fifth on z.ai, no
+        discount at all where none is published — see ``adapters.pricing``).
+        The itemized cost report shows that as cache-read tokens, which is
+        why the token counts travel even when the model is unpriced.
         """
+        conformance.LEDGER.record_call(conformance.ADJUDICATOR)
+        conformance.LEDGER.record_items(conformance.ADJUDICATOR, 1)
+        try:
+            return self._adjudicate(item, extracted)
+        except AdjudicatorError as exc:
+            conformance.LEDGER.record_schema_failure(conformance.ADJUDICATOR, _clip_reason(exc))
+            raise
+
+    def _adjudicate(self, item: ReviewItem, extracted: ExtractedDocument) -> Adjudication:
         started = time.perf_counter()
         with self._client.messages.stream(
             model=self._config.model,
@@ -400,8 +434,8 @@ class AnthropicAdjudicator:
         cache_read = getattr(usage, "cache_read_input_tokens", 0) or 0
         usd = (
             Decimal(input_tokens) * self._config.usd_per_mtok_in
-            + Decimal(cache_write) * self._config.usd_per_mtok_in * _CACHE_WRITE_FACTOR
-            + Decimal(cache_read) * self._config.usd_per_mtok_in * _CACHE_READ_FACTOR
+            + Decimal(cache_write) * self._config.usd_per_mtok_in * self._config.cache_write_factor
+            + Decimal(cache_read) * self._config.usd_per_mtok_in * self._config.cache_read_factor
             + Decimal(output_tokens) * self._config.usd_per_mtok_out
         ) / _MTOK
         cost = MappingCost(

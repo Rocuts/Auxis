@@ -38,8 +38,10 @@ from typing import Any
 import anthropic
 
 from tax_tables.adapters.anthropic_mapper import CANONICAL_CONVENTIONS, serialize_document
+from tax_tables.adapters.pricing import ANTHROPIC_CACHE_FACTORS, cache_factors_for
 from tax_tables.domain.records import CanonicalRecord
 from tax_tables.extraction.model import ExtractedDocument
+from tax_tables.observability import conformance
 from tax_tables.ports.mapper import MappingCost, MappingResult
 from tax_tables.ports.verifier import RecordVerdict, Verdict, VerificationResult
 
@@ -48,9 +50,6 @@ _DEFAULT_MODEL = "claude-opus-5"
 #: cheaper verifier model or a gateway with different billing.
 _DEFAULT_USD_PER_MTOK_IN = Decimal(5)
 _DEFAULT_USD_PER_MTOK_OUT = Decimal(25)
-#: Cache multipliers relative to the input price (Anthropic billing model).
-_CACHE_WRITE_FACTOR = Decimal("1.25")
-_CACHE_READ_FACTOR = Decimal("0.1")
 _MTOK = Decimal(1_000_000)
 
 #: Verdicts are small — one line of prose per record at worst — so the
@@ -82,6 +81,11 @@ class VerifierConfig:
     usd_per_mtok_in: Decimal = _DEFAULT_USD_PER_MTOK_IN
     usd_per_mtok_out: Decimal = _DEFAULT_USD_PER_MTOK_OUT
     max_output_tokens: int = _MAX_OUTPUT_TOKENS
+    #: Cache prices as multiples of the input price, defaulted from THIS
+    #: role's model rather than Anthropic's ratios (see ``adapters.pricing``).
+    #: A role pointed at another family prices its own cache tokens.
+    cache_read_factor: Decimal = ANTHROPIC_CACHE_FACTORS.read
+    cache_write_factor: Decimal = ANTHROPIC_CACHE_FACTORS.write
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> VerifierConfig:
@@ -117,6 +121,7 @@ class VerifierConfig:
         # is never silently billed at another model's rate (adversarial-
         # review minor, promoted).
         same_engine = model == mapper_model
+        factors = cache_factors_for(model)
         return cls(
             api_key=api_key,
             model=model,
@@ -137,6 +142,16 @@ class VerifierConfig:
             ),
             max_output_tokens=int(
                 source.get("RECORD_VERIFIER_MAX_OUTPUT_TOKENS") or _MAX_OUTPUT_TOKENS
+            ),
+            cache_read_factor=Decimal(
+                source.get("RECORD_VERIFIER_CACHE_READ_FACTOR")
+                or (source.get("SCHEMA_MAPPER_CACHE_READ_FACTOR") if same_engine else None)
+                or str(factors.read)
+            ),
+            cache_write_factor=Decimal(
+                source.get("RECORD_VERIFIER_CACHE_WRITE_FACTOR")
+                or (source.get("SCHEMA_MAPPER_CACHE_WRITE_FACTOR") if same_engine else None)
+                or str(factors.write)
             ),
         )
 
@@ -361,12 +376,19 @@ def parse_verification_payload(
 
     assigned: dict[int, RecordVerdict] = {}
     notes: list[str] = []
+    conformance.LEDGER.record_items(conformance.VERIFIER, record_count)
     for raw in payload["verdicts"]:
         if not isinstance(raw, Mapping):
+            conformance.LEDGER.record_malformed_item(
+                conformance.VERIFIER, "verdict that is not an object"
+            )
             notes.append(f"ignored a verdict that is not an object: {_clip(raw)}")
             continue
         index = raw.get("record_index")
         if not isinstance(index, int) or isinstance(index, bool) or not 0 <= index < record_count:
+            conformance.LEDGER.record_malformed_item(
+                conformance.VERIFIER, "verdict naming a record outside the batch"
+            )
             notes.append(
                 f"ignored a verdict naming record_index {index!r}, which is not one "
                 f"of the {record_count} records under review"
@@ -378,7 +400,12 @@ def parse_verification_payload(
 
     for index in range(record_count):
         if index not in assigned:
-            # Silence is not assent (port docstring).
+            # Silence is not assent (port docstring) — and a record the model
+            # was asked to judge and did not is a contract miss, not merely a
+            # dispute.
+            conformance.LEDGER.record_malformed_item(
+                conformance.VERIFIER, "no verdict returned for a record under review"
+            )
             assigned[index] = RecordVerdict(
                 record_index=index,
                 verdict=Verdict.DISPUTED,
@@ -390,6 +417,12 @@ def parse_verification_payload(
 # ---------------------------------------------------------------------------
 # The adapter
 # ---------------------------------------------------------------------------
+
+
+def _clip_reason(exc: Exception, limit: int = 160) -> str:
+    """A failure reason short enough for a report line."""
+    text = " ".join(str(exc).split())
+    return text if len(text) <= limit else text[: limit - 1] + "…"
 
 
 class AnthropicRecordVerifier:
@@ -410,9 +443,24 @@ class AnthropicRecordVerifier:
             base_url=config.base_url,
             timeout=_REQUEST_TIMEOUT_SECONDS,
             max_retries=3,
+            http_client=conformance.instrumented_http_client(
+                conformance.VERIFIER, timeout=_REQUEST_TIMEOUT_SECONDS
+            ),
         )
 
     def verify(self, extracted: ExtractedDocument, mapping: MappingResult) -> VerificationResult:
+        if not mapping.records:
+            # Recorded before the call counter: a document that mapped nothing
+            # makes no verification call, so it must not enter the denominator.
+            return VerificationResult(verdicts=[], cost=None)
+        conformance.LEDGER.record_call(conformance.VERIFIER)
+        try:
+            return self._verify(extracted, mapping)
+        except VerifierError as exc:
+            conformance.LEDGER.record_schema_failure(conformance.VERIFIER, _clip_reason(exc))
+            raise
+
+    def _verify(self, extracted: ExtractedDocument, mapping: MappingResult) -> VerificationResult:
         records = mapping.records
         if not records:
             # Nothing to refute: a document that mapped no records spends no
@@ -468,8 +516,8 @@ class AnthropicRecordVerifier:
         cache_read = getattr(usage, "cache_read_input_tokens", 0) or 0
         usd = (
             Decimal(input_tokens) * self._config.usd_per_mtok_in
-            + Decimal(cache_write) * self._config.usd_per_mtok_in * _CACHE_WRITE_FACTOR
-            + Decimal(cache_read) * self._config.usd_per_mtok_in * _CACHE_READ_FACTOR
+            + Decimal(cache_write) * self._config.usd_per_mtok_in * self._config.cache_write_factor
+            + Decimal(cache_read) * self._config.usd_per_mtok_in * self._config.cache_read_factor
             + Decimal(output_tokens) * self._config.usd_per_mtok_out
         ) / _MTOK
         cost = MappingCost(
