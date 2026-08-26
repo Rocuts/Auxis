@@ -592,3 +592,16 @@ for amount 12500 (single) and the open-top estates/trusts bracket for
 bearer -> the job fails typed as missing_credentials. Router re-shown on
 the five fixtures: 01-04 deterministic_text at $0/0 calls, 05 -> ocr
 (tesseract, conf 0.92), report gate line green.
+
+## 2026-08-26 — Accounting correction: the twelfth minor, named
+
+The minors triage above reads "six promoted + three parked + two already
+closed" — eleven. Twelve were reported. The twelfth is *"spend on failed
+adjudications is never reported"*: it was promoted and fixed, but folded
+into the same dev-log bullet (and the same fix) as its sibling *"failed
+adjudications are invisible in pipeline_report"* — one bullet, two minors,
+one mechanism (cost rides ``AdjudicationError`` into
+``AdjudicationOutcome.error_cost`` and the report's ``adj_usd``). Correct
+ledger: **seven promoted (six fixes), three parked, two previously closed
+= twelve.** The disposition of every one is unchanged; only the header
+under-counted.
