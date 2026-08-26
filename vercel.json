@@ -1,9 +1,10 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "fastapi",
   "functions": {
     "app/main.py": {
       "maxDuration": 300,
-      "excludeFiles": "{fixtures/**,tests/**,docs/**,infra/**,scripts/**,.github/**,.venv/**,**/test_*.py,**/*.pen}"
+      "excludeFiles": "{fixtures/**,tests/**,docs/**,infra/**,scripts/**,.github/**,.venv/**,Documents/**,.claude/**,.pytest_cache/**,.mypy_cache/**,.ruff_cache/**,**/__pycache__/**,**/test_*.py,.env,.env.*}"
     }
   },
   "crons": [

@@ -1,0 +1,34 @@
+# What must never be uploaded to Vercel.
+#
+# `excludeFiles` in vercel.json prunes the *function bundle*; this prunes the
+# *upload*. Both are needed, and this one is the security-relevant half: a
+# local `.env` is gitignored but very much present on disk, and the build's
+# own filePathMap listed `.env`, `.env.local` and `.env.preview` before this
+# file existed (verified against `vercel build` output).
+
+# Secrets. Never, under any circumstance (anti-goal #10).
+.env
+.env.*
+*.env
+
+# The test oracle and the corpus. The ground truth must not exist in the
+# deployed artifact (anti-goal #1, reinforced at the packaging layer).
+fixtures/
+tests/
+
+# Not needed at runtime, and large.
+infra/
+docs/
+scripts/
+.github/
+Documents/
+.venv/
+.git/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+__pycache__/
+**/__pycache__/
+*.pyc
+.DS_Store
+.claude/
