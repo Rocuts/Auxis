@@ -42,6 +42,7 @@ from tax_tables.adapters.anthropic_mapper import (
     check_provenance,
     serialize_document,
 )
+from tax_tables.adapters.envelope import loads_fence_tolerant
 from tax_tables.adapters.pricing import ANTHROPIC_CACHE_FACTORS, cache_factors_for
 from tax_tables.extraction.model import ExtractedDocument
 from tax_tables.observability import conformance
@@ -314,7 +315,7 @@ def parse_adjudication_payload(
     """
     try:
         try:
-            payload = json.loads(text, parse_float=Decimal)
+            payload = loads_fence_tolerant(text, role=conformance.ADJUDICATOR, parse_float=Decimal)
         except json.JSONDecodeError as exc:
             raise AdjudicatorError(f"adjudication response is not valid JSON: {exc}") from exc
         if not isinstance(payload, dict) or not {"resolution", "citations", "confidence"} <= set(

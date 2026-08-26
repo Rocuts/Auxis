@@ -1578,3 +1578,91 @@ March 2024 model.
 
 `make check`: 572 passed, 1 skipped (the accuracy gate, which needs the key).
 Gate 2b remains **OPEN**.
+
+## 2026-08-26 — Both forks resolved: a bounded accommodation, and a venue fixed before it is needed
+
+### The fence residue, accommodated in writing rather than in reflex
+
+The previous entry left an operator fork. Resolved: **accommodate at the
+transport boundary, scoped in writing, measured every time.**
+`adapters/envelope.py` accepts a body when **exactly one complete JSON value
+parses and the only other content is fence framing** — an optional leading
+fence line (a backtick run, optionally with a language tag, on its own line), an
+optional trailing backtick run, whitespace anywhere. Everything else stays a
+hard contract failure: prose either side of the value, a second value, a
+truncated value, an empty body, backticks with content on the same line.
+
+Three properties make this a transport fix rather than a repair:
+
+- **The rejection cases are the specification.** They are tested first and
+  outnumber the acceptance cases. The distance between "strip two backticks"
+  and "salvage what you can from a bad body" is the distance between fixing a
+  transport and inventing data (anti-goal #8).
+- **The strict error is what surfaces.** When the framing turns out not to have
+  been the whole problem, the *original* `JSONDecodeError` is re-raised, so a
+  traceback describes what the model actually sent rather than an intermediate
+  no one saw.
+- **Every occurrence is counted, by role and by position.** The residue rate
+  prints beside the accuracy table with a leading/trailing breakdown. An
+  accommodation nobody can see is a repair; one that publishes a rate is a
+  documented property of the model — and that visibility is the entire
+  justification for permitting it.
+
+Replaying the captured fixture-02 body through the loader yields **8 records**,
+matching that document's expected count, with residue recorded as one trailing
+occurrence. ADR 014 §4 carries the rule; §3 excludes residue from the
+hard-failure trigger, because escalating a model for formatting its correct
+answer would be paying for a different failure than the one observed.
+
+### The tier, measured — and a quoted claim that no longer holds
+
+Two dated facts worth recording precisely, because the earlier entry read the
+balance as evidence of a purchase and it is not.
+
+**The $4.999 is the recurring allowance, not a top-up.** Every Vercel team
+receives $5 per 30 days of AI Gateway credit. **No purchase has occurred on
+this account.** The balance moving is the allowance resetting, not funds
+arriving — which is why the GLM 429 throttle lifted while the 403s did not.
+
+**Vercel's August 2025 GA announcement stated that free credits carry no
+premium-model restriction. The observed behaviour today contradicts it.**
+`anthropic/claude-haiku-4.5` returns 403 "Free tier users do not have access to
+this model"; opus-5, sonnet-5, gpt-5-mini and glm-5.3 return 429 carrying the
+same free-tier message; only cheap ids invoke. The policy evidently changed
+after GA and the announcement was not amended. **Another measured-beats-quoted
+instance, and the third in this project** — after the request-body cap (docs
+say 100 MB, this runtime enforces ~4.5 MB) and `output_config` (accepted by the
+gateway, not enforced). The pattern is now consistent enough to be a stated
+methodology rather than a run of luck: *quote no platform number this project
+depends on without measuring it first.*
+
+**And the trap worth naming: the first gateway credit purchase permanently ends
+the monthly allowance.** So "just add $5 to the gateway" costs $5 *and* the
+standing $5/30 days, forever. That single fact decides the escalation venue.
+
+### The escalation venue, fixed pre-run
+
+ADR 014 §5, amended in this window: if a trigger fires, escalation is the
+**direct Anthropic route** — the operator funds $5 at `console.anthropic.com`,
+`ANTHROPIC_API_KEY` becomes a direct `sk-ant-…` key, `SCHEMA_MAPPER_BASE_URL`
+is unset, and `SCHEMA_MAPPER_MODEL` becomes the claude-haiku-4.5-class id.
+Never a gateway credit purchase. Four reasons, in order of weight: a gateway
+purchase permanently kills the recurring allowance; the direct API *enforces*
+structured outputs, which retires the conformance caveat in the same move that
+escalates the model; list price is identical, since the gateway applies no
+markup; and the dual-route adapters make it an environment flip with no code
+change. `claude-3-haiku` remains a mechanism fallback and may never be the
+source of a reported result.
+
+Deciding this while it is still hypothetical is the point. Under a red gate the
+gateway route is the one that looks closest to hand.
+
+### Decision: run the gate on the reachable pair, against the free allowance
+
+Documented guidance and this project's own instinct agree — exhaust the free
+tier before spending. The Phase 2b gate runs now on `zai/glm-5.3-flash`
+(mapper) and `alibaba/qwen-3-235b` (verifier). If any ADR 014 trigger fires,
+the run stops and reports; the purchase is an operator action, at the Anthropic
+console only.
+
+`make check`: 591 passed, 1 skipped.

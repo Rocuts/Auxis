@@ -38,6 +38,7 @@ from typing import Any
 import anthropic
 
 from tax_tables.adapters.anthropic_mapper import CANONICAL_CONVENTIONS, serialize_document
+from tax_tables.adapters.envelope import loads_fence_tolerant
 from tax_tables.adapters.pricing import ANTHROPIC_CACHE_FACTORS, cache_factors_for
 from tax_tables.domain.records import CanonicalRecord
 from tax_tables.extraction.model import ExtractedDocument
@@ -368,7 +369,7 @@ def parse_verification_payload(
     than guessed at — nothing the model said disappears silently.
     """
     try:
-        payload = json.loads(text)
+        payload = loads_fence_tolerant(text, role=conformance.VERIFIER)
     except json.JSONDecodeError as exc:
         raise VerifierError(f"verification response is not valid JSON: {exc}") from exc
     if not isinstance(payload, dict) or not isinstance(payload.get("verdicts"), list):

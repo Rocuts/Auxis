@@ -39,6 +39,7 @@ from typing import Any
 import anthropic
 from pydantic import ValidationError
 
+from tax_tables.adapters.envelope import loads_fence_tolerant
 from tax_tables.adapters.pricing import ANTHROPIC_CACHE_FACTORS, cache_factors_for
 from tax_tables.domain.records import (
     ATTRIBUTE_KEY_FIELD,
@@ -614,7 +615,7 @@ def parse_mapping_payload(text: str, *, extracted: ExtractedDocument) -> Mapping
     the model's raw proposal as ``raw_value`` — reviewable, never dropped.
     """
     try:
-        payload = json.loads(text, parse_float=Decimal)
+        payload = loads_fence_tolerant(text, role=conformance.MAPPER, parse_float=Decimal)
     except json.JSONDecodeError as exc:
         raise MapperError(f"mapping response is not valid JSON: {exc}") from exc
     if not isinstance(payload, dict) or "records" not in payload or "issues" not in payload:

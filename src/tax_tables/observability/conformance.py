@@ -31,6 +31,15 @@ Three quantities, deliberately kept apart because they mean different things:
     beside the rates so the two are never conflated, and it is a lower bound:
     a retry provoked by a connection error never reaches an HTTP response.
 
+``residue``
+    Responses whose JSON was complete and correct but arrived inside markdown
+    code-fence framing, which ``adapters.envelope`` strips under a rule narrow
+    enough to reject anything else. Counted by position because that is the
+    difference between a model that opens a fence and one that closes a reply.
+    A *presentation* property: the accommodation exists so this shows up as a
+    published rate instead of a silent repair, and ADR 014 deliberately keeps
+    it out of the escalation trigger, which fires on hard contract failures.
+
 The ledger is process-wide and additive by design: the adapters record into it
 from wherever they run, and a reporter renders it at the end. It is only
 rendered when real HTTP attempts were observed, so a suite driven by injected
@@ -51,6 +60,12 @@ ADJUDICATOR = "adjudicator"
 #: Role order for the report; a role with no calls is omitted.
 ROLES = (MAPPER, VERIFIER, ADJUDICATOR)
 
+#: Where fence framing sat on a response the transport accommodated. Recorded
+#: per occurrence so the report can say which end the model framed, not merely
+#: that it framed something.
+RESIDUE_LEADING = "leading"
+RESIDUE_TRAILING = "trailing"
+
 #: Statuses the Anthropic SDK treats as retryable. A response carrying one of
 #: these was, by construction, either retried or the final attempt of an
 #: exhausted retry budget.
@@ -69,6 +84,16 @@ class RoleCounters:
     malformed_items: int = 0
     http_attempts: int = 0
     retries: int = 0
+    residue_responses: int = 0
+    residue_leading: int = 0
+    residue_trailing: int = 0
+
+    @property
+    def residue_rate(self) -> float | None:
+        """Share of calls whose body needed fence framing removed."""
+        if self.calls == 0:
+            return None
+        return self.residue_responses / self.calls
 
     @property
     def call_conformance(self) -> float | None:
@@ -128,6 +153,17 @@ class ConformanceLedger:
         self._bump(role, malformed_items=1)
         self._note(role, reason)
 
+    def record_envelope_residue(self, role: str, positions: Iterable[str]) -> None:
+        """One response accommodated, plus one count per end that was framed."""
+        seen = tuple(positions)
+        self._bump(
+            role,
+            residue_responses=1,
+            residue_leading=sum(1 for p in seen if p == RESIDUE_LEADING),
+            residue_trailing=sum(1 for p in seen if p == RESIDUE_TRAILING),
+        )
+        self._note(role, f"fence framing stripped ({'+'.join(seen)})")
+
     def record_http_status(self, role: str, status: int) -> None:
         retryable = status in _RETRYABLE_STATUSES or status >= 500
         self._bump(role, http_attempts=1, retries=1 if retryable else 0)
@@ -182,10 +218,12 @@ _HEADER = (
     "items",
     "schema_fail",
     "malformed",
+    "residue",
     "http_att",
     "retryable",
     "call_ok",
     "item_ok",
+    "residue%",
 )
 
 
@@ -215,10 +253,12 @@ def format_conformance_report(ledger: ConformanceLedger = LEDGER) -> str:
                 str(counters.items),
                 str(counters.schema_failures),
                 str(counters.malformed_items),
+                str(counters.residue_responses),
                 str(counters.http_attempts),
                 str(counters.retries),
                 _pct(counters.call_conformance),
                 _pct(counters.item_conformance),
+                _pct(counters.residue_rate),
             )
         )
 
@@ -237,6 +277,21 @@ def format_conformance_report(ledger: ConformanceLedger = LEDGER) -> str:
         "  retryable counts 408/409/429/5xx responses the SDK absorbed - throughput, "
         "not conformance."
     )
+    lines.append(
+        "  residue = complete JSON that arrived inside markdown fence framing, stripped "
+        "at the transport"
+    )
+    lines.append(
+        "  boundary (ADR 014): reported, never an escalation trigger - the contract "
+        "was met, the presentation was not."
+    )
+    for role in present:
+        counters = snapshot[role]
+        if counters.residue_responses:
+            lines.append(
+                f"  {role}: fence framing by position - "
+                f"leading {counters.residue_leading}, trailing {counters.residue_trailing}"
+            )
     for role in present:
         reasons: Iterable[str] = ledger.reasons(role)
         for reason in reasons:

@@ -1,6 +1,6 @@
 # ADR 014 — Semantic-layer model selection, and its pre-registered escalation rule
 
-**Status:** accepted · **Date:** 2026-08-26 · **Phase:** 2b
+**Status:** accepted · **Date:** 2026-08-26 (amended same day, pre-run: §4 carve-out implemented, §5 venue fixed) · **Phase:** 2b
 
 ## Context
 
@@ -90,7 +90,12 @@ known-worse model.
 - **Throttling.** A 429 the SDK retried through, or a run that dies on an
   exhausted retry budget, is a throughput event. It is re-run, never escalated:
   it says nothing about whether the model can emit the schema.
-- **Envelope residue** — see the carve-out below.
+- **Envelope residue.** A response whose JSON value is complete and correct and
+  whose only other content is markdown fence framing. Its rate is measured and
+  printed beside the accuracy table, and it is deliberately excluded from B1:
+  the contract was met and the presentation was not, and escalating a model for
+  formatting its correct answer would be paying for a different failure than
+  the one observed. §4 fixes the boundary.
 
 Escalation is **one step**. Going further (to `anthropic/claude-sonnet-5` or
 `claude-opus-5`) is an operator decision, not a rule this page grants.
@@ -100,51 +105,76 @@ README as model-selection evidence. A single table showing the model that
 happened to be chosen is an assertion; two tables with a rule written before
 either of them is evidence.
 
-### 4. The carve-out, and the peek that produced it
+### 4. The residue carve-out, scoped and implemented
 
 **This rule was written after one look at real output, and says so.** A
 single-document smoke test of the instrumentation (fixture 02, dry, nothing
 persisted) returned a body that `json.loads` parsed completely and then
-rejected with `Extra data`: the model emitted the correct, complete JSON object
-followed by a stray markdown-fence remnant (`` `` ``). The semantic content
-conformed; the envelope carried transport residue from a gateway that forwards
-`output_config` without enforcing it.
+rejected with `Extra data`: `stop_reason='end_turn'`, a 7,880-character valid
+object carrying all 8 of that document's records, followed by a stray
+two-backtick remnant. The semantic content conformed; the envelope carried
+transport residue from a gateway that forwards `output_config` without
+enforcing it. Recording that here rather than folding it quietly into a
+threshold is the point of pre-registration.
 
-Recording that here rather than quietly folding it into a threshold is the
-point of pre-registration. **Envelope residue is not a Trigger B failure**: a
-body whose JSON value parses completely, with nothing but whitespace or
-markdown-fence characters around it, is a transport artifact, not a semantic
-one, and no value in it is guessed or dropped.
+`adapters/envelope.py` accommodates that framing at the transport boundary,
+under a rule narrow enough to state in one sentence:
 
-That carve-out is **not yet implemented**, and the gate cannot produce a
-meaningful accuracy number until it is resolved, because today such a response
-fails the whole document. The two live options — accommodate the residue at the
-transport boundary and count each occurrence as its own measured rate, or treat
-it as a hard failure and escalate — are an open fork for the operator. The
-second is currently blocked: see below.
+> A body is accepted when **exactly one complete JSON value parses** and the
+> only other content is **fence framing** — an optional leading fence line (a
+> backtick run, optionally with a language tag, on its own line), an optional
+> trailing backtick run, and whitespace.
 
-### 5. The escalation target is currently unreachable
+Everything else stays a hard contract failure: prose before or after the value,
+a second value, a truncated value, an empty body, backticks with content on the
+same line. The distance between "strip fence characters" and "salvage what you
+can" is the distance between a transport fix and silent data invention, and the
+rejection cases are tested first for that reason. When the framing turns out not
+to have been the whole problem, the **strict** error is re-raised, so a
+traceback always describes what the model actually sent.
 
-Probed 2026-08-26 against the configured key:
+**Never silent.** Every accommodation increments a residue counter by role and
+by position (leading / trailing), and the rate prints beside the accuracy table
+with the positions broken out. An accommodation nobody can see is a repair; one
+that shows up as a published rate is a documented property of the model. That
+visibility is the whole justification for permitting it at all — and it is why
+residue is excluded from the escalation trigger rather than quietly counted as
+success.
 
-| Model | Result |
-|---|---|
-| `zai/glm-5.3-flash` | 200 — the earlier free-tier 429 has lifted |
-| `alibaba/qwen-3-235b` | 200 |
-| `anthropic/claude-3-haiku` | 200 |
-| `anthropic/claude-haiku-4.5` | **403 — "Free tier users do not have access to this model. Upgrade to paid credits."** |
-| `anthropic/claude-opus-5`, `claude-sonnet-5`, `openai/gpt-5-mini`, `zai/glm-5.3` | 429, same free-tier message |
+### 5. Escalation goes direct to Anthropic, never through the gateway
 
-`GET /v1/credits` reports a balance of $4.999 with $0.0006 used, so this is not
-an empty wallet: the balance is free-tier allowance, and the account is still
-flagged free tier for model access. Cheap ids invoke; anything above the tier's
-price ceiling does not.
+The venue is fixed **before** the run, for the same reason the thresholds are.
+It is not a formality: the gateway route is reachable-looking and is the wrong
+answer, for reasons that are easier to weigh now than under a red gate.
 
-**Consequence, stated plainly: if the pre-registered rule fires, it cannot be
-executed on this key.** Unblocking it is a paid top-up, an operator action.
-`anthropic/claude-3-haiku` is the only Anthropic-family id currently reachable;
-it is a March 2024 model and is recorded here as a *mechanism* fallback — it
-would prove the escalation path runs — never as a quality escalation.
+The free tier's price ceiling makes the gateway route unavailable in any case —
+`anthropic/claude-haiku-4.5` returns 403 on the configured key while cheap ids
+invoke, and the $4.999 balance is the recurring monthly allowance rather than
+purchased credit. The dev-log entry for 2026-08-26 carries the measured
+probe table and the policy history.
+
+**Route.** The operator funds $5 at `console.anthropic.com`;
+`ANTHROPIC_API_KEY` becomes a direct `sk-ant-…` key; `SCHEMA_MAPPER_BASE_URL`
+is unset; `SCHEMA_MAPPER_MODEL` becomes the claude-haiku-4.5-class id. The
+adapters already read that chain, so it is an environment flip and no code
+change — the ports design paying out again.
+
+**Why not simply buy gateway credits:**
+
+1. **A gateway purchase is irreversible in the wrong direction.** The first
+   credit purchase permanently ends the recurring monthly allowance. Spending
+   $5 there costs $5 *and* the standing $5/30 days.
+2. **The direct API enforces structured outputs.** It removes the conformance
+   caveat this whole ADR is built around, in the same move that escalates the
+   model — §4's carve-out becomes unnecessary rather than merely measured.
+3. **The price is the same.** The gateway applies no markup, so the direct
+   route costs list price exactly as the gateway does.
+4. **It is one env flip**, already exercised: the adapters were built
+   dual-route from the start.
+
+`anthropic/claude-3-haiku` — the only Anthropic-family id reachable on the free
+tier — stays a **mechanism** fallback: it would prove the escalation path runs.
+It is a March 2024 model and may never be the source of a reported result.
 
 ## Consequences
 
@@ -156,3 +186,8 @@ would prove the escalation path runs — never as a quality escalation.
   `adapters/pricing.py`).
 - A conformance rate is a permanent artifact of every run, so the README states
   a measurement where it previously carried a caveat.
+- The one accommodation the pipeline makes to a non-enforcing transport is
+  bounded in writing, tested from the rejection side, and published as a rate.
+- The escalation venue is decided while it is still a hypothetical, so the
+  choice cannot be rationalised afterwards by whichever route is cheapest to
+  reach in the moment.

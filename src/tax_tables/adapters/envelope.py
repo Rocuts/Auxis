@@ -1,0 +1,100 @@
+"""Fence framing is tolerated at the transport boundary. Nothing else is.
+
+The Vercel AI Gateway forwards ``output_config`` without enforcing it for a
+non-Anthropic model, so the contract is honoured by instruction-following. In
+practice that produces one specific artifact and no other: a complete, correct
+JSON object wrapped in markdown code-fence characters — the model answering as
+if it were writing to a chat window. The first measured run of
+``zai/glm-5.3-flash`` returned exactly that (``stop_reason='end_turn'``, a
+7,880-character valid object, then a two-backtick remnant), and the whole
+document failed on two characters.
+
+This module accommodates that framing and refuses everything else, because the
+distance between "strip fence characters" and "salvage what you can from a bad
+body" is the distance between a transport fix and silent data invention
+(anti-goal #8). The rule is deliberately narrow:
+
+**Accepted** — exactly one complete JSON value parses, and the only other
+content is fence framing: an optional leading fence line (a backtick run,
+optionally with a language tag, on its own line), an optional trailing backtick
+run, and whitespace anywhere.
+
+**Rejected, as a hard contract failure** — prose before or after the value, a
+second JSON value, a truncated value, an empty body. Every one of those means
+the model said something the contract has no place for, and guessing which part
+was meant is exactly the failure mode this codebase exists to avoid.
+
+**Never silent.** Each accommodation is recorded in the conformance ledger by
+role and by position, and the residue rate prints beside the accuracy table. An
+accommodation nobody can see is a repair; one that shows up as a measured rate
+is a documented property of the model.
+"""
+
+from __future__ import annotations
+
+import json
+import re
+from collections.abc import Callable
+from typing import Any
+
+from tax_tables.observability import conformance
+
+#: A leading fence must be its own line: a backtick run, an optional language
+#: tag ("json"), then the line break. Backticks followed by content on the same
+#: line are not framing and are left alone to fail.
+_LEADING_FENCE = re.compile(r"\A\s*`+[ \t]*[A-Za-z0-9_+.-]*[ \t]*\r?\n")
+
+#: A trailing fence is a backtick run at the end of the body. The run length is
+#: not checked: the measured artifact was two backticks, not three, and a
+#: truncated fence is still nothing but fence characters.
+_TRAILING_FENCE = re.compile(r"\s*`+\s*\Z")
+
+
+def strip_fence_framing(text: str) -> tuple[str, tuple[str, ...]]:
+    """Return the body with fence framing removed, and which ends carried it.
+
+    Whitespace alone is not residue: ``json.loads`` already ignores it, so a
+    body that differs from the contract only by surrounding newlines parses
+    strictly and never reaches this function.
+    """
+    positions: list[str] = []
+    inner = text
+    leading = _LEADING_FENCE.match(inner)
+    if leading is not None:
+        inner = inner[leading.end() :]
+        positions.append(conformance.RESIDUE_LEADING)
+    trailing = _TRAILING_FENCE.search(inner)
+    if trailing is not None:
+        inner = inner[: trailing.start()]
+        positions.append(conformance.RESIDUE_TRAILING)
+    return inner, tuple(positions)
+
+
+def loads_fence_tolerant(
+    text: str,
+    *,
+    role: str,
+    parse_float: Callable[[str], Any] | None = None,
+) -> Any:
+    """``json.loads`` for a model response, tolerating fence framing only.
+
+    Raises ``json.JSONDecodeError`` — the caller's existing failure path —
+    whenever the body is anything other than one JSON value inside optional
+    fence framing. The error reported is always the *strict* one, so a
+    traceback describes what the model actually sent rather than what was left
+    after an attempted unwrap.
+    """
+    decoder = json.JSONDecoder(parse_float=parse_float)
+    try:
+        return decoder.decode(text)
+    except json.JSONDecodeError as strict_error:
+        inner, positions = strip_fence_framing(text)
+        if not positions:
+            raise
+        try:
+            value = decoder.decode(inner)
+        except json.JSONDecodeError:
+            # The framing was not the whole problem. Report the original.
+            raise strict_error from None
+        conformance.LEDGER.record_envelope_residue(role, positions)
+        return value
