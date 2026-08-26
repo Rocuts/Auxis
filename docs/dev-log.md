@@ -127,3 +127,12 @@ a Postgres 18 service container. Gate: `make check` green — ruff, mypy strict,
 11 tests including the three gate properties, conflict policy, and
 commutativity. Pending: the same migrations against the Neon branch (needs
 DATABASE_URL in .env, user-supplied) to close the Neon half of the gate.
+
+**CI failure worth recording:** the Phase 1 push failed lint in CI while local
+`make check` was green. Creating `tests/__init__.py` mid-session changed how
+ruff's isort classifies `tests.*` imports (third-party -> first-party), but
+ruff's local cache skipped re-linting unchanged files under the new
+classification — a false green. Fix: imports re-sorted with `--no-cache`, and
+`known-first-party = ["tax_tables", "tests"]` pinned in pyproject so
+classification is declared, not inferred. Lesson: any config change that
+alters lint semantics deserves a `--no-cache` run before push.
