@@ -423,23 +423,48 @@ class TestFormatReport:
         report = format_report(compare([], []))
         assert "field-level accuracy: 0/0" in report
 
+    def test_disagreement_column_renders_and_totals(self) -> None:
+        report = format_report(compare([expected()], [actual()]), disagreements={SYNTHETIC_DOC: 2})
+        lines = report.splitlines()
+        assert lines[1].split()[-1] == "disagree"
+        row = next(line for line in lines if line.startswith(SYNTHETIC_DOC))
+        assert row.split()[-1] == "2"
+        total = next(line for line in lines if line.startswith("TOTAL"))
+        assert total.split()[-1] == "2"
+
+    def test_absent_group_defaults_to_zero_disagreements(self) -> None:
+        report = format_report(compare([expected()], [actual()]), disagreements={})
+        row = next(line for line in report.splitlines() if line.startswith(SYNTHETIC_DOC))
+        assert row.split()[-1] == "0"
+
+    def test_without_disagreements_the_table_is_unchanged(self) -> None:
+        assert "disagree" not in format_report(compare([expected()], [actual()]))
+
 
 def test_end_to_end_accuracy() -> None:
-    """The Phase 2 gate: PDFs -> router -> real SchemaMapper -> comparison.
+    """The Phase 2 gate: PDFs -> router -> real SchemaMapper -> independent
+    RecordVerifier -> comparison.
 
     Accuracy is judged on the mapper's raw output (triage never mutates its
-    inputs, and persistence is not part of field accuracy). The tables the
-    gate asks for — by document, by record type, and per-document mapper
-    cost — are printed regardless of outcome; run via ``make accuracy`` to
-    see them. Skips only when no mapping credential is configured: the
-    accuracy table only ever comes from a run against the real mapping API,
-    never from stubs (anti-goals #1/#8).
+    inputs, and persistence is not part of field accuracy); the verifier's
+    disputes are reported in the per-document ``disagree`` column, and every
+    disputed record is named with the verifier's reason. Cost is itemized by
+    role (mapper / verifier), per document. A verifier failure fails the gate
+    like a mapper failure: the gate result is "128/128 through the two-agent
+    layer", not "128/128 while the second agent was down". Skips only when no
+    mapping credential is configured: the accuracy table only ever comes from
+    a run against the real APIs, never from stubs (anti-goals #1/#8).
     """
     from tax_tables.adapters.anthropic_mapper import (
         AnthropicSchemaMapper,
         MapperConfig,
         MapperConfigError,
         MapperError,
+    )
+    from tax_tables.adapters.anthropic_verifier import (
+        AnthropicRecordVerifier,
+        VerifierConfig,
+        VerifierError,
     )
     from tax_tables.adapters.pdfplumber_extractor import PdfplumberExtractor
     from tax_tables.adapters.tesseract_extractor import TesseractExtractor
@@ -460,55 +485,81 @@ def test_end_to_end_accuracy() -> None:
     truth = load_ground_truth()
     router = ExtractionRouter(digital=PdfplumberExtractor(), ocr=TesseractExtractor())
     mapper = AnthropicSchemaMapper(config)
+    verifier_config = VerifierConfig.from_env()  # falls back to the mapper credential
+    verifier = AnthropicRecordVerifier(verifier_config)
 
     actuals: list[ActualRecord] = []
+    disagreements: dict[str, int] = {}
     cost_rows: list[tuple[str, ...]] = [
-        ("document", "tok_in", "tok_out", "cache_w", "cache_r", "usd", "wall_s")
+        ("document", "role", "engine", "tok_in", "tok_out", "cache_w", "cache_r", "usd", "wall_s")
     ]
-    mapper_failures: list[str] = []
+
+    def cost_row(document: str, role: str, cost: Any) -> tuple[str, ...]:
+        if cost is None:
+            return (document, role, "!", "!", "!", "!", "!", "!", "!")
+        return (
+            document,
+            role,
+            cost.engine,
+            str(cost.input_tokens),
+            str(cost.output_tokens),
+            str(cost.cache_write_tokens),
+            str(cost.cache_read_tokens),
+            f"{cost.usd:.4f}",
+            f"{cost.wall_seconds:.1f}",
+        )
+
+    failures: list[str] = []
     for path in iter_source_documents(truth):
         try:
             result = run_document(
-                path.read_bytes(), filename=path.name, router=router, mapper=mapper
+                path.read_bytes(),
+                filename=path.name,
+                router=router,
+                mapper=mapper,
+                verifier=verifier,
             )
         except MapperError as exc:
             # One document's failure must not discard the report for the
             # other four; it is named and fails the gate below.
-            mapper_failures.append(f"{path.name}: {exc}")
-            cost_rows.append((path.name, "!", "!", "!", "!", "!", "!"))
+            failures.append(f"{path.name}: mapper: {exc}")
+            cost_rows.append(cost_row(path.name, "mapper", None))
+            continue
+        except VerifierError as exc:
+            failures.append(f"{path.name}: verifier: {exc}")
+            cost_rows.append(cost_row(path.name, "verifier", None))
             continue
         actuals.extend((path.name, record) for record in result.mapping.records)
-        cost = result.mapping.cost
-        assert cost is not None  # the real adapter always reports its spend
-        cost_rows.append(
-            (
-                path.name,
-                str(cost.input_tokens),
-                str(cost.output_tokens),
-                str(cost.cache_write_tokens),
-                str(cost.cache_read_tokens),
-                f"{cost.usd:.4f}",
-                f"{cost.wall_seconds:.1f}",
-            )
-        )
+        assert result.mapping.cost is not None  # the real adapters report spend
+        cost_rows.append(cost_row(path.name, "mapper", result.mapping.cost))
+        verification = result.verification
+        assert verification is not None
+        cost_rows.append(cost_row(path.name, "verifier", verification.cost))
+        disagreements[path.name] = len(verification.disputed)
         if result.mapping.issues:
             print(f"\n{path.name}: {len(result.mapping.issues)} mapping issue(s):")
             for issue in result.mapping.issues:
                 print(f"  p{issue.source_page} {issue.table_id}: {issue.reason}")
+        if verification.disputed:
+            print(f"\n{path.name}: {len(verification.disputed)} verifier dispute(s):")
+            for verdict in verification.disputed:
+                print(f"  record {verdict.record_index}: {verdict.reason}")
+        for note in verification.notes:
+            print(f"  verifier note: {note}")
 
     comparison = compare(truth.expected_records, actuals)
     print()
-    print(format_report(comparison, by="document"))
+    print(format_report(comparison, by="document", disagreements=disagreements))
     print()
     print(format_report(comparison, by="record_type"))
     widths = [max(len(row[i]) for row in cost_rows) for i in range(len(cost_rows[0]))]
-    print("\nmapper cost by document (engine: " + config.model + ")")
+    print("\nsemantic-layer cost by document and role")
     for index, row in enumerate(cost_rows):
         print("  ".join(cell.ljust(widths[i]) for i, cell in enumerate(row)).rstrip())
         if index == 0:
             print("  ".join("-" * width for width in widths))
 
-    assert not mapper_failures, "mapping failed for: " + "; ".join(mapper_failures)
+    assert not failures, "semantic layer failed for: " + "; ".join(failures)
     assert comparison.is_perfect, (
         f"accuracy {len(comparison.matched)}/{comparison.expected_count} with "
         f"{len(comparison.spurious)} spurious — every failing record is named above"

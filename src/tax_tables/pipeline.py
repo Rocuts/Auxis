@@ -1,30 +1,55 @@
 """The document pipeline, composed once for every target:
 
-    extracted cell grid -> SchemaMapper -> validators/triage -> persist
+    extracted cell grid -> SchemaMapper -> RecordVerifier -> validators/triage
+        -> persist / review queue -> Adjudicator (single pass over the queue)
 
-Ports in, ports out: the router, mapper, and repository arrive as
-interfaces, so the same function runs under docker-compose (pdfplumber +
-tesseract + local Postgres), on Vercel (pdfplumber + vision-OCR + Neon),
-and in the AWS design (Textract + Bedrock + RDS) without change.
+Ports in, ports out: the router, mapper, verifier, adjudicator, and
+repository arrive as interfaces, so the same function runs under
+docker-compose (pdfplumber + tesseract + local Postgres), on Vercel
+(pdfplumber + vision-OCR + Neon), and in the AWS design (Textract + Bedrock
++ RDS) without change.
 
 Accounting invariant (anti-goal #8): every record the mapper produced is
 either persisted (possibly flagged ``needs_review``) or lands in the
 review queue with its findings; every mapper issue lands in the review
 queue. Nothing is dropped between the mapper and the database.
+
+The semantic-layer amendment (ADR 012) adds two bounded roles:
+
+- The verifier's disputes enter triage as FLAG findings — a disputed record
+  persists as ``needs_review`` and the dispute's reason is queued. The
+  verifier never corrects anything, and a mapper/verifier disagreement is
+  never settled by the models talking.
+- The adjudicator runs once per open queue item, after persistence. At or
+  above ``auto_resolve_threshold`` (with valid citations) the item resolves
+  with its audit trail; otherwise the proposal is stored and the item stays
+  human. A failed adjudication leaves its item open and is reported, never
+  raised past the pass. Without a repository (dry run) there is no queue,
+  so the adjudicator is not consulted.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from decimal import Decimal
-from typing import Protocol
+from typing import Literal, Protocol
 from uuid import UUID
 
 from tax_tables.extraction.model import ExtractedDocument, ExtractionMethod
+from tax_tables.ports.adjudicator import (
+    DEFAULT_AUTO_RESOLVE_THRESHOLD,
+    Adjudication,
+    AdjudicationError,
+    Adjudicator,
+)
 from tax_tables.ports.mapper import MappingIssue, MappingResult, SchemaMapper
 from tax_tables.ports.repository import IngestOutcome, RecordRepository
+from tax_tables.ports.verifier import RecordVerifier, VerificationResult
 from tax_tables.validation.validators import (
     DEFAULT_CONFIDENCE_FLOOR,
+    RULE_VERIFIER_DISPUTE,
+    Finding,
+    Severity,
     TriageResult,
     review_queue_entry,
     triage,
@@ -39,11 +64,29 @@ class DocumentExtractor(Protocol):
 
 
 @dataclass(frozen=True)
+class AdjudicationOutcome:
+    """What the adjudicator pass did with one queued item.
+
+    ``auto_resolved``: threshold met with valid citations, item resolved
+    with its audit trail. ``proposal_stored``: below threshold or citations
+    invalid — the proposal awaits a human, item still open. ``error``: the
+    adjudication call itself failed; the item is untouched and stays open.
+    """
+
+    item_id: UUID
+    disposition: Literal["auto_resolved", "proposal_stored", "error"]
+    adjudication: Adjudication | None
+    error: str | None = None
+
+
+@dataclass(frozen=True)
 class PipelineResult:
     """Everything one document run produced, for reporting and for tests.
 
     ``document_id``/``ingest`` are None on a dry run (no repository) —
-    extraction, mapping, and triage still happen, nothing is persisted.
+    extraction, mapping, verification, and triage still happen, nothing is
+    persisted and nothing is adjudicated. ``verification`` is None when no
+    verifier was configured.
     """
 
     extracted: ExtractedDocument
@@ -52,6 +95,8 @@ class PipelineResult:
     document_id: UUID | None
     ingest: IngestOutcome | None
     review_entries: int
+    verification: VerificationResult | None = None
+    adjudications: list[AdjudicationOutcome] = field(default_factory=list)
 
 
 def _issue_entry(issue: MappingIssue) -> dict[str, object]:
@@ -65,18 +110,77 @@ def _issue_entry(issue: MappingIssue) -> dict[str, object]:
     }
 
 
+def _dispute_findings(verification: VerificationResult) -> list[Finding]:
+    """Verifier disputes as triage findings: same FLAG machinery, same
+    review-queue entries as the module's own rules."""
+    return [
+        Finding(
+            rule=RULE_VERIFIER_DISPUTE,
+            severity=Severity.FLAG,
+            detail=verdict.reason or "unspecified",
+            record_index=verdict.record_index,
+        )
+        for verdict in verification.disputed
+    ]
+
+
+def _adjudicate_queue(
+    repository: RecordRepository,
+    adjudicator: Adjudicator,
+    document_id: UUID,
+    extracted: ExtractedDocument,
+    threshold: Decimal,
+) -> list[AdjudicationOutcome]:
+    outcomes: list[AdjudicationOutcome] = []
+    for item in repository.list_open_reviews(document_id):
+        try:
+            adjudication = adjudicator.adjudicate(item, extracted)
+        except AdjudicationError as exc:
+            outcomes.append(
+                AdjudicationOutcome(
+                    item_id=item.id, disposition="error", adjudication=None, error=str(exc)
+                )
+            )
+            continue
+        payload = adjudication.audit_payload()
+        if adjudication.citations_valid and adjudication.confidence >= threshold:
+            repository.resolve_review(
+                item.id,
+                resolution=payload,
+                resolved_by=f"adjudicator:{payload['engine'] or 'unknown'}",
+            )
+            disposition: Literal["auto_resolved", "proposal_stored"] = "auto_resolved"
+        else:
+            repository.propose_resolution(item.id, payload)
+            disposition = "proposal_stored"
+        outcomes.append(
+            AdjudicationOutcome(item_id=item.id, disposition=disposition, adjudication=adjudication)
+        )
+    return outcomes
+
+
 def run_document(
     pdf_bytes: bytes,
     *,
     filename: str,
     router: DocumentExtractor,
     mapper: SchemaMapper,
+    verifier: RecordVerifier | None = None,
     repository: RecordRepository | None = None,
+    adjudicator: Adjudicator | None = None,
     confidence_floor: Decimal = DEFAULT_CONFIDENCE_FLOOR,
+    auto_resolve_threshold: Decimal = DEFAULT_AUTO_RESOLVE_THRESHOLD,
 ) -> PipelineResult:
     extracted = router.extract(pdf_bytes, filename=filename)
     mapping = mapper.map_document(extracted)
-    triaged = triage(mapping.records, confidence_floor=confidence_floor)
+
+    verification: VerificationResult | None = None
+    disputes: list[Finding] = []
+    if verifier is not None:
+        verification = verifier.verify(extracted, mapping)
+        disputes = _dispute_findings(verification)
+
+    triaged = triage(mapping.records, confidence_floor=confidence_floor, extra_findings=disputes)
 
     if repository is None:
         return PipelineResult(
@@ -86,6 +190,7 @@ def run_document(
             document_id=None,
             ingest=None,
             review_entries=0,
+            verification=verification,
         )
 
     handle = repository.register_document(
@@ -97,14 +202,21 @@ def run_document(
     )
     outcome = repository.ingest(handle.id, triaged.persistable)
     # Every finding is queued with its reason — REJECTs explain why a record
-    # is absent from the fact table, FLAGs explain why a persisted row says
-    # needs_review. A flag without its why is useless to a reviewer.
+    # is absent from the fact table, FLAGs (including verifier disputes)
+    # explain why a persisted row says needs_review. A flag without its why
+    # is useless to a reviewer.
     entries = [
         review_queue_entry(mapping.records[finding.record_index], finding)
         for finding in triaged.findings
     ]
     entries.extend(_issue_entry(issue) for issue in mapping.issues)
     queued = repository.queue_review(handle.id, entries) if entries else 0
+
+    adjudications: list[AdjudicationOutcome] = []
+    if adjudicator is not None:
+        adjudications = _adjudicate_queue(
+            repository, adjudicator, handle.id, extracted, auto_resolve_threshold
+        )
 
     return PipelineResult(
         extracted=extracted,
@@ -113,4 +225,6 @@ def run_document(
         document_id=handle.id,
         ingest=outcome,
         review_entries=queued,
+        verification=verification,
+        adjudications=adjudications,
     )

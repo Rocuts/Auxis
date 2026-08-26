@@ -518,12 +518,22 @@ def _render_table(headers: Sequence[str], rows: Sequence[Sequence[str]]) -> list
     return [line(headers), rule, *(line(row) for row in rows)]
 
 
-def format_report(result: ComparisonResult, by: GroupBy = "document") -> str:
+def format_report(
+    result: ComparisonResult,
+    by: GroupBy = "document",
+    *,
+    disagreements: Mapping[str, int] | None = None,
+) -> str:
     """Plain-text accuracy report, grouped by document or by record type.
 
     The Phase 2 gate asks for a table *and*, below target, for every failing
     record named with its reason — so the failure listing is not optional
     output, it is the part of the report that makes a red result usable.
+
+    ``disagreements`` (group name -> count of verifier-disputed records) adds
+    the gate's disagreement column: how often the independent verifier pushed
+    back per group, reported alongside accuracy instead of averaged away
+    (ADR 012). A group absent from the mapping reads 0.
     """
     index = _GROUP_INDEX[by]
     groups: dict[str, _GroupCounts] = {}
@@ -541,7 +551,9 @@ def format_report(result: ComparisonResult, by: GroupBy = "document") -> str:
     for key in result.spurious:
         bump(key, spurious=1)
 
-    headers = ("group" if by == "record_type" else "document", "exp", "ok", "diff", "miss", "extra")
+    headers = ["group" if by == "record_type" else "document", "exp", "ok", "diff", "miss", "extra"]
+    if disagreements is not None:
+        headers.append("disagree")
     rows = [
         [
             name,
@@ -550,6 +562,7 @@ def format_report(result: ComparisonResult, by: GroupBy = "document") -> str:
             str(counts.mismatched),
             str(counts.missing),
             str(counts.spurious),
+            *([str(disagreements.get(name, 0))] if disagreements is not None else []),
         ]
         for name, counts in sorted(groups.items())
     ]
@@ -568,6 +581,7 @@ def format_report(result: ComparisonResult, by: GroupBy = "document") -> str:
             str(total.mismatched),
             str(total.missing),
             str(total.spurious),
+            *([str(sum(disagreements.values()))] if disagreements is not None else []),
         ]
     )
 
