@@ -1391,3 +1391,64 @@ So the blocker is unchanged in substance and now precisely diagnosed: the
 `anthropic/claude-opus-5` on the key already configured) **or a direct
 Anthropic API key** (`sk-ant-…`, which bypasses the gateway entirely — set
 `ANTHROPIC_API_KEY` and unset `SCHEMA_MAPPER_BASE_URL`).
+
+## 2026-08-26 — Switching the semantic layer to `zai/glm-5.3-flash`
+
+Operator direction: run the semantic layer on `zai/glm-5.3-flash` on cost
+grounds. The instinct is well-founded and the architecture absorbed it as
+**pure configuration** — three env vars, no code change, and the verifier and
+adjudicator inherit the model from `SCHEMA_MAPPER_MODEL` automatically. That
+is the ports design being paid for rather than asserted.
+
+**The economics, measured rather than guessed.** Gateway catalogue pricing is
+$0.075/Mtok input and $0.25/Mtok output, against Opus 5's $5/$25. Sizing the
+actual prompts locally (extraction is free, so the mapper's own
+`serialize_document` gives the real input size for every fixture):
+
+| Document | grid chars | ~input tok | records | ~output tok |
+|---|---|---|---|---|
+| 01 | 3,271 | 2,856 | 32 | 5,440 |
+| 02 | 2,988 | 2,785 | 8 | 1,360 |
+| 03 | 7,193 | 3,836 | 51 | 8,670 |
+| 04 | 3,817 | 2,992 | 18 | 3,060 |
+| 05 | 5,420 | 3,393 | 19 | 3,230 |
+
+Mapper plus verifier over all five ≈ **31.7k input / 26.9k output**, so a full
+accuracy run costs **~$0.009 on GLM 5.3 Flash against ~$0.83 on Opus 5 — 91×**.
+At that price the semantic layer stops being the dominant cost line, which
+reframes the corpus-level cost story the "4 of 5 documents extract for $0"
+finding was written against.
+
+**What blocks it is throughput, not price.** The free tier returns **429** on
+this model — not the 403 Claude returns, so it is a throttle rather than a
+paywall, but an effective one. A spacing probe managed 3 successes in 6
+attempts at 12 s intervals, and both real runs died on their *first* mapper
+call: `make accuracy` failed in 6.8 s, and a single-document
+`pipeline_report` failed identically. The Anthropic SDK's retries exhaust
+against an immediate 429. So the run needs paid credits — and given the
+number above, **$5 of credits is roughly 550 full accuracy runs**.
+
+**Three caveats recorded before any number is produced with this model:**
+
+1. **Structured outputs are not enforced.** Sending the mapper's exact
+   `output_config` json_schema request to a toy schema returned
+   `{"answer": "four"}` — dropping `confidence`, which was in `required`. The
+   same request with the mapper's real `RESPONSE_SCHEMA` returned the correct
+   shape (`['issues','records']`, 2 records, right keys). So the model
+   *complies by instruction-following*; the gateway passes the parameter
+   through without enforcing it, unlike Anthropic's own API. The mapper's
+   fail-closed parser turns any non-conformance into a loud failure rather
+   than silent corruption, which is the design working — but conformance is
+   now a probabilistic property, and that belongs in the README next to any
+   accuracy number this model produces.
+2. **Mapper and verifier are now the same model**, which weakens ADR 012's
+   conformity mitigation: that ADR names `RECORD_VERIFIER_MODEL` as the guard
+   against correlated same-model errors. Cross-family independence is restored
+   for free by pointing the verifier at, say, `alibaba/qwen-3-235b`.
+3. **Cache-read cost will be under-reported.** The cost math uses Anthropic's
+   multipliers (write 1.25×, read 0.1× of input); GLM's catalogue lists cache
+   read at $0.015/Mtok, which is 0.2× of its $0.075 input. Small in absolute
+   terms, but it is a number in the cost table.
+
+Gate 2b remains **OPEN**, with the blocker narrowed from "no key" to "free-tier
+throttle on a model that costs under a cent per run".
