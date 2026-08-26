@@ -1217,3 +1217,81 @@ Also observed in the same pass: Deployment Protection (Vercel Authentication)
 is still enabled — the deployment URL 302s to `vercel.com/sso-api`. The
 production *alias* was not protected, which is the documented split: protection
 covers deployment URLs and previews, not the production alias.
+
+## 2026-08-26 — Gate 3.5-structural CLOSED: preview deployed, measured
+
+Deployment Protection disabled by the operator; preview deployed with
+`--target=preview` (and, per the previous entry, only after a production
+deployment existed — see the constraint below).
+
+**A platform constraint worth stating, because it cost two deploys.** Removing
+the auto-promoted production deployment put the project back to zero
+deployments, and the *next* deploy was auto-assigned to production **again** —
+`--target=preview` did not override it. So the rule is not "the first CLI
+deploy is production", it is **"a project with no production deployment
+assigns the next deployment to production, whatever target you ask for."**
+Previews are unreachable until one exists. The operator's call was to keep
+that baseline deployment: it 500s by design (the four app variables are
+Preview-scoped, so a production build fails closed at import), it has never
+served a request or touched data, and its only purpose is to unlock previews.
+Promotion remains a deliberate human action at delivery.
+
+**Endpoint sweep — every endpoint, against the live preview.** All public
+`GET`s correct; unknown ids 404; `/records/resolve` 422 without a chain and
+404 on a miss; `/reviews` and `/reviews/{id}` serving. Auth boundaries both
+enforced: `POST /documents` 401 with no key *and* with a wrong key;
+`/internal/sweep` 401 on missing and wrong bearer across **both** `GET` and
+`POST`, 200 with the cron bearer.
+
+**Measurement 1 — request-body cap: ~4.5 MB, and the docs are wrong for this
+project.** Bisected against the live preview:
+
+| Body | Result |
+|---|---|
+| 4,194,305 B (4 MiB) | 202 |
+| 4,482,662 B | **202 — largest accepted** |
+| 4,495,769 B | **413 — smallest rejected** |
+| 4,613,735 B and up | 413 |
+
+The rejection is the platform's `FUNCTION_PAYLOAD_TOO_LARGE`, raised at the
+edge: the request never reaches the function, so the app's own 413 and its
+JSON `detail` never fire and the caller gets an HTML error. The foresight note
+recorded before this phase was right and the platform documentation — which
+currently states 100 MB request bodies — is not what this project's runtime
+enforces. Quoting the doc would have shipped a wrong number; README
+limitation #6 now carries the measured bytes. Consequence worth naming: the
+application's own 10 MB `MAX_UPLOAD_BYTES` is binding **only on the local
+target**; both deployed targets have a smaller platform limit that fires
+first (AWS ~4.4 MB derived, Vercel ~4.5 MB measured).
+
+**Measurement 2 — cold start: 0.67 s.** First-ever invocation of a
+freshly-deployed function, including the Neon connect: **0.667 s**. Warm
+requests: 0.369–0.426 s, median ~0.39 s. Cold-start penalty ≈ **0.28 s**.
+Worth holding next to ADR 004: Aurora Serverless v2 was rejected because a
+cold first hit costs ~15 s of resume latency and would make the demo URL look
+broken. The chosen stack's cold first hit is two orders of magnitude cheaper.
+That ADR's reasoning is now backed by a measurement rather than an argument.
+
+**Measurement 3 — the 202-then-`missing_credentials` path, on the real
+platform.** All five fixtures uploaded **202**. Four jobs were carried to the
+terminal `failed` state by the self-kick, each with
+`error.type == "missing_credentials"` naming the variables and never their
+values. The fifth stayed `queued`: the kick is best-effort by construction —
+its daemon thread need not outlive the response on request-scoped compute —
+and a direct authenticated sweep drained it immediately (`{"processed":[...]}`,
+11.6 s including cold start). **That is the cron-backstop contract working,
+observed rather than asserted**: a kick that does not land delays work and
+never loses it. Note the preview-specific procedure — **Vercel crons run on
+production only**, so on a preview the sweep is exercised by direct call.
+
+**What the preview has NOT proven.** No page has reached a vision model and no
+record has been mapped: every job fails at the mapper's credential check
+*before* extraction runs. So the vision-OCR adapter's live behaviour is
+untested, and the platform has served no tax data. README limitation #2 now
+says exactly that.
+
+**Gate 3.5-structural: CLOSED** — preview serves every endpoint,
+unauthenticated POST rejected, sweep auth enforced, three measurements
+recorded. **Gate 3.5-LIVE: OPEN**, behind the same single blocker as Phase 2b:
+a funded model key. It covers the fixture seed with real mapping, data-bearing
+queries over the URL, and production promotion.

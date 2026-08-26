@@ -9,12 +9,15 @@ targets, proven rather than asserted.** The same pipeline runs under
 `docker compose`, on Vercel, and in an AWS CDK stack, because every boundary
 that touches a platform is a port with three adapters behind it.
 
-> **Status at time of writing (2026-08-26).** Two gates are still open and are
-> named as such throughout: the **Phase 2b accuracy run** is blocked on a
-> funded API key, and **Phase 3.5 (deploy to Vercel)** has not been built —
-> there is no live URL yet. Every number that depends on those runs appears
-> below as an explicit `TBD` with the command that fills it. Nothing here is
-> estimated and then presented as measured.
+> **Status at time of writing (2026-08-26).** One thing blocks everything that
+> is still open: **there is no funded model API key.** Consequently the
+> **Phase 2b accuracy run** has never executed, and while a **Vercel preview
+> deployment serves every endpoint** (with cold start and body cap measured
+> against it), no document has been extracted or mapped on it — so there is no
+> data-bearing live URL and nothing has been promoted to production. Every
+> number that depends on that key appears below as an explicit `TBD` with the
+> command that fills it. Nothing here is estimated and then presented as
+> measured; where something *was* measured, the raw figures are given.
 
 ---
 
@@ -64,7 +67,7 @@ make api                      # http://localhost:8000/docs
 Run everything the project can verify without credentials:
 
 ```bash
-make check       # ruff + mypy --strict + pytest (487 passed, 1 skipped)
+make check       # ruff + mypy --strict + pytest (540 passed, 1 skipped)
 make synth-check # cdk synth with NO AWS credentials, then cfn-lint
 make diagrams    # every README mermaid block, under two Mermaid majors
 ```
@@ -344,7 +347,7 @@ without revisiting the decision.
 > **TBD — gate open.** The 128/128 field-level accuracy run executes the real
 > mapper and the independent verifier against the Anthropic API and is blocked
 > on a funded key. It runs with `make accuracy` the moment one lands in `.env`.
-> Everything else in `make check` (487 tests) runs keyless.
+> Everything else in `make check` (540 tests) runs keyless.
 >
 > The table below is the shape the harness prints. **No numbers are filled in
 > because none have been measured.** Target is 128/128; below that, every
@@ -577,18 +580,48 @@ nowhere near deploy-correct. See [`docs/audit/`](docs/audit/) for the full
 > the production alias. Pass `--target=preview` explicitly on an empty
 > project. (Hit and recorded during Phase 3.5; see the dev-log.)
 
-> **GATE OPEN.** Phase 3.5 has not been built. There is **no live URL yet**,
-> no `vercel.json`, and no vision-OCR adapter in the tree. The Vercel column of
-> the ports table describes the designed adapters, and the decisions behind
-> them are recorded in ADRs
+> **3.5-structural CLOSED; 3.5-LIVE still open.** The Vercel adapters, the
+> vision-OCR extractor, `vercel.json`, and `scripts/seed_remote.sh` are built
+> and a **preview deployment serves every endpoint**. What is still open is
+> everything that needs a funded model key: no document has been extracted or
+> mapped on the platform, so there is **no data-bearing live URL** and no
+> production promotion. Measured against the preview:
+>
+> | Measurement | Result |
+> |---|---|
+> | Cold start (first-ever invocation, incl. Neon connect) | **0.67 s** |
+> | Warm requests | **0.37–0.43 s** (median ~0.39 s) |
+> | Cold-start penalty | **~0.28 s** |
+> | Request-body cap | **~4.5 MB** (4,482,662 B accepted / 4,495,769 B rejected) |
+>
+> That 0.67 s is worth holding next to
+> [ADR 004](docs/decisions/004-aurora-serverless-v2-rejected.md): the reason
+> Aurora Serverless v2 was rejected is a 15 s resume on a cold first hit. The
+> chosen stack's cold first hit is **two orders of magnitude** cheaper, which
+> is the trade that ADR was buying.
+>
+> Endpoint sweep against the preview: every `GET` returns correctly, unknown
+> ids 404, `/records/resolve` 422s without a chain, unauthenticated and
+> wrong-key `POST /documents` both 401, and `/internal/sweep` rejects a
+> missing or wrong bearer on **both** `GET` and `POST` while accepting the
+> cron bearer. All five fixtures upload **202**; each job then reaches the
+> honest `missing_credentials` terminal state, which is the credential block
+> showing up exactly where it should — in the job row, not as an HTTP error
+> on a valid upload.
+>
+> Two preview-specific notes. **Vercel crons run on production only**, so on a
+> preview the sweep is exercised by direct authenticated call. And of the five
+> uploads, four were carried to terminal state by the self-kick while one
+> stayed `queued` — the kick is best-effort by design (the daemon thread need
+> not outlive the response on request-scoped compute) and a direct sweep
+> drained it immediately. That is the cron-backstop contract working, observed
+> rather than assumed.
+>
+> The decisions behind these adapters are recorded in ADRs
 > [008](docs/decisions/008-vercel-as-the-live-target.md),
 > [009](docs/decisions/009-cron-sweep-jobrunner.md),
 > [010](docs/decisions/010-vision-ocr-vercel-extractor.md), and
-> [011](docs/decisions/011-blob-in-postgres-vs-vercel-blob.md). The parts that
-> are already built and tested are the cron-sweep `JobRunner`
-> (`POST /internal/sweep`, `CRON_SECRET`-bearer, `FOR UPDATE SKIP LOCKED`) and
-> the `bytea` blob store. First-hit latency (function cold start plus Neon
-> resume) is measured and recorded here when the gate closes: **TBD**.
+> [011](docs/decisions/011-blob-in-postgres-vs-vercel-blob.md).
 
 ### 3. docker-compose — the evaluator's one-command reproduction
 
@@ -608,9 +641,14 @@ Consolidated, and deliberately specific. If something is unproven, it says so.
 1. **The accuracy gate is credential-blocked.** No end-to-end accuracy number
    has been measured. Every accuracy and per-document cost figure in this
    README is a `TBD` slot, not an estimate presented as a result.
-2. **Phase 3.5 is not built.** There is no live URL, no `vercel.json`, and no
-   vision-OCR adapter. Document 05 is currently extracted by Tesseract
-   (local) or Textract (the AWS design).
+2. **The vision-OCR adapter has never run against a real model.** It is
+   built, and its 26 tests cover every fidelity and fail-closed rule against
+   recorded response shapes — but on the platform each job fails at the
+   mapper's credential check *before* extraction is reached, so no page has
+   been sent to a vision model. What is untested is whether a real model
+   obeys the prompt, not whether the adapter handles what comes back.
+   Document 05 is extracted today by Tesseract (local) or, in the AWS design,
+   Textract.
 
 ### The AWS stack
 
@@ -638,10 +676,13 @@ Consolidated, and deliberately specific. If something is unproven, it says so.
    |---|---|---|
    | local / `docker compose` | 10 MB | the application cap; nothing smaller underneath |
    | AWS | **~4.4 MB** | API Gateway caps payloads at 10 MB, but a Lambda proxy integration base64-encodes the binary body into a 6 MB synchronous invocation payload — 6 MB ÷ 4/3. Derived, not measured. |
-   | Vercel | **TBD — measure in Phase 3.5** | Platform documentation currently states 100 MB request bodies, up from a historical 4.5 MB. That is a documented figure this project has not exercised, and the gap between the two numbers is exactly the kind of thing that should be measured rather than quoted. |
+   | Vercel | **~4.5 MB — measured** | Bisected against a live preview: **4,482,662 bytes accepted (202), 4,495,769 bytes rejected (413)**. The rejection is the platform's `FUNCTION_PAYLOAD_TOO_LARGE`, raised at the edge — the request never reaches the function, so the app's own 413 and its JSON `detail` never fire and the client gets an HTML error instead. Note this contradicts the current platform documentation, which states 100 MB request bodies; the historical 4.5 MB is what this project's plan and runtime actually enforce. Quoting the doc would have been wrong. |
 
-   Uploads above a platform ceiling would need a presigned-upload ingest path,
-   which is designed-for but not built.
+   The application cap (`MAX_UPLOAD_BYTES`, 10 MB) is therefore only binding
+   on the local target; on both deployed targets a *smaller* platform limit
+   fires first, and on neither does the caller receive the app's own message.
+   Uploads above a platform ceiling would need a presigned-upload ingest
+   path, which is designed-for but not built.
 7. **The VPC endpoint policies are account-scoped, not action-scoped.** All
    seven endpoints require `aws:PrincipalAccount` to be this account, which
    closes the cross-account exfiltration path an unrestricted S3 gateway
