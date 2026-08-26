@@ -1179,3 +1179,41 @@ latency, and the 202-then-`missing_credentials` path on the real platform) all
 follow those two actions. Gate **3.5-LIVE** stays open behind the credential
 as before: fixture seed with real mapping, data-bearing queries over the URL,
 and production promotion.
+
+## 2026-08-26 — First CLI deploy was auto-promoted to production by the platform; removed
+
+Recording this because it is exactly the kind of event that gets quietly
+smoothed over.
+
+`vercel deploy` was run **without** `--prod` and without an alias, per the
+preview-only instruction. Vercel deployed it to **production** anyway and
+aliased it to `auxis-drab.vercel.app`, stating the reason in its own output:
+*"This is the project's first deployment, so it was assigned to production.
+Future deployments will be preview deployments unless you use --prod."*
+
+So the deny rules held — no `--prod`, no `vercel promote`, no `vercel alias`
+was ever issued — and the outcome still contradicted the stated posture. The
+guard that was missing was anticipating platform behaviour on an empty
+project, not a forbidden command. The correct form is
+**`vercel deploy --target=preview`**, which states the target explicitly
+rather than relying on a default that changes with project state; a one-line
+note now sits in the README's Vercel section so the next operator expects it.
+
+The deployment was broken on arrival, which is itself informative: it returned
+`500 FUNCTION_INVOCATION_FAILED` because the four application variables are
+**Preview**-scoped and this was a production build, so `ApiSettings.from_env`
+raised at import. That is the fail-closed posture working exactly as designed
+— a missing secret fails the boot rather than opening an endpoint — and it
+means the deployment never served a request or touched data.
+
+Removed with `vercel remove <deployment-url> --yes`, targeting the **unique
+deployment URL**, never the bare project name (which would have removed every
+deployment of the project). Verified after: the production alias returns 404
+and `vercel ls` reports no deployments. The no-live-URL posture the README
+states is restored, and **promotion to production remains a deliberate human
+action at delivery time**.
+
+Also observed in the same pass: Deployment Protection (Vercel Authentication)
+is still enabled — the deployment URL 302s to `vercel.com/sso-api`. The
+production *alias* was not protected, which is the documented split: protection
+covers deployment URLs and previews, not the production alias.

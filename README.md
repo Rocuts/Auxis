@@ -571,6 +571,12 @@ nowhere near deploy-correct. See [`docs/audit/`](docs/audit/) for the full
 
 ### 2. Vercel — the live URL
 
+> **Platform behaviour worth knowing before you deploy:** Vercel assigns a
+> project's **first** deployment to **production**, whatever target you asked
+> for — `vercel deploy` with no `--prod` still lands in production and takes
+> the production alias. Pass `--target=preview` explicitly on an empty
+> project. (Hit and recorded during Phase 3.5; see the dev-log.)
+
 > **GATE OPEN.** Phase 3.5 has not been built. There is **no live URL yet**,
 > no `vercel.json`, and no vision-OCR adapter in the tree. The Vercel column of
 > the ports table describes the designed adapters, and the decisions behind
