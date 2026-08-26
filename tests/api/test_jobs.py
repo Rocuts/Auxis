@@ -95,3 +95,22 @@ class TestJobContract:
         with psycopg.connect(TEST_DSN) as conn:
             statuses = conn.execute("SELECT status FROM jobs ORDER BY created_at").fetchall()
         assert statuses == [("failed",), ("queued",)]
+
+
+class TestCronSweepEntrypoint:
+    """Vercel Cron issues GET, not POST. The mutating GET is the platform's
+    contract, not a design choice — but the auth is identical on both."""
+
+    def test_get_is_accepted_with_the_bearer(self, client: TestClient) -> None:
+        response = client.get("/internal/sweep", headers=BEARER)
+        assert response.status_code == 200
+        assert response.json() == {"processed": []}
+
+    def test_get_without_the_bearer_is_401(self, client: TestClient) -> None:
+        assert client.get("/internal/sweep").status_code == 401
+
+    def test_get_with_the_wrong_bearer_is_401(self, client: TestClient) -> None:
+        assert (
+            client.get("/internal/sweep", headers={"Authorization": "Bearer nope"}).status_code
+            == 401
+        )

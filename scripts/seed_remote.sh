@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+# Ingest the five fixture PDFs into a deployed instance and report each job's
+# fate.
+#
+# Usage:
+#   BASE_URL=https://<deployment> API_KEY=... scripts/seed_remote.sh
+#   scripts/seed_remote.sh http://localhost:8000        # positional override
+#
+# Optional:
+#   VERCEL_AUTOMATION_BYPASS_SECRET  sent as x-vercel-protection-bypass, for
+#                                    preview deployments behind Deployment
+#                                    Protection.
+#   POLL_SECONDS                     how long to wait for a job to finish
+#                                    (default 180).
+#
+# Exit status is the point: non-zero if any upload was rejected or any job
+# ended in `failed`, so this is usable as a gate and not only as a demo. A
+# job that is still `queued`/`running` when the poll budget runs out is
+# reported as a timeout, never quietly counted as success.
+set -euo pipefail
+
+BASE_URL="${1:-${BASE_URL:-http://localhost:8000}}"
+BASE_URL="${BASE_URL%/}"
+API_KEY="${API_KEY:-}"
+POLL_SECONDS="${POLL_SECONDS:-180}"
+FIXTURES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../fixtures" && pwd)"
+
+if [[ -z "${API_KEY}" ]]; then
+  echo "error: API_KEY is required (POST /documents is authenticated)" >&2
+  exit 2
+fi
+
+CURL_COMMON=(--silent --show-error --max-time 60 -H "X-API-Key: ${API_KEY}")
+if [[ -n "${VERCEL_AUTOMATION_BYPASS_SECRET:-}" ]]; then
+  CURL_COMMON+=(-H "x-vercel-protection-bypass: ${VERCEL_AUTOMATION_BYPASS_SECRET}")
+  CURL_COMMON+=(-H "x-vercel-set-bypass-cookie: false")
+fi
+
+echo "seeding ${BASE_URL}"
+failures=0
+declare -a job_ids=()
+declare -a job_names=()
+
+for pdf in "${FIXTURES_DIR}"/0*.pdf; do
+  name="$(basename "${pdf}")"
+  response="$(curl "${CURL_COMMON[@]}" \
+    -w '\n%{http_code}' \
+    -H 'Content-Type: application/pdf' \
+    --data-binary "@${pdf}" \
+    "${BASE_URL}/documents")"
+  status="$(tail -n1 <<<"${response}")"
+  body="$(sed '$d' <<<"${response}")"
+
+  if [[ "${status}" != "202" ]]; then
+    echo "  ✗ ${name}: HTTP ${status} ${body}"
+    failures=$((failures + 1))
+    continue
+  fi
+  job_id="$(sed -n 's/.*"job_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' <<<"${body}")"
+  duplicate="$(sed -n 's/.*"duplicate"[[:space:]]*:[[:space:]]*\([a-z]*\).*/\1/p' <<<"${body}")"
+  echo "  → ${name}: 202 job=${job_id} duplicate=${duplicate}"
+  job_ids+=("${job_id}")
+  job_names+=("${name}")
+done
+
+echo "polling ${#job_ids[@]} job(s), budget ${POLL_SECONDS}s"
+deadline=$(( $(date +%s) + POLL_SECONDS ))
+for i in "${!job_ids[@]}"; do
+  job_id="${job_ids[$i]}"
+  name="${job_names[$i]}"
+  while :; do
+    body="$(curl "${CURL_COMMON[@]}" "${BASE_URL}/jobs/${job_id}")"
+    status="$(sed -n 's/.*"status"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' <<<"${body}")"
+    case "${status}" in
+      succeeded)
+        persisted="$(sed -n 's/.*"records_persisted"[[:space:]]*:[[:space:]]*\([0-9]*\).*/\1/p' <<<"${body}")"
+        echo "  ✓ ${name}: succeeded, ${persisted:-0} record(s) persisted"
+        break
+        ;;
+      failed)
+        echo "  ✗ ${name}: failed — ${body}"
+        failures=$((failures + 1))
+        break
+        ;;
+      *)
+        if (( $(date +%s) >= deadline )); then
+          echo "  ✗ ${name}: still '${status}' when the ${POLL_SECONDS}s budget expired"
+          failures=$((failures + 1))
+          break
+        fi
+        sleep 3
+        ;;
+    esac
+  done
+done
+
+if (( failures > 0 )); then
+  echo "FAILED: ${failures} problem(s)" >&2
+  exit 1
+fi
+echo "OK: all fixtures ingested"

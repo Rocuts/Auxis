@@ -63,7 +63,6 @@ edit rather than a code change.
 from __future__ import annotations
 
 import importlib
-import io
 import os
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -84,6 +83,7 @@ from tax_tables.extraction.model import (
     percentile,
 )
 from tax_tables.extraction.prose import classify_block
+from tax_tables.extraction.render import render_page_png
 from tax_tables.ports.extractor import PageBatch
 
 #: One block of a Textract response. Deliberately a ``Mapping`` rather than a
@@ -91,11 +91,6 @@ from tax_tables.ports.extractor import PageBatch
 #: and this module reads the documented subset it needs.
 Block = Mapping[str, Any]
 BBox = tuple[float, float, float, float]
-
-#: Matches the local OCR adapter's measured render resolution; see module
-#: docstring. Textract's documented floor is 150 DPI.
-RENDER_DPI = 300
-_PDF_POINTS_PER_INCH = 72
 
 #: The synchronous API caps inline document bytes at 10 MB. A page over the
 #: cap fails here, naming the page, rather than as an opaque ClientError from
@@ -174,7 +169,12 @@ class TextractExtractor:
         pdf = pdfium.PdfDocument(pdf_bytes)
         try:
             for number in page_numbers:
-                image, width, height = _render_png(pdf, number)
+                image, width, height = render_page_png(
+                    pdf,
+                    number,
+                    max_bytes=_MAX_SYNC_BYTES,
+                    limit_label="synchronous AnalyzeDocument",
+                )
                 response = client.analyze_document(
                     Document={"Bytes": image}, FeatureTypes=["TABLES"]
                 )
@@ -220,21 +220,6 @@ def _build_client() -> Any:
             "fixtures/textract/05_response.json."
         ) from exc
     return boto3.client("textract")
-
-
-def _render_png(pdf: Any, number: int) -> tuple[bytes, int, int]:
-    """Render one 1-based page to PNG bytes, with the image's pixel size."""
-    page = pdf[number - 1]
-    image = page.render(scale=RENDER_DPI / _PDF_POINTS_PER_INCH).to_pil().convert("RGB")
-    buffer = io.BytesIO()
-    image.save(buffer, format="PNG")
-    payload = buffer.getvalue()
-    if len(payload) > _MAX_SYNC_BYTES:
-        raise ValueError(
-            f"page {number} renders to {len(payload)} bytes at {RENDER_DPI} DPI, over the "
-            f"{_MAX_SYNC_BYTES}-byte synchronous AnalyzeDocument limit"
-        )
-    return payload, int(image.width), int(image.height)
 
 
 # --------------------------------------------------------------------------

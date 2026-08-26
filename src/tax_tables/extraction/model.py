@@ -45,6 +45,7 @@ class GridSource(StrEnum):
     RULED_LINES = "ruled_lines"  # pdfplumber default lines strategy
     WORD_GAP_REBUILD = "word_gap_rebuild"  # columns re-inferred from word x-gaps
     RULED_CELL_OCR = "ruled_cell_ocr"  # image line grid + per-cell OCR
+    VISION_MODEL = "vision_model"  # a vision model read the rendered page
 
 
 def percentile(values: list[Decimal], q: Decimal) -> Decimal:

@@ -52,9 +52,41 @@ from tax_tables.adapters.anthropic_verifier import (
 )
 from tax_tables.adapters.pdfplumber_extractor import PdfplumberExtractor
 from tax_tables.adapters.postgres import PostgresRecordRepository
-from tax_tables.adapters.tesseract_extractor import TesseractExtractor
 from tax_tables.extraction.router import ExtractionRouter
 from tax_tables.pipeline import run_document
+from tax_tables.ports.extractor import TableExtractor
+
+
+def ocr_extractor(source: Mapping[str, str]) -> TableExtractor:
+    """The target's pixel-licensed adapter, chosen by config.
+
+    One knob, three targets (``EXTRACTION_OCR_ENGINE``): ``tesseract``
+    locally, ``vision`` on Vercel — where no system binary can exist, so the
+    tesseract executable simply cannot be installed (ADR 010) — and
+    ``textract`` on AWS. Imports are local to each branch so that choosing
+    one target never drags another's dependency into the bundle: boto3 and
+    pytesseract must both stay out of the Vercel function.
+
+    An unknown value raises rather than defaulting. Silently falling back to
+    a local binary that is not present would surface as an empty document at
+    high confidence — the exact silent loss anti-goal #8 forbids.
+    """
+    engine = (source.get("EXTRACTION_OCR_ENGINE") or "tesseract").strip().lower()
+    if engine == "tesseract":
+        from tax_tables.adapters.tesseract_extractor import TesseractExtractor
+
+        return TesseractExtractor()
+    if engine == "vision":
+        from tax_tables.adapters.vision_extractor import AnthropicVisionExtractor, VisionOcrConfig
+
+        return AnthropicVisionExtractor(VisionOcrConfig.from_env(source))
+    if engine == "textract":
+        from tax_tables.adapters.textract_extractor import TextractExtractor
+
+        return TextractExtractor()
+    raise ValueError(
+        f"unknown EXTRACTION_OCR_ENGINE {engine!r}: expected tesseract, vision, or textract"
+    )
 
 
 @dataclass(frozen=True)
@@ -184,7 +216,7 @@ def process_job(
                     pdf_bytes,
                     filename=filename_row[0],
                     router=ExtractionRouter(
-                        digital=PdfplumberExtractor(), ocr=TesseractExtractor()
+                        digital=PdfplumberExtractor(), ocr=ocr_extractor(source)
                     ),
                     mapper=AnthropicSchemaMapper(mapper_config),
                     verifier=AnthropicRecordVerifier(VerifierConfig.from_env(source)),

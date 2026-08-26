@@ -342,8 +342,78 @@ paths:
                 $ref: '#/components/schemas/HTTPValidationError'
   /internal/sweep:
     post:
-      summary: Process queued jobs (cron / queue-subscriber path)
-      operationId: sweep_internal_sweep_post
+      summary: Process queued jobs (cron / self-kick path)
+      description: 'Two callers, two methods, one handler.
+
+
+        `POST` is the JobRunner''s immediate self-kick after an upload. `GET`
+
+        exists because **Vercel Cron issues GET requests** — a mutating GET
+
+        is not a choice, it is the platform''s contract, and the endpoint is
+
+        bearer-authenticated and safe to repeat (`FOR UPDATE SKIP LOCKED`
+
+        means a duplicate sweep claims different jobs, never the same ones
+
+        twice). Vercel injects `Authorization: Bearer $CRON_SECRET`
+
+        automatically when that variable is set, which is exactly the check
+
+        `require_cron_secret` already performs.'
+      operationId: sweep_jobs
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 50
+          minimum: 1
+          default: 10
+          title: Limit
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SweepOut'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    get:
+      summary: Process queued jobs (cron / self-kick path)
+      description: 'Two callers, two methods, one handler.
+
+
+        `POST` is the JobRunner''s immediate self-kick after an upload. `GET`
+
+        exists because **Vercel Cron issues GET requests** — a mutating GET
+
+        is not a choice, it is the platform''s contract, and the endpoint is
+
+        bearer-authenticated and safe to repeat (`FOR UPDATE SKIP LOCKED`
+
+        means a duplicate sweep claims different jobs, never the same ones
+
+        twice). Vercel injects `Authorization: Bearer $CRON_SECRET`
+
+        automatically when that variable is set, which is exactly the check
+
+        `require_cron_secret` already performs.'
+      operationId: sweep_jobs_cron
       parameters:
       - name: limit
         in: query

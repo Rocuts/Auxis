@@ -281,13 +281,32 @@ def create_app(settings: ApiSettings, *, runner: JobRunner | None = None) -> Fas
             raise HTTPException(status_code=404, detail="review item not found")
         return ReviewOut(**row)
 
-    @app.post(
-        "/internal/sweep",
-        response_model=SweepOut,
-        dependencies=[Depends(require_cron_secret)],
-        summary="Process queued jobs (cron / queue-subscriber path)",
-    )
     def sweep(limit: Annotated[int, Query(ge=1, le=50)] = 10) -> SweepOut:
+        """Two callers, two methods, one handler.
+
+        `POST` is the JobRunner's immediate self-kick after an upload. `GET`
+        exists because **Vercel Cron issues GET requests** — a mutating GET
+        is not a choice, it is the platform's contract, and the endpoint is
+        bearer-authenticated and safe to repeat (`FOR UPDATE SKIP LOCKED`
+        means a duplicate sweep claims different jobs, never the same ones
+        twice). Vercel injects `Authorization: Bearer $CRON_SECRET`
+        automatically when that variable is set, which is exactly the check
+        `require_cron_secret` already performs.
+        """
         return SweepOut(processed=sweep_pending(settings.database_url, limit=limit))
+
+    # Registered per method with distinct operation ids: one path, one
+    # handler, two callers. A single api_route(methods=[...]) would emit a
+    # duplicate operationId into the OpenAPI document.
+    for method, operation_id in (("POST", "sweep_jobs"), ("GET", "sweep_jobs_cron")):
+        app.add_api_route(
+            "/internal/sweep",
+            sweep,
+            methods=[method],
+            response_model=SweepOut,
+            dependencies=[Depends(require_cron_secret)],
+            operation_id=operation_id,
+            summary="Process queued jobs (cron / self-kick path)",
+        )
 
     return app
