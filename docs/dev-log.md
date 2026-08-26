@@ -149,3 +149,117 @@ classification — a false green. Fix: imports re-sorted with `--no-cache`, and
 `known-first-party = ["tax_tables", "tests"]` pinned in pyproject so
 classification is declared, not inferred. Lesson: any config change that
 alters lint semantics deserves a `--no-cache` run before push.
+
+## 2026-08-25 — Phase 2a: deterministic extraction (no API key yet)
+
+Phase 2 split at the ANTHROPIC_API_KEY boundary: 2a builds everything
+deterministic — router, pdfplumber + tesseract extractors, the extracted-grid
+model, validators, review triage, and the accuracy-harness skeleton. The
+SchemaMapper exists as a port only. No stub, no fabricated records: the
+accuracy table does not exist until it runs against the real API in 2b.
+
+**Probe-first.** Every design decision came from measuring the five PDFs
+before writing adapter code. Findings that shaped the architecture:
+
+- Docs 02/03 have row rects but no vertical rules; pdfplumber's default
+  strategy returns 1-column grids ('Alabama 4.000 5.290 9.290 5' as one
+  cell). Whole-page `text` strategy is worse (merges prose into tables).
+  Chosen fix: keep the ruled bbox, rebuild columns from word x-gaps — the
+  same geometry problem OCR word boxes pose, so one shared `gridbuild`
+  module serves both paths.
+- Doc 05 (scanned, 0 chars) defeats *every* whole-page tesseract mode: PSM 3
+  drops the entire rate stub column ('Rate', '0/15/20 percent'), PSM 4 drops
+  the whole Table 1 body, PSM 11 loses paragraph structure. The ruling lines
+  themselves confuse segmentation. Per-cell OCR after image-side line-grid
+  detection recovers every lost cell at conf 94–96. Deskew is estimated from
+  the image (projection-variance search), never hardcoded from fixture
+  knowledge.
+- A 2026 best-practices validation agent (Opus 5, web-sourced, empirical
+  against our fixtures) corrected three assumptions before they shipped:
+  `lines_strict` returns zero tables on doc 03 (rect-drawn grid); mean OCR
+  confidence *rewards* silent dropout (PSM 4 scored the highest mean by
+  losing the hard table) — so the model pairs p10 tails with coverage counts
+  and a flagged-cell cap; and pytesseract was about to ride the main
+  dependency list into a Vercel bundle where its binary cannot exist — now
+  an optional `ocr` extra mirrored into the dev group.
+
+**Implementation was orchestrated:** four Opus 5 agents built the two
+adapters, the validators, and the harness skeleton in parallel on disjoint
+files, each handed the probe data as spec. Two agent findings mattered:
+
+- The planned thickness filter for spurious ruling lines is provably wrong:
+  bold header text projects as *thin* clusters (6px and 2px at the 0.30 ink
+  threshold). Replaced with a continuity rule — a horizontal rule must have
+  a contiguous ink run spanning >=20% of page width. Code was made faithful
+  to reality; the structural test was not weakened.
+- Loading the oracle exposed a real Phase 1 defect: docs 02 and 04 carry
+  'Qualifying surviving spouse' rows, but the FilingStatus enum and the 0003
+  CHECK admitted only four statuses — two records unpersistable, accuracy
+  capped at 126/128 before the mapper even exists. Fixed by migration 0005
+  (CHECK replaced, never edited in place) + the enum member; a guard test
+  keeps the status representable. Recorded here because the harness caught
+  it exactly the way the gate philosophy intends: a truthful red, not a
+  negotiated green.
+
+**Gate 2a evidence** (uv run python -m tax_tables.tools.extraction_report):
+router chose deterministic_text for 01–04 and ocr for 05; grids 9x5+5x2 /
+5x4+2x2 / 28x5+25x5 (51 data rows stitched) / 4x4+6x2+5x3+7x3 / 4x5+4x2;
+prose+footnote blocks captured on every document (doc 02's prose-only rule,
+doc 03's unit sentence and rebate note, doc 05's SUPERSEDED banner and the
+NOTE block carrying the 3.8% rate that exists nowhere else); docs 01–04 at
+$0.07–0.12 wall and **$0 / 0 API calls** (the report exits nonzero if a
+text-layer document ever spends money); doc 05 at 3.1s, 285 words, p10 0.95,
+document confidence 0.92, also $0 locally. `make check`: 172 passed, 1
+deliberate skip (the 2b accuracy run), ruff + mypy strict clean. An
+adversarial review workflow (find-then-refute) ran over the full 2a diff
+before gate close; its confirmed findings and fixes are recorded below.
+
+**Adversarial review outcome (same day).** Four Opus 5 finders (correctness,
+anti-goals, robustness/contracts, test honesty) produced 35 findings over
+the 2a diff; independent refute-by-default verifiers killed 28 and
+confirmed 7, several with runnable probes. All 7 fixed and pinned by tests:
+
+1. *Router (critical).* A scanned page carrying a small text overlay (a
+   60-char Bates/records stamp) cleared the 50-char threshold, routed to
+   pdfplumber, and the whole document came back empty at confidence 1.0 —
+   proven with a hand-built stamped-scan PDF. Fix: a page-sized-image test
+   (`_scan_like`, coverage >= 0.5) that outranks the char count; both
+   routing directions are now stated invariants with tests, including a
+   synthetic stamped-scan case.
+2. *Router (major).* /Rotate metadata sent rotated-but-upright text pages
+   to the paid OCR path, violating the brief's "never send a usable text
+   layer to the vision adapter". Routing now keys on upright-char count;
+   sideways text layers (which pdfplumber cannot read reliably) still go to
+   the pixel-licensed port.
+3. *Domain (critical).* Doc 01's Estates and Trusts brackets
+   (taxpayer_class-discriminated, no filing status) were unpersistable —
+   the second oracle-vs-schema gap after QSS, found by the new
+   constructibility guard that maps all 128 oracle entries onto
+   CanonicalRecord. Fix: migration 0006 relaxes bracket_requires_chain to
+   "any taxpayer discriminator"; the exclusion constraint's
+   COALESCE(filing_status,'') — documented in 0003 as defense in depth —
+   is now load-bearing, and a raw-SQL test proves the estate chain still
+   rejects overlaps.
+4. *Harness (critical).* The oracle's `table_id` is the document's printed
+   label ('table_1', 'section_3'); the extractor's is provenance ('p1_t0').
+   Comparing them would have mismatched all 128 records in 2b — hidden by
+   synthetic tests that set both sides identically. Fix: COMPARED_AS rename
+   map (label rides in attrs.source_table_label), the mapper port docstring
+   now states the contract, and oracle commentary fields (note/
+   extraction_note) are explicitly not compared.
+5. *Validators (major).* A chain missing its lowest bracket produced zero
+   findings (pairwise gap checks can't see it). New bracket_bottom rule
+   flags multi-bracket chains not starting at 0; migration 0006 also
+   re-anchors the bracket_gaps view (lag default 0) so the DB diagnostic
+   sees the same hole.
+6. *Validators (minor).* derived_sum skipped records with a partial rate
+   triple — disabling itself exactly when a column had been lost. A partial
+   triple now flags.
+7. *Tesseract test (major).* The dropout guard (>200 words vs 285 measured)
+   tolerated a 30% loss; tightened to >270, and doc 05's only tax-year
+   sentence ('Tax Year 2025', one small prose block) is now pinned — losing
+   it would leave tax_year inferable only from forbidden sources.
+
+Post-fix: make check 184 passed + 1 deliberate skip, extraction report
+unchanged (identical grids, costs, confidences). Gate 2a closed pending
+sign-off.

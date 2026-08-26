@@ -23,6 +23,7 @@ from tax_tables.domain.records import (
     ReviewStatus,
 )
 from tax_tables.validation.validators import (
+    RULE_BRACKET_BOTTOM,
     RULE_BRACKET_GAP,
     RULE_BRACKET_OVERLAP,
     RULE_CONFIDENCE_FLOOR,
@@ -168,6 +169,28 @@ class TestBracketGap:
         assert RULE_BRACKET_GAP not in {f.rule for f in validate_batch(records)}
 
 
+class TestBracketBottom:
+    def test_chain_starting_at_zero_is_clean(self) -> None:
+        records = [bracket(0, 11925), bracket(11926, None)]
+        assert RULE_BRACKET_BOTTOM not in {f.rule for f in validate_batch(records)}
+
+    def test_chain_with_uncovered_head_is_flagged_on_its_lowest_bracket(self) -> None:
+        # The classic symptom of a first data row lost to a header band:
+        # pairwise gap checks cannot see it, the missing row is its own only
+        # evidence. The chain's lowest surviving bracket carries the flag.
+        records = [bracket(11926, 48475), bracket(48476, None)]
+        result = triage(records)
+        assert rules_for(result.findings, 0) == {RULE_BRACKET_BOTTOM}
+        finding = next(f for f in result.findings if f.rule == RULE_BRACKET_BOTTOM)
+        assert "[0, 11925]" in finding.detail
+        assert result.persistable[0].review_status is ReviewStatus.NEEDS_REVIEW
+        assert_partitions(result, records)
+
+    def test_lone_threshold_bracket_may_start_high(self) -> None:
+        records = [bracket(1_000_000, None)]
+        assert RULE_BRACKET_BOTTOM not in {f.rule for f in validate_batch(records)}
+
+
 class TestOpenTop:
     def test_open_ended_top_is_clean(self) -> None:
         records = [bracket(0, 12250), bracket(12251, 49800), bracket(49801, None)]
@@ -252,6 +275,20 @@ class TestDerivedSum:
         )
         assert validate_batch([record]) == []
 
+    def test_partial_triple_is_flagged_not_skipped(self) -> None:
+        # A mapper that lost one of the three columns is exactly the case
+        # this rule exists for; skipping it would disable the only
+        # cross-check at the moment it matters.
+        record = scalar(
+            attrs={
+                "state_rate_pct": "6.25",
+                "avg_local_rate_pct": "1.43",
+            }
+        )
+        findings = validate_batch([record])
+        assert rules_for(findings, 0) == {RULE_DERIVED_SUM}
+        assert "combined_rate_pct" in findings[0].detail
+
     def test_inconsistent_triple_is_flagged(self) -> None:
         record = scalar(
             attrs={
@@ -283,10 +320,6 @@ class TestDerivedSum:
                 "combined_rate_pct": None,
             }
         )
-        assert validate_batch([record]) == []
-
-    def test_partial_triple_is_not_checked(self) -> None:
-        record = scalar(attrs={"state_rate_pct": "6.25", "combined_rate_pct": "7.68"})
         assert validate_batch([record]) == []
 
     def test_numeric_json_types_are_accepted(self) -> None:

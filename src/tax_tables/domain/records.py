@@ -107,8 +107,15 @@ class CanonicalRecord(BaseModel):
             and self.upper_bound < self.lower_bound
         ):
             raise ValueError("upper_bound must be >= lower_bound")
-        if self.is_bracket and (self.tax_year is None or self.filing_status is None):
-            raise ValueError("a bracket record requires tax_year and filing_status")
+        if self.is_bracket and (
+            self.tax_year is None or (self.filing_status is None and self.taxpayer_class is None)
+        ):
+            # Document 01's Estates and Trusts schedule: brackets discriminated
+            # by taxpayer_class alone, with no filing status (migration 0006).
+            raise ValueError(
+                "a bracket record requires tax_year and at least one taxpayer "
+                "discriminator (filing_status or taxpayer_class)"
+            )
         if (
             self.effective_from is not None
             and self.effective_to is not None

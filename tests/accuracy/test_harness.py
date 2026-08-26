@@ -82,7 +82,10 @@ def expected(**overrides: Any) -> ExpectedRecord:
 def actual(**overrides: Any) -> ActualRecord:
     base: dict[str, Any] = {
         "source_page": 1,
-        "table_id": "table_z",
+        # Two key spaces: table_id carries extraction provenance, while the
+        # document's own printed label rides in attrs (COMPARED_AS).
+        "table_id": "p1_t0",
+        "attrs": {"source_table_label": "table_z"},
         "record_type": RecordType.ORDINARY_INCOME_BRACKET,
         "jurisdiction": "ZZ-TEST",
         "tax_year": 1999,
@@ -95,7 +98,9 @@ def actual(**overrides: Any) -> ActualRecord:
         "confidence": Decimal("1"),
     }
     document = str(overrides.pop("source_document", SYNTHETIC_DOC))
+    attrs_override: dict[str, Any] = overrides.pop("attrs", {})
     base.update(overrides)
+    base["attrs"] = {"source_table_label": "table_z", **attrs_override}
     return document, CanonicalRecord.model_validate(base)
 
 
@@ -149,6 +154,45 @@ class TestGroundTruthStructure:
         )
         assert unrepresentable == []
 
+    def test_every_oracle_record_is_constructible_as_a_canonical_record(
+        self, truth: GroundTruth
+    ) -> None:
+        """The guard that would have caught both schema gaps at once.
+
+        Enum membership alone missed the estates/trusts brackets (filing
+        status absent, taxpayer_class-discriminated), which the domain
+        model's shape validator rejected until migration 0006. So: map every
+        oracle entry's typed core onto CanonicalRecord, everything else into
+        attrs, and name each entry that cannot be built. If this fails, the
+        Phase 2 accuracy ceiling is below 128 before any mapper runs.
+        """
+        core_names = (
+            set(CanonicalRecord.model_fields) - {"attrs", "confidence", "review_status"}
+        ) | {"source_page", "table_id"}
+        failures: list[str] = []
+        for entry in truth.expected_records:
+            stated = entry.compared_fields()
+            stated.pop("source_document", None)
+            core: dict[str, Any] = {"source_page": entry.source_page, "table_id": "oracle"}
+            attrs: dict[str, Any] = {}
+            for name, value in stated.items():
+                if name in ("source_page", "table_id"):
+                    continue
+                if name in core_names:
+                    core[name] = value
+                else:
+                    attrs[name] = value
+            if (status := core.get("filing_status")) is not None:
+                core["filing_status"] = FilingStatus(str(status))
+            for numeric in ("rate", "amount"):
+                if core.get(numeric) is not None:
+                    core[numeric] = Decimal(str(core[numeric]))
+            try:
+                CanonicalRecord.model_validate({**core, "attrs": attrs, "confidence": Decimal(1)})
+            except Exception as error:  # broad on purpose: name every failure
+                failures.append(f"{entry.source_document}/{natural_key(entry)}: {error}")
+        assert failures == []
+
     def test_no_expected_value_is_a_float(self, truth: GroundTruth) -> None:
         """Every oracle number must have arrived as a Decimal built from the
         JSON source text — one float would make exact comparison a lie."""
@@ -194,6 +238,31 @@ class TestNaturalKey:
 
 
 class TestCompare:
+    def test_extraction_provenance_and_document_label_are_different_key_spaces(self) -> None:
+        # The oracle's table_id is the label the document prints; the mapped
+        # record's table_id is extraction provenance. They can never be equal
+        # on real data, so the comparison reads the label from attrs.
+        result = compare(
+            [expected(table_id="table_1")],
+            [actual(table_id="p1_t0", attrs={"source_table_label": "table_1"})],
+        )
+        assert len(result.matched) == 1
+
+    def test_wrong_table_label_is_still_caught(self) -> None:
+        result = compare(
+            [expected(table_id="table_1")],
+            [actual(table_id="p1_t0", attrs={"source_table_label": "table_3"})],
+        )
+        assert result.field_mismatches
+        assert any(d.field == "table_id" for d in result.field_mismatches[0].diffs)
+
+    def test_oracle_commentary_fields_are_not_compared(self) -> None:
+        # 'note'/'extraction_note' are free prose documenting traps; a mapper
+        # cannot reproduce English sentences and must not be judged on them.
+        entry = expected(note="the dash means no tax imposed")
+        assert "note" not in entry.compared_fields()
+        assert len(compare([entry], [actual()]).matched) == 1
+
     def test_exact_match(self) -> None:
         result = compare([expected()], [actual()])
         assert len(result.matched) == 1

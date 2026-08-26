@@ -57,6 +57,7 @@ _DERIVED_SUM_KEYS = ("state_rate_pct", "avg_local_rate_pct", "combined_rate_pct"
 
 RULE_BRACKET_OVERLAP = "bracket_overlap"
 RULE_BRACKET_GAP = "bracket_gap"
+RULE_BRACKET_BOTTOM = "bracket_bottom"
 RULE_OPEN_TOP = "open_top"
 RULE_RATE_PLAUSIBILITY = "rate_plausibility"
 RULE_CONFIDENCE_FLOOR = "confidence_floor"
@@ -238,6 +239,37 @@ def check_bracket_gap(records: Sequence[CanonicalRecord]) -> list[Finding]:
     return findings
 
 
+def check_bracket_bottom(records: Sequence[CanonicalRecord]) -> list[Finding]:
+    """FLAG a multi-bracket chain that does not start at the domain floor.
+
+    Bounds are ``ge=0``, so a chain whose lowest bracket starts above 0 has
+    an uncovered head — the classic symptom of a first data row lost to a
+    header band. ``check_bracket_gap`` walks pairs and cannot see it: the
+    missing row is its own only evidence. ``check_open_top`` guards the top
+    of the chain; this rule is its mirror at the bottom. A lone bracket is
+    exempt — a single threshold record legitimately starts high.
+    """
+    findings: list[Finding] = []
+    for indexes in _bracket_chains(records).values():
+        if len(indexes) < 2:
+            continue
+        lowest = min(indexes, key=lambda i: (records[i].lower_bound or 0, i))
+        first_lower = records[lowest].lower_bound or 0
+        if first_lower > 0:
+            findings.append(
+                Finding(
+                    rule=RULE_BRACKET_BOTTOM,
+                    severity=Severity.FLAG,
+                    detail=(
+                        f"chain's lowest bracket {_fmt(records[lowest])} starts at "
+                        f"{first_lower}; [0, {first_lower - 1}] is uncovered"
+                    ),
+                    record_index=lowest,
+                )
+            )
+    return findings
+
+
 def check_open_top(records: Sequence[CanonicalRecord]) -> list[Finding]:
     """FLAG chains whose open-ended ("and over") bracket is missing, doubled,
     or not actually on top.
@@ -371,7 +403,22 @@ def check_derived_sum(records: Sequence[CanonicalRecord]) -> list[Finding]:
     findings: list[Finding] = []
     for index, record in enumerate(records):
         attrs = record.attrs
-        if not all(key in attrs for key in _DERIVED_SUM_KEYS):
+        present = [key for key in _DERIVED_SUM_KEYS if key in attrs]
+        if not present:
+            continue  # not a derived-column record at all
+        if len(present) != len(_DERIVED_SUM_KEYS):
+            # A partial triple is exactly the case this rule exists for — a
+            # mapper that lost one of the three columns. Skipping it would
+            # disable the only cross-check at the moment it matters.
+            missing = [key for key in _DERIVED_SUM_KEYS if key not in attrs]
+            findings.append(
+                Finding(
+                    rule=RULE_DERIVED_SUM,
+                    severity=Severity.FLAG,
+                    detail=f"derived rate columns incomplete: missing {missing}",
+                    record_index=index,
+                )
+            )
             continue
         raw = [attrs[key] for key in _DERIVED_SUM_KEYS]
         if all(value is None for value in raw):
@@ -421,6 +468,7 @@ def validate_batch(
     findings = [
         *check_bracket_overlap(records),
         *check_bracket_gap(records),
+        *check_bracket_bottom(records),
         *check_open_top(records),
         *check_rate_plausibility(records),
         *check_confidence_floor(records, floor=confidence_floor),

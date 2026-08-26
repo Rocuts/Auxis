@@ -55,11 +55,72 @@ class RecordingExtractor:
         )
 
 
+def synthetic_scan_pdf(*, stamp: str | None) -> bytes:
+    """A one-page PDF holding a page-sized JPEG (a 'scan'), optionally with a
+    text stamp long enough to clear MIN_TEXT_CHARS. Hand-rolled writer: no
+    PDF-authoring dependency exists in this project, and the routing question
+    only needs geometry, not content."""
+    import io
+
+    from PIL import Image
+
+    buf = io.BytesIO()
+    Image.new("RGB", (120, 160), (235, 235, 235)).save(buf, format="JPEG")
+    jpeg = buf.getvalue()
+    w, h = 612.0, 792.0
+    parts = [f"q {w:.0f} 0 0 {h:.0f} 0 0 cm /Im0 Do Q"]
+    if stamp:
+        parts.append(f"BT /F1 9 Tf 40 {h - 24:.0f} Td ({stamp}) Tj ET")
+    content = "\n".join(parts).encode("latin-1")
+    objs: dict[int, bytes] = {
+        1: b"<< /Type /Catalog /Pages 2 0 R >>",
+        2: b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        3: (
+            f"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {w:.0f} {h:.0f}] "
+            "/Contents 4 0 R /Resources << /XObject << /Im0 5 0 R >> "
+            "/Font << /F1 6 0 R >> >> >>"
+        ).encode(),
+        4: b"<< /Length %d >>\nstream\n%s\nendstream" % (len(content), content),
+        5: (
+            b"<< /Type /XObject /Subtype /Image /Width 120 /Height 160 "
+            b"/ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode "
+            b"/Length %d >>\nstream\n%s\nendstream" % (len(jpeg), jpeg)
+        ),
+        6: b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+    }
+    out = bytearray(b"%PDF-1.4\n")
+    offsets: dict[int, int] = {}
+    for num in sorted(objs):
+        offsets[num] = len(out)
+        out += f"{num} 0 obj\n".encode() + objs[num] + b"\nendobj\n"
+    xref_at = len(out)
+    out += f"xref\n0 {len(objs) + 1}\n".encode() + b"0000000000 65535 f \n"
+    for num in sorted(objs):
+        out += f"{offsets[num]:010d} 00000 n \n".encode()
+    out += (
+        f"trailer\n<< /Size {len(objs) + 1} /Root 1 0 R >>\nstartxref\n{xref_at}\n%%EOF\n"
+    ).encode()
+    return bytes(out)
+
+
 class TestRoute:
     @pytest.mark.parametrize("name", DIGITAL_DOCS)
     def test_text_layer_documents_route_deterministic(self, name: str) -> None:
         methods = route((FIXTURES / name).read_bytes())
         assert set(methods) == {ExtractionMethod.DETERMINISTIC_TEXT}
+
+    def test_scan_with_text_stamp_still_routes_to_ocr(self) -> None:
+        # The mixed page: a page-sized image plus a stamp that clears
+        # MIN_TEXT_CHARS. Trusting the char count alone would classify this
+        # digital; pdfplumber would then find no tables and the document
+        # would come back empty at full confidence — anti-goal #8. The
+        # page-sized image must win.
+        stamp = "Received by Records Management on 14 March 2026 Bates 000147"
+        assert len(stamp) >= 50
+        assert route(synthetic_scan_pdf(stamp=stamp)) == [ExtractionMethod.OCR]
+
+    def test_plain_scan_control_routes_to_ocr(self) -> None:
+        assert route(synthetic_scan_pdf(stamp=None)) == [ExtractionMethod.OCR]
 
     def test_scanned_document_routes_to_ocr(self) -> None:
         methods = route((FIXTURES / SCANNED_DOC).read_bytes())

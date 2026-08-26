@@ -9,15 +9,28 @@ page and dispatches:
     genuinely blank page       -> nothing to extract, nothing spent
 
 Classification is per page, on raw evidence, never on filename or metadata:
-``len(page.chars)`` (the primitive under extract_text, with overprinted
-duplicates deduped) against a threshold, plus the presence of a page image.
-A blank page routes to neither path — the image conjunct keeps a blank page
-from triggering a paid OCR call. Rotated pages (/Rotate metadata) route to
-OCR: pdfplumber's coordinate handling for them is unreliable, and a wrong
-grid is worse than a slower one.
+upright character count (overprinted duplicates deduped) against a
+threshold, the presence of a page image, and whether any image dominates
+the sheet. A blank page routes to neither path — the image conjunct keeps a
+blank page from triggering a paid OCR call.
 
-The invariant the tests pin: a page with a usable text layer is NEVER sent
-to an OCR adapter.
+Two invariants, one per direction, both pinned by tests:
+
+- a page with a usable text layer is NEVER sent to an OCR adapter (OCR
+  costs money on two of three targets);
+- a page dominated by a page-sized image is NEVER handed to the
+  deterministic adapter, even when it also carries a small text layer.
+  A scanner stamp or e-file header over 50 chars would otherwise classify
+  the page as digital, pdfplumber would find no tables, and the document
+  would come back empty at confidence 1.0 — anti-goal #8's silent loss
+  (found by adversarial review, reproduced with a stamped-scan probe).
+
+Orientation, not /Rotate metadata, decides "usable": pdfplumber resolves
+page rotation before setting each char's ``upright``, so a rotated page
+whose text reads upright stays on the $0 deterministic path (the brief
+forbids sending any usable text layer to the paid vision adapter), while a
+sideways text layer — which the deterministic adapter cannot read reliably
+— goes to the pixel-licensed port.
 """
 
 from __future__ import annotations
@@ -40,19 +53,38 @@ from tax_tables.ports.extractor import TableExtractor
 if TYPE_CHECKING:
     from pdfplumber.page import Page
 
-#: Below this many deduplicated characters a page has no usable text layer.
-#: Real content pages carry hundreds; a stray watermark char or page number
-#: does not make a page extractable.
+#: Below this many deduplicated upright characters a page has no usable
+#: text layer. Real content pages carry hundreds; a stray watermark char or
+#: page number does not make a page extractable.
 MIN_TEXT_CHARS = 50
+
+#: A page whose image covers this fraction of the sheet is a scan. Its text
+#: layer, if any, is an overlay — a Bates stamp, an e-file header — not the
+#: page's content, and MIN_TEXT_CHARS alone does not screen it out: a
+#: 60-char stamp clears the threshold and would send a whole scanned page
+#: to pdfplumber, which finds no tables and reports the document empty.
+_PAGE_IMAGE_COVERAGE = 0.5
+
+
+def _scan_like(page: Page) -> bool:
+    area = float(page.width) * float(page.height)
+    if area <= 0:
+        return False
+    return any(
+        abs(float(im["x1"]) - float(im["x0"])) * abs(float(im["bottom"]) - float(im["top"]))
+        >= _PAGE_IMAGE_COVERAGE * area
+        for im in page.images
+    )
 
 
 def classify_page(page: Page) -> ExtractionMethod:
-    if page.rotation not in (0, None):
-        return ExtractionMethod.OCR
-    char_count = len(page.dedupe_chars().chars)
-    if char_count >= MIN_TEXT_CHARS:
+    chars = page.dedupe_chars().chars
+    upright_count = sum(1 for c in chars if c["upright"])
+    if upright_count >= MIN_TEXT_CHARS and not _scan_like(page):
         return ExtractionMethod.DETERMINISTIC_TEXT
-    if page.images:
+    if page.images or len(chars) >= MIN_TEXT_CHARS:
+        # A scan (with or without an overlay stamp), or a sideways text
+        # layer: only the pixel-licensed port can read it faithfully.
         return ExtractionMethod.OCR
     return ExtractionMethod.NONE
 

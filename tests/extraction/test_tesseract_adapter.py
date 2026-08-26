@@ -178,13 +178,23 @@ class TestProse:
             assert 0 <= x0 < x1 <= page.width, block.text[:60]
             assert 0 <= top < bottom <= page.height, block.text[:60]
 
+    def test_tax_year_is_stated_in_prose(self, page: PageExtraction) -> None:
+        # 'Tax Year 2025' appears in one small block and nowhere in either
+        # table. Lose it and doc 05's tax_year is only guessable — from the
+        # successor circular's effective date or the document id, both of
+        # which the brief forbids as tax_year sources.
+        assert any("Tax Year 2025" in block.text for block in page.prose)
+
 
 class TestOcrStats:
     def test_word_coverage_guards_against_dropout(self, page: PageExtraction) -> None:
-        # The page holds roughly 275 words across tables and prose. A run that
-        # finds far fewer has lost content, however confident it feels.
+        # Measured: this pipeline finds 285 words on the page. The bound sits
+        # ~5% below that — above the 263 that losing the smallest prose block
+        # would leave, and above every whole-page PSM mode that silently
+        # drops table content (a guard at 200 would have waved those through,
+        # tolerating a 30% loss while claiming to catch dropout).
         assert page.ocr_stats is not None
-        assert page.ocr_stats.word_count > 200
+        assert page.ocr_stats.word_count > 270
 
     def test_confidence_tail_is_healthy(self, page: PageExtraction) -> None:
         assert page.ocr_stats is not None

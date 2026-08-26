@@ -45,6 +45,21 @@ REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 FIXTURES_DIR: Final = REPO_ROOT / "fixtures"
 GROUND_TRUTH_PATH: Final = FIXTURES_DIR / "ground_truth.json"
 
+#: Oracle field -> the name it is compared under on a mapped record. The
+#: oracle's ``table_id`` is the label the *document prints* ("table_1",
+#: "section_3", "footnote"); ``CanonicalRecord.table_id`` is extraction
+#: provenance ("p1_t0"). Two key spaces — comparing them to each other
+#: compares different things, and every one of the 128 records would
+#: mismatch. The mapper's side of the contract lives in the SchemaMapper
+#: port docstring: extraction provenance stays in ``table_id``, and the
+#: document's own label rides in ``attrs["source_table_label"]``.
+COMPARED_AS: Final[Mapping[str, str]] = {"table_id": "source_table_label"}
+
+#: Oracle commentary, not assertions: free prose documenting a trap or an
+#: extraction subtlety. A mapper cannot (and must not) reproduce English
+#: sentences, so these fields are never compared.
+NOT_COMPARED: Final = frozenset({"note", "extraction_note"})
+
 #: Which field of an expected entry carries the DDL's ``attribute_key``
 #: sub-discriminator, per record type. Mirrors the comment on
 #: ``migrations/0003_records.sql``: employment component, wage-base item,
@@ -207,6 +222,8 @@ class ExpectedRecord(BaseModel):
         stated = {name: getattr(self, name) for name in sorted(self.model_fields_set)}
         stated.update(dict(sorted((self.model_extra or {}).items())))
         stated["lifecycle_status"] = self.lifecycle_status
+        for name in NOT_COMPARED:
+            stated.pop(name, None)
         return stated
 
 
@@ -436,7 +453,7 @@ def compare(expected: Sequence[ExpectedRecord], actual: Sequence[ActualRecord]) 
         diffs: list[FieldDiff] = []
         for name, want in entry.compared_fields().items():
             fields_compared += 1
-            got = actual_value(candidate, name)
+            got = actual_value(candidate, COMPARED_AS.get(name, name))
             if not values_equal(want, got):
                 fields_differing += 1
                 diffs.append(FieldDiff(field=name, expected=want, actual=got))

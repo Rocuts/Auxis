@@ -27,7 +27,7 @@ def _insert_bracket(
     *,
     lower: int,
     upper: int | None,
-    filing_status: str = "single",
+    filing_status: str | None = "single",
     taxpayer_class: str | None = "individual",
     tax_year: int = 2026,
 ) -> None:
@@ -93,3 +93,48 @@ def test_null_taxpayer_class_cannot_escape_the_constraint(
     _insert_bracket(db, lower=0, upper=48350, taxpayer_class=None, tax_year=2025)
     with pytest.raises(errors.ExclusionViolation):
         _insert_bracket(db, lower=40000, upper=500000, taxpayer_class=None, tax_year=2025)
+
+
+def test_estate_trust_brackets_chain_without_filing_status(
+    db: psycopg.Connection,
+) -> None:
+    # Document 01's Estates and Trusts schedule: brackets discriminated by
+    # taxpayer_class alone, filing_status NULL. Before migration 0006 the
+    # bracket_requires_chain CHECK rejected them outright; after it, the
+    # exclusion constraint's COALESCE(filing_status, '') is load-bearing —
+    # the four rows insert cleanly AND the chain still refuses overlaps.
+    _seed_document(db)
+
+    def estate_bracket(lower: int, upper: int | None) -> None:
+        db.execute(
+            """
+            INSERT INTO records (document_id, source_page, table_id, tax_year,
+                jurisdiction, record_type, filing_status, taxpayer_class,
+                bracket, rate, currency, confidence)
+            VALUES (%s, 1, 't2', 2026, 'US-FED', 'ordinary_income_bracket',
+                    NULL, 'estate_or_trust', int8range(%s, %s, '[]'),
+                    0.1, 'USD', 1.0)
+            """,
+            (DOC_ID, lower, upper),
+        )
+
+    estate_bracket(0, 3250)
+    estate_bracket(3251, 11750)
+    estate_bracket(11751, 16050)
+    estate_bracket(16051, None)
+    count = db.execute(
+        "SELECT count(*) FROM records WHERE taxpayer_class = 'estate_or_trust'"
+    ).fetchone()
+    assert count is not None and count[0] == 4
+    with pytest.raises(errors.ExclusionViolation):
+        estate_bracket(10000, 20000)
+
+
+def test_bracket_without_any_taxpayer_discriminator_is_rejected(
+    db: psycopg.Connection,
+) -> None:
+    # The loosened CHECK still demands *some* discriminator: filing_status
+    # and taxpayer_class both NULL must not slip into the chain space.
+    _seed_document(db)
+    with pytest.raises(errors.CheckViolation):
+        _insert_bracket(db, lower=0, upper=12250, filing_status=None, taxpayer_class=None)

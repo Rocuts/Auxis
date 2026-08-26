@@ -92,8 +92,11 @@ class PdfplumberExtractor:
     """TableExtractor for pages that have a usable text layer.
 
     Stateless and cheap to construct; one instance may serve many documents.
-    The router guarantees it never sees a scanned page — and if it did, it
-    would return empty pages rather than invent content.
+    The router's scan-detection (upright-char threshold plus the page-sized-
+    image test) keeps scanned pages away from this adapter; were one to slip
+    through anyway, it would return empty pages rather than invent content —
+    which is why that routing invariant is pinned by its own tests, since an
+    empty page here is indistinguishable from a genuinely blank one.
     """
 
     @property

@@ -11,6 +11,16 @@ real implementations (Bedrock on AWS, Anthropic API elsewhere) need an API
 key that does not exist yet, and a fake mapper producing fabricated records
 would poison the accuracy harness (anti-goal #1's neighbor). Phase 2b
 implements it; nothing in Phase 2a may call it.
+
+Provenance contract (owed to the accuracy harness and the review queue):
+every CanonicalRecord keeps the extractor's ``ExtractedTable.table_id``
+("p1_t0") unchanged in ``table_id`` — review-queue provenance stays in the
+extraction key space — and additionally carries
+``attrs["source_table_label"]``: the slug of the caption of the table (or
+prose block) the record came from, lowercased with non-alphanumeric runs
+collapsed to "_" ("Table A. ... (continued)" -> "table_a"), or "footnote"
+for records derived from a ProseBlock of kind FOOTNOTE. Both values derive
+from extracted content; neither may ever read the oracle.
 """
 
 from __future__ import annotations
