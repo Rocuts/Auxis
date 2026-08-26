@@ -29,6 +29,10 @@ src = ["src", "tests"]
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "SIM", "C4", "RUF"]
 
+[tool.ruff.lint.isort]
+# Explicit so local and CI never disagree on import classification.
+known-first-party = ["tax_tables", "tests"]
+
 [tool.mypy]
 strict = true
 files = ["src", "tests"]

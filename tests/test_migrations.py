@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import psycopg
-from tests.conftest import MIGRATIONS_DIR, TEST_DSN, reset_database
 
 from tax_tables.migrate import apply_migrations
+from tests.conftest import MIGRATIONS_DIR, TEST_DSN, reset_database
 
 
 def test_migrations_apply_and_are_idempotent() -> None:

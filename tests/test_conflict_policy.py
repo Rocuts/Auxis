@@ -14,7 +14,6 @@ import hashlib
 from decimal import Decimal
 
 import psycopg
-from tests.conftest import TEST_DSN, reset_database
 
 from tax_tables.adapters.postgres import PostgresRecordRepository
 from tax_tables.domain.records import (
@@ -24,6 +23,7 @@ from tax_tables.domain.records import (
     RecordType,
 )
 from tax_tables.ports.repository import DocumentHandle
+from tests.conftest import TEST_DSN, reset_database
 
 
 def _sha(name: str) -> str:
