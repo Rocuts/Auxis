@@ -1,4 +1,4 @@
-.PHONY: check lint typecheck test fmt
+.PHONY: check lint typecheck test fmt db-up db-down
 
 check: lint typecheck test
 
@@ -15,3 +15,9 @@ test:
 fmt:
 	uv run ruff format src tests
 	uv run ruff check --fix src tests
+
+db-up:
+	docker compose up -d --wait db
+
+db-down:
+	docker compose down -v

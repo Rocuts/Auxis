@@ -3,7 +3,10 @@ name = "tax-table-ingestion"
 version = "0.1.0"
 description = "Accept tax-table PDFs, extract and normalize tabular data, persist it, and expose it over a REST API."
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "psycopg[binary]>=3.2",
+    "pydantic>=2.9",
+]
 
 [dependency-groups]
 dev = [

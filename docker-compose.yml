@@ -1,0 +1,23 @@
+services:
+  db:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: tax
+      POSTGRES_PASSWORD: tax
+      POSTGRES_DB: tax
+    ports:
+      - "5433:5432"
+    volumes:
+      # PG18's official image moved PGDATA to a version-specific path
+      # (/var/lib/postgresql/18/docker); mounting the 17-era
+      # /var/lib/postgresql/data silently initializes an empty database.
+      # Mount the parent directory, as the image now documents.
+      - db-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tax -d tax"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  db-data:
