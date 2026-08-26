@@ -9,3 +9,6 @@ __pycache__/
 .ruff_cache/
 .vercel
 .env*
+# ...but .env.example is a deliverable: anti-goal #10 requires it to
+# document every required variable. It holds placeholders only.
+!.env.example

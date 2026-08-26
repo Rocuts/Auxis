@@ -1452,3 +1452,129 @@ number above, **$5 of credits is roughly 550 full accuracy runs**.
 
 Gate 2b remains **OPEN**, with the blocker narrowed from "no key" to "free-tier
 throttle on a model that costs under a cent per run".
+
+## 2026-08-26 — Four pre-run deltas, and a conformance failure measured on the first document
+
+Gateway credits arrived. Before spending them on the gate, four changes so that
+the run's first print is trustworthy rather than something to be corrected
+afterwards.
+
+**1. Cache-read cost is provider-aware.** All three adapters hard-coded
+Anthropic's ratios — cache write 1.25× input, cache read 0.1× — which is right
+on Anthropic and wrong everywhere else. `adapters/pricing.py` now resolves them
+from the model, sourced from the gateway's own catalogue
+(`GET /v1/models`, read today) rather than from memory:
+
+| Model | input | cache read | ratio |
+|---|---|---|---|
+| `anthropic/claude-opus-5` | $5.00 | $0.50 | 0.1× |
+| `anthropic/claude-haiku-4.5` | $1.00 | $0.10 | 0.1× |
+| `zai/glm-5.3-flash` | $0.075 | $0.015 | **0.2×** |
+| `alibaba/qwen-3-235b` | $0.22 | — | **none published** |
+
+Two findings changed the design. First, **no z.ai model in the catalogue
+publishes a cache-*write* price at all**, so billing writes at Anthropic's 1.25×
+premium was inventing a charge; they now bill at the plain input rate. Second —
+the one that mattered — **qwen publishes no cache pricing of any kind, and the
+gateway returns `cache_read_input_tokens` for it anyway** (a probe came back
+with `cr=2`). So the fallback rule is deliberately asymmetric: **a provider with
+no published discount is billed at full input rate, never at another vendor's
+discount.** Under-reporting is the dangerous direction for a number that ships
+in a README. Resolution ladder: env override → exact model id → provider
+namespace → full rate. Anthropic remains the default, so nothing about the
+existing suite moved.
+
+**2. The verifier moved to a different family.** `RECORD_VERIFIER_MODEL=alibaba/qwen-3-235b`.
+ADR 012 names cross-family verification as the mitigation for Anthropic's
+conformity finding, and until now it was available but unused — mapper and
+verifier were the same model, which makes the second opinion an echo. It costs
+about $0.0008 a run.
+
+Its prices had to move with it. The config chain transfers the mapper's prices
+to another role **only** while that role runs the mapper's model — a rule
+promoted from an earlier adversarial review — so a verifier pointed at qwen
+without `RECORD_VERIFIER_USD_PER_MTOK_*` would have been reported at the Opus
+defaults, **22× its real rate**. Delta 1 exists to make cost lines correct at
+first print; delta 2 would have broken exactly that if shipped alone.
+
+**3. Conformance became a measured rate.** The standing caveat was that the
+gateway forwards `output_config` without enforcing it for non-Anthropic models,
+so schema conformance is probabilistic. A caveat is not a number.
+`observability/conformance.py` counts, per role: hard contract failures
+(unparseable body, missing envelope, truncated generation), malformed items
+(a proposed record failing validation, a verdict outside the batch, a record
+the verifier skipped), and retryable HTTP responses — the last kept strictly
+apart, because a 429 the SDK retried through says nothing about whether the
+model can emit a schema.
+
+Retries are only visible below the SDK's public surface, so they are counted at
+the transport: one httpx response hook per role through the SDK's documented
+`http_client` parameter. **That parameter is type-checked**, and `anthropic`
+1.0.0 ships `httpx2`, not `httpx` — a client built from the `httpx` on the path
+is rejected at construction. The module is now resolved from the SDK itself, so
+this package declares no httpx dependency of its own.
+
+The table prints under the accuracy table via a print-only pytest plugin loaded
+by `make accuracy` (`-p tax_tables.observability.pytest_plugin`). **The accuracy
+harness itself is untouched** — it is the oracle, and reporting is not a reason
+to edit it. `pipeline_report` prints the same table on the non-pytest path.
+
+**4. The escalation rule is pre-registered.** [ADR 014](decisions/014-semantic-layer-model-selection.md):
+the mapper escalates to `anthropic/claude-haiku-4.5` if any accuracy miss is
+attributed to the model's semantic mapping (≥ 1, because the gate target is
+128/128), or if hard contract failures exceed 0, or if malformed items exceed
+2% of proposed records. Throttling is explicitly not a trigger. Both runs'
+tables ship in the README, because one table showing the model that happened to
+be chosen is an assertion and two tables with a rule written beforehand are
+evidence.
+
+### What the smoke test found
+
+A one-document dry run (fixture 02, nothing persisted) to prove the
+instrumentation attaches. It attached, and immediately measured a failure:
+
+```
+role    calls  items  schema_fail  malformed  http_att  retryable  call_ok  item_ok
+mapper  1      0      1            0          1         0          0.0%     -
+  mapper: mapping response is not valid JSON: Extra data: line 251 column 1
+```
+
+Capturing the raw body identified it precisely, and it is **milder than the
+error reads**: `stop_reason='end_turn'`, and the response is a complete, valid
+JSON object — correct envelope, correct records — followed by a stray markdown
+fence remnant (`` `` ``). `json.loads` parses the whole object and then rejects
+the trailing characters. The model's *semantic* output conformed; the
+*envelope* carried transport residue, which is precisely what a gateway that
+forwards `output_config` without enforcing it produces.
+
+This is a design fork, so it stops here rather than being resolved quietly.
+ADR 014 pre-registers the carve-out — envelope residue is not a conformance
+trigger — and records that it is **not implemented**, so the gate cannot
+produce a meaningful accuracy number until the operator picks:
+
+- accommodate the residue at the transport boundary (take the first complete
+  JSON value when the remainder is only whitespace or fence characters) and
+  count each occurrence as its own measured rate — nothing dropped, nothing
+  guessed, the accommodation visible rather than hidden; or
+- treat it as a hard failure and escalate the mapper.
+
+### The credit finding
+
+The second option is currently blocked, and the check was worth running before
+writing a rule that depends on it. `GET /v1/credits` returns a balance of
+**$4.999** with $0.0006 used — so credits are genuinely loaded, and the GLM 429
+throttle recorded in the previous entry has lifted. But
+`anthropic/claude-haiku-4.5` still returns **403, "Free tier users do not have
+access to this model. Upgrade to paid credits"**, and opus-5, sonnet-5,
+gpt-5-mini and glm-5.3 all return 429 carrying that same free-tier message.
+`claude-3-haiku`, `qwen-3-235b` and `glm-5.3-flash` invoke fine.
+
+So the balance is free-tier allowance, not paid credit: cheap ids work, the
+tier's price ceiling still bites, and **the pre-registered escalation target
+cannot be reached on this key.** Unblocking it is a paid top-up — an operator
+action. `claude-3-haiku` is the only Anthropic-family id currently reachable
+and is recorded as a mechanism fallback, never a quality escalation: it is a
+March 2024 model.
+
+`make check`: 572 passed, 1 skipped (the accuracy gate, which needs the key).
+Gate 2b remains **OPEN**.
