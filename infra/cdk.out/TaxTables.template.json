@@ -1,0 +1,4486 @@
+{
+ "Description": "Tax table ingestion service (designed; synth-only)",
+ "Transform": "AWS::SecretsManager-2024-09-16",
+ "Metadata": {
+  "cdk_nag": {
+   "rules_to_suppress": [
+    {
+     "reason": "AWSLambdaBasicExecutionRole / AWSLambdaVPCAccessExecutionRole on CDK-generated Lambda roles: log-write and ENI-management permissions only, the documented minimal baseline for VPC Lambdas; replacing them with inline copies duplicates AWS-maintained policy with no privilege reduction. Also covers the API Gateway account CloudWatch role (AmazonAPIGatewayPushToCloudWatchLogs), which is log-write only.",
+     "id": "AwsSolutions-IAM4",
+     "applies_to": [
+      "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
+      "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole",
+      "Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+     ]
+    },
+    {
+     "reason": "Three wildcard classes, each the narrowest expressible grant: (1) textract:AnalyzeDocument supports no resource-level permissions, so '*' is mandatory; (2) the Bedrock grant is scoped to foundation-model/anthropic.* with a region wildcard because cross-region inference profiles resolve to regional model ARNs; (3) CDK grant helpers emit object-suffix (<bucket-arn>/*), Lambda version (:*), X-Ray/log-delivery, and DistributedMap child-execution wildcards that are the service-documented shapes for those grants.",
+     "id": "AwsSolutions-IAM5"
+    }
+   ]
+  }
+ },
+ "Resources": {
+  "Vpc8378EB38": {
+   "Type": "AWS::EC2::VPC",
+   "Properties": {
+    "CidrBlock": "10.0.0.0/16",
+    "EnableDnsHostnames": true,
+    "EnableDnsSupport": true,
+    "InstanceTenancy": "default",
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "TaxTables/Vpc"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Vpc/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "VGhlIGVuZHBvaW50IHNlY3VyaXR5IGdyb3Vwcycgb25seSBpbmdyZXNzIGlzIGFsbG93LWZyb20tVlBDLUNJRFIsIGV4cHJlc3NlZCBhcyBhIEZuOjpHZXRBdHQgdG9rZW4gdGhlIHJ1bGUgY2Fubm90IHJlc29sdmUgYXQgc3ludGguIFRoZSBWUEMgaXMgZnVsbHkgaXNvbGF0ZWQgKG5vIElHVywgbm8gTkFUKSwgc28gdGhlIHJ1bGUgYWRtaXRzIGludHJhLVZQQyB0cmFmZmljIG9ubHkgYnkgY29uc3RydWN0aW9uIOKAlCAwLjAuMC4wLzAgaXMgdW5yZXByZXNlbnRhYmxlIGhlcmUu",
+       "id": "CdkNagValidationFailure",
+       "applies_to": [
+        "AwsSolutions-EC23"
+       ],
+       "is_reason_encoded": true
+      }
+     ]
+    }
+   }
+  },
+  "VpcisolatedSubnet1SubnetE62B1B9B": {
+   "Type": "AWS::EC2::Subnet",
+   "Properties": {
+    "AvailabilityZone": {
+     "Fn::Select": [
+      0,
+      {
+       "Fn::GetAZs": ""
+      }
+     ]
+    },
+    "CidrBlock": "10.0.0.0/24",
+    "MapPublicIpOnLaunch": false,
+    "Tags": [
+     {
+      "Key": "aws-cdk:subnet-name",
+      "Value": "isolated"
+     },
+     {
+      "Key": "aws-cdk:subnet-type",
+      "Value": "Isolated"
+     },
+     {
+      "Key": "Name",
+      "Value": "TaxTables/Vpc/isolatedSubnet1"
+     }
+    ],
+    "VpcId": {
+     "Ref": "Vpc8378EB38"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Vpc/isolatedSubnet1/Subnet",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "VGhlIGVuZHBvaW50IHNlY3VyaXR5IGdyb3Vwcycgb25seSBpbmdyZXNzIGlzIGFsbG93LWZyb20tVlBDLUNJRFIsIGV4cHJlc3NlZCBhcyBhIEZuOjpHZXRBdHQgdG9rZW4gdGhlIHJ1bGUgY2Fubm90IHJlc29sdmUgYXQgc3ludGguIFRoZSBWUEMgaXMgZnVsbHkgaXNvbGF0ZWQgKG5vIElHVywgbm8gTkFUKSwgc28gdGhlIHJ1bGUgYWRtaXRzIGludHJhLVZQQyB0cmFmZmljIG9ubHkgYnkgY29uc3RydWN0aW9uIOKAlCAwLjAuMC4wLzAgaXMgdW5yZXByZXNlbnRhYmxlIGhlcmUu",
+       "id": "CdkNagValidationFailure",
+       "applies_to": [
+        "AwsSolutions-EC23"
+       ],
+       "is_reason_encoded": true
+      }
+     ]
+    }
+   }
+  },
+  "VpcisolatedSubnet1RouteTableE442650B": {
+   "Type": "AWS::EC2::RouteTable",
+   "Properties": {
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "TaxTables/Vpc/isolatedSubnet1"
+     }
+    ],
+    "VpcId": {
+     "Ref": "Vpc8378EB38"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Vpc/isolatedSubnet1/RouteTable",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "VGhlIGVuZHBvaW50IHNlY3VyaXR5IGdyb3Vwcycgb25seSBpbmdyZXNzIGlzIGFsbG93LWZyb20tVlBDLUNJRFIsIGV4cHJlc3NlZCBhcyBhIEZuOjpHZXRBdHQgdG9rZW4gdGhlIHJ1bGUgY2Fubm90IHJlc29sdmUgYXQgc3ludGguIFRoZSBWUEMgaXMgZnVsbHkgaXNvbGF0ZWQgKG5vIElHVywgbm8gTkFUKSwgc28gdGhlIHJ1bGUgYWRtaXRzIGludHJhLVZQQyB0cmFmZmljIG9ubHkgYnkgY29uc3RydWN0aW9uIOKAlCAwLjAuMC4wLzAgaXMgdW5yZXByZXNlbnRhYmxlIGhlcmUu",
+       "id": "CdkNagValidationFailure",
+       "applies_to": [
+        "AwsSolutions-EC23"
+       ],
+       "is_reason_encoded": true
+      }
+     ]
+    }
+   }
+  },
+  "VpcisolatedSubnet1RouteTableAssociationD259E31A": {
+   "Type": "AWS::EC2::SubnetRouteTableAssociation",
+   "Properties": {
+    "RouteTableId": {
+     "Ref": "VpcisolatedSubnet1RouteTableE442650B"
+    },
+    "SubnetId": {
+     "Ref": "VpcisolatedSubnet1SubnetE62B1B9B"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Vpc/isolatedSubnet1/RouteTableAssociation",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "VGhlIGVuZHBvaW50IHNlY3VyaXR5IGdyb3Vwcycgb25seSBpbmdyZXNzIGlzIGFsbG93LWZyb20tVlBDLUNJRFIsIGV4cHJlc3NlZCBhcyBhIEZuOjpHZXRBdHQgdG9rZW4gdGhlIHJ1bGUgY2Fubm90IHJlc29sdmUgYXQgc3ludGguIFRoZSBWUEMgaXMgZnVsbHkgaXNvbGF0ZWQgKG5vIElHVywgbm8gTkFUKSwgc28gdGhlIHJ1bGUgYWRtaXRzIGludHJhLVZQQyB0cmFmZmljIG9ubHkgYnkgY29uc3RydWN0aW9uIOKAlCAwLjAuMC4wLzAgaXMgdW5yZXByZXNlbnRhYmxlIGhlcmUu",
+       "id": "CdkNagValidationFailure",
+       "applies_to": [
+        "AwsSolutions-EC23"
+       ],
+       "is_reason_encoded": true
+      }
+     ]
+    }
+   }
+  },
+  "VpcisolatedSubnet2Subnet39217055": {
+   "Type": "AWS::EC2::Subnet",
+   "Properties": {
+    "AvailabilityZone": {
+     "Fn::Select": [
+      1,
+      {
+       "Fn::GetAZs": ""
+      }
+     ]
+    },
+    "CidrBlock": "10.0.1.0/24",
+    "MapPublicIpOnLaunch": false,
+    "Tags": [
+     {
+      "Key": "aws-cdk:subnet-name",
+      "Value": "isolated"
+     },
+     {
+      "Key": "aws-cdk:subnet-type",
+      "Value": "Isolated"
+     },
+     {
+      "Key": "Name",
+      "Value": "TaxTables/Vpc/isolatedSubnet2"
+     }
+    ],
+    "VpcId": {
+     "Ref": "Vpc8378EB38"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Vpc/isolatedSubnet2/Subnet",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "VGhlIGVuZHBvaW50IHNlY3VyaXR5IGdyb3Vwcycgb25seSBpbmdyZXNzIGlzIGFsbG93LWZyb20tVlBDLUNJRFIsIGV4cHJlc3NlZCBhcyBhIEZuOjpHZXRBdHQgdG9rZW4gdGhlIHJ1bGUgY2Fubm90IHJlc29sdmUgYXQgc3ludGguIFRoZSBWUEMgaXMgZnVsbHkgaXNvbGF0ZWQgKG5vIElHVywgbm8gTkFUKSwgc28gdGhlIHJ1bGUgYWRtaXRzIGludHJhLVZQQyB0cmFmZmljIG9ubHkgYnkgY29uc3RydWN0aW9uIOKAlCAwLjAuMC4wLzAgaXMgdW5yZXByZXNlbnRhYmxlIGhlcmUu",
+       "id": "CdkNagValidationFailure",
+       "applies_to": [
+        "AwsSolutions-EC23"
+       ],
+       "is_reason_encoded": true
+      }
+     ]
+    }
+   }
+  },
+  "VpcisolatedSubnet2RouteTable334F9764": {
+   "Type": "AWS::EC2::RouteTable",
+   "Properties": {
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "TaxTables/Vpc/isolatedSubnet2"
+     }
+    ],
+    "VpcId": {
+     "Ref": "Vpc8378EB38"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Vpc/isolatedSubnet2/RouteTable",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "VGhlIGVuZHBvaW50IHNlY3VyaXR5IGdyb3Vwcycgb25seSBpbmdyZXNzIGlzIGFsbG93LWZyb20tVlBDLUNJRFIsIGV4cHJlc3NlZCBhcyBhIEZuOjpHZXRBdHQgdG9rZW4gdGhlIHJ1bGUgY2Fubm90IHJlc29sdmUgYXQgc3ludGguIFRoZSBWUEMgaXMgZnVsbHkgaXNvbGF0ZWQgKG5vIElHVywgbm8gTkFUKSwgc28gdGhlIHJ1bGUgYWRtaXRzIGludHJhLVZQQyB0cmFmZmljIG9ubHkgYnkgY29uc3RydWN0aW9uIOKAlCAwLjAuMC4wLzAgaXMgdW5yZXByZXNlbnRhYmxlIGhlcmUu",
+       "id": "CdkNagValidationFailure",
+       "applies_to": [
+        "AwsSolutions-EC23"
+       ],
+       "is_reason_encoded": true
+      }
+     ]
+    }
+   }
+  },
+  "VpcisolatedSubnet2RouteTableAssociation25A4716F": {
+   "Type": "AWS::EC2::SubnetRouteTableAssociation",
+   "Properties": {
+    "RouteTableId": {
+     "Ref": "VpcisolatedSubnet2RouteTable334F9764"
+    },
+    "SubnetId": {
+     "Ref": "VpcisolatedSubnet2Subnet39217055"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Vpc/isolatedSubnet2/RouteTableAssociation",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "VGhlIGVuZHBvaW50IHNlY3VyaXR5IGdyb3Vwcycgb25seSBpbmdyZXNzIGlzIGFsbG93LWZyb20tVlBDLUNJRFIsIGV4cHJlc3NlZCBhcyBhIEZuOjpHZXRBdHQgdG9rZW4gdGhlIHJ1bGUgY2Fubm90IHJlc29sdmUgYXQgc3ludGguIFRoZSBWUEMgaXMgZnVsbHkgaXNvbGF0ZWQgKG5vIElHVywgbm8gTkFUKSwgc28gdGhlIHJ1bGUgYWRtaXRzIGludHJhLVZQQyB0cmFmZmljIG9ubHkgYnkgY29uc3RydWN0aW9uIOKAlCAwLjAuMC4wLzAgaXMgdW5yZXByZXNlbnRhYmxlIGhlcmUu",
+       "id": "CdkNagValidationFailure",
+       "applies_to": [
+        "AwsSolutions-EC23"
+       ],
+       "is_reason_encoded": true
+      }
+     ]
+    }
+   }
+  },
+  "VpcRestrictDefaultSecurityGroupCustomResourceC73DA2BE": {
+   "Type": "Custom::VpcRestrictDefaultSG",
+   "Properties": {
+    "ServiceToken": {
+     "Fn::GetAtt": [
+      "CustomVpcRestrictDefaultSGCustomResourceProviderHandlerDC833E5E",
+      "Arn"
+     ]
+    },
+    "DefaultSecurityGroupId": {
+     "Fn::GetAtt": [
+      "Vpc8378EB38",
+      "DefaultSecurityGroup"
+     ]
+    },
+    "Account": {
+     "Ref": "AWS::AccountId"
+    }
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Vpc/RestrictDefaultSecurityGroupCustomResource/Default",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "VGhlIGVuZHBvaW50IHNlY3VyaXR5IGdyb3Vwcycgb25seSBpbmdyZXNzIGlzIGFsbG93LWZyb20tVlBDLUNJRFIsIGV4cHJlc3NlZCBhcyBhIEZuOjpHZXRBdHQgdG9rZW4gdGhlIHJ1bGUgY2Fubm90IHJlc29sdmUgYXQgc3ludGguIFRoZSBWUEMgaXMgZnVsbHkgaXNvbGF0ZWQgKG5vIElHVywgbm8gTkFUKSwgc28gdGhlIHJ1bGUgYWRtaXRzIGludHJhLVZQQyB0cmFmZmljIG9ubHkgYnkgY29uc3RydWN0aW9uIOKAlCAwLjAuMC4wLzAgaXMgdW5yZXByZXNlbnRhYmxlIGhlcmUu",
+       "id": "CdkNagValidationFailure",
+       "applies_to": [
+        "AwsSolutions-EC23"
+       ],
+       "is_reason_encoded": true
+      }
+     ]
+    }
+   }
+  },
+  "VpcFlowLog8FF33A73": {
+   "Type": "AWS::EC2::FlowLog",
+   "Properties": {
+    "LogDestination": {
+     "Fn::Join": [
+      "",
+      [
+       {
+        "Fn::GetAtt": [
+         "AccessLogs8B620ECA",
+         "Arn"
+        ]
+       },
+       "/vpc-flow-logs/"
+      ]
+     ]
+    },
+    "LogDestinationType": "s3",
+    "ResourceId": {
+     "Ref": "Vpc8378EB38"
+    },
+    "ResourceType": "VPC",
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "TaxTables/Vpc/FlowLog"
+     }
+    ],
+    "TrafficType": "ALL"
+   },
+   "DependsOn": [
+    "AccessLogsPolicyABDC4D2D"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Vpc/FlowLog/FlowLog",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "VGhlIGVuZHBvaW50IHNlY3VyaXR5IGdyb3Vwcycgb25seSBpbmdyZXNzIGlzIGFsbG93LWZyb20tVlBDLUNJRFIsIGV4cHJlc3NlZCBhcyBhIEZuOjpHZXRBdHQgdG9rZW4gdGhlIHJ1bGUgY2Fubm90IHJlc29sdmUgYXQgc3ludGguIFRoZSBWUEMgaXMgZnVsbHkgaXNvbGF0ZWQgKG5vIElHVywgbm8gTkFUKSwgc28gdGhlIHJ1bGUgYWRtaXRzIGludHJhLVZQQyB0cmFmZmljIG9ubHkgYnkgY29uc3RydWN0aW9uIOKAlCAwLjAuMC4wLzAgaXMgdW5yZXByZXNlbnRhYmxlIGhlcmUu",
+       "id": "CdkNagValidationFailure",
+       "applies_to": [
+        "AwsSolutions-EC23"
+       ],
+       "is_reason_encoded": true
+      }
+     ]
+    }
+   }
+  },
+  "VpcS3Endpoint4A3DE4B5": {
+   "Type": "AWS::EC2::VPCEndpoint",
+   "Properties": {
+    "RouteTableIds": [
+     {
+      "Ref": "VpcisolatedSubnet1RouteTableE442650B"
+     },
+     {
+      "Ref": "VpcisolatedSubnet2RouteTable334F9764"
+     }
+    ],
+    "ServiceName": {
+     "Fn::Join": [
+      "",
+      [
+       "com.amazonaws.",
+       {
+        "Ref": "AWS::Region"
+       },
+       ".s3"
+      ]
+     ]
+    },
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "TaxTables/Vpc"
+     }
+    ],
+    "VpcEndpointType": "Gateway",
+    "VpcId": {
+     "Ref": "Vpc8378EB38"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Vpc/S3Endpoint/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "VGhlIGVuZHBvaW50IHNlY3VyaXR5IGdyb3Vwcycgb25seSBpbmdyZXNzIGlzIGFsbG93LWZyb20tVlBDLUNJRFIsIGV4cHJlc3NlZCBhcyBhIEZuOjpHZXRBdHQgdG9rZW4gdGhlIHJ1bGUgY2Fubm90IHJlc29sdmUgYXQgc3ludGguIFRoZSBWUEMgaXMgZnVsbHkgaXNvbGF0ZWQgKG5vIElHVywgbm8gTkFUKSwgc28gdGhlIHJ1bGUgYWRtaXRzIGludHJhLVZQQyB0cmFmZmljIG9ubHkgYnkgY29uc3RydWN0aW9uIOKAlCAwLjAuMC4wLzAgaXMgdW5yZXByZXNlbnRhYmxlIGhlcmUu",
+       "id": "CdkNagValidationFailure",
+       "applies_to": [
+        "AwsSolutions-EC23"
+       ],
+       "is_reason_encoded": true
+      }
+     ]
+    }
+   }
+  },
+  "VpcSecretsEndpointSecurityGroup81CD588F": {
+   "Type": "AWS::EC2::SecurityGroup",
+   "Properties": {
+    "GroupDescription": "TaxTables/Vpc/SecretsEndpoint/SecurityGroup",
+    "SecurityGroupEgress": [
+     {
+      "CidrIp": "0.0.0.0/0",
+      "Description": "Allow all outbound traffic by default",
+      "IpProtocol": "-1"
+     }
+    ],
+    "SecurityGroupIngress": [
+     {
+      "CidrIp": {
+       "Fn::GetAtt": [
+        "Vpc8378EB38",
+        "CidrBlock"
+       ]
+      },
+      "Description": {
+       "Fn::Join": [
+        "",
+        [
+         "from ",
+         {
+          "Fn::GetAtt": [
+           "Vpc8378EB38",
+           "CidrBlock"
+          ]
+         },
+         ":443"
+        ]
+       ]
+      },
+      "FromPort": 443,
+      "IpProtocol": "tcp",
+      "ToPort": 443
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "TaxTables/Vpc"
+     }
+    ],
+    "VpcId": {
+     "Ref": "Vpc8378EB38"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Vpc/SecretsEndpoint/SecurityGroup/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "VGhlIGVuZHBvaW50IHNlY3VyaXR5IGdyb3Vwcycgb25seSBpbmdyZXNzIGlzIGFsbG93LWZyb20tVlBDLUNJRFIsIGV4cHJlc3NlZCBhcyBhIEZuOjpHZXRBdHQgdG9rZW4gdGhlIHJ1bGUgY2Fubm90IHJlc29sdmUgYXQgc3ludGguIFRoZSBWUEMgaXMgZnVsbHkgaXNvbGF0ZWQgKG5vIElHVywgbm8gTkFUKSwgc28gdGhlIHJ1bGUgYWRtaXRzIGludHJhLVZQQyB0cmFmZmljIG9ubHkgYnkgY29uc3RydWN0aW9uIOKAlCAwLjAuMC4wLzAgaXMgdW5yZXByZXNlbnRhYmxlIGhlcmUu",
+       "id": "CdkNagValidationFailure",
+       "applies_to": [
+        "AwsSolutions-EC23"
+       ],
+       "is_reason_encoded": true
+      }
+     ]
+    }
+   }
+  },
+  "VpcSecretsEndpointFBE119FA": {
+   "Type": "AWS::EC2::VPCEndpoint",
+   "Properties": {
+    "PrivateDnsEnabled": true,
+    "SecurityGroupIds": [
+     {
+      "Fn::GetAtt": [
+       "VpcSecretsEndpointSecurityGroup81CD588F",
+       "GroupId"
+      ]
+     }
+    ],
+    "ServiceName": {
+     "Fn::Join": [
+      "",
+      [
+       "com.amazonaws.",
+       {
+        "Ref": "AWS::Region"
+       },
+       ".secretsmanager"
+      ]
+     ]
+    },
+    "SubnetIds": [
+     {
+      "Ref": "VpcisolatedSubnet1SubnetE62B1B9B"
+     },
+     {
+      "Ref": "VpcisolatedSubnet2Subnet39217055"
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "TaxTables/Vpc"
+     }
+    ],
+    "VpcEndpointType": "Interface",
+    "VpcId": {
+     "Ref": "Vpc8378EB38"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Vpc/SecretsEndpoint/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "VGhlIGVuZHBvaW50IHNlY3VyaXR5IGdyb3Vwcycgb25seSBpbmdyZXNzIGlzIGFsbG93LWZyb20tVlBDLUNJRFIsIGV4cHJlc3NlZCBhcyBhIEZuOjpHZXRBdHQgdG9rZW4gdGhlIHJ1bGUgY2Fubm90IHJlc29sdmUgYXQgc3ludGguIFRoZSBWUEMgaXMgZnVsbHkgaXNvbGF0ZWQgKG5vIElHVywgbm8gTkFUKSwgc28gdGhlIHJ1bGUgYWRtaXRzIGludHJhLVZQQyB0cmFmZmljIG9ubHkgYnkgY29uc3RydWN0aW9uIOKAlCAwLjAuMC4wLzAgaXMgdW5yZXByZXNlbnRhYmxlIGhlcmUu",
+       "id": "CdkNagValidationFailure",
+       "applies_to": [
+        "AwsSolutions-EC23"
+       ],
+       "is_reason_encoded": true
+      }
+     ]
+    }
+   }
+  },
+  "VpcTextractEndpointSecurityGroupCEBBF9E3": {
+   "Type": "AWS::EC2::SecurityGroup",
+   "Properties": {
+    "GroupDescription": "TaxTables/Vpc/TextractEndpoint/SecurityGroup",
+    "SecurityGroupEgress": [
+     {
+      "CidrIp": "0.0.0.0/0",
+      "Description": "Allow all outbound traffic by default",
+      "IpProtocol": "-1"
+     }
+    ],
+    "SecurityGroupIngress": [
+     {
+      "CidrIp": {
+       "Fn::GetAtt": [
+        "Vpc8378EB38",
+        "CidrBlock"
+       ]
+      },
+      "Description": {
+       "Fn::Join": [
+        "",
+        [
+         "from ",
+         {
+          "Fn::GetAtt": [
+           "Vpc8378EB38",
+           "CidrBlock"
+          ]
+         },
+         ":443"
+        ]
+       ]
+      },
+      "FromPort": 443,
+      "IpProtocol": "tcp",
+      "ToPort": 443
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "TaxTables/Vpc"
+     }
+    ],
+    "VpcId": {
+     "Ref": "Vpc8378EB38"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Vpc/TextractEndpoint/SecurityGroup/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "VGhlIGVuZHBvaW50IHNlY3VyaXR5IGdyb3Vwcycgb25seSBpbmdyZXNzIGlzIGFsbG93LWZyb20tVlBDLUNJRFIsIGV4cHJlc3NlZCBhcyBhIEZuOjpHZXRBdHQgdG9rZW4gdGhlIHJ1bGUgY2Fubm90IHJlc29sdmUgYXQgc3ludGguIFRoZSBWUEMgaXMgZnVsbHkgaXNvbGF0ZWQgKG5vIElHVywgbm8gTkFUKSwgc28gdGhlIHJ1bGUgYWRtaXRzIGludHJhLVZQQyB0cmFmZmljIG9ubHkgYnkgY29uc3RydWN0aW9uIOKAlCAwLjAuMC4wLzAgaXMgdW5yZXByZXNlbnRhYmxlIGhlcmUu",
+       "id": "CdkNagValidationFailure",
+       "applies_to": [
+        "AwsSolutions-EC23"
+       ],
+       "is_reason_encoded": true
+      }
+     ]
+    }
+   }
+  },
+  "VpcTextractEndpointB3DE12BB": {
+   "Type": "AWS::EC2::VPCEndpoint",
+   "Properties": {
+    "PrivateDnsEnabled": true,
+    "SecurityGroupIds": [
+     {
+      "Fn::GetAtt": [
+       "VpcTextractEndpointSecurityGroupCEBBF9E3",
+       "GroupId"
+      ]
+     }
+    ],
+    "ServiceName": {
+     "Fn::Join": [
+      "",
+      [
+       "com.amazonaws.",
+       {
+        "Ref": "AWS::Region"
+       },
+       ".textract"
+      ]
+     ]
+    },
+    "SubnetIds": [
+     {
+      "Ref": "VpcisolatedSubnet1SubnetE62B1B9B"
+     },
+     {
+      "Ref": "VpcisolatedSubnet2Subnet39217055"
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "TaxTables/Vpc"
+     }
+    ],
+    "VpcEndpointType": "Interface",
+    "VpcId": {
+     "Ref": "Vpc8378EB38"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Vpc/TextractEndpoint/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "VGhlIGVuZHBvaW50IHNlY3VyaXR5IGdyb3Vwcycgb25seSBpbmdyZXNzIGlzIGFsbG93LWZyb20tVlBDLUNJRFIsIGV4cHJlc3NlZCBhcyBhIEZuOjpHZXRBdHQgdG9rZW4gdGhlIHJ1bGUgY2Fubm90IHJlc29sdmUgYXQgc3ludGguIFRoZSBWUEMgaXMgZnVsbHkgaXNvbGF0ZWQgKG5vIElHVywgbm8gTkFUKSwgc28gdGhlIHJ1bGUgYWRtaXRzIGludHJhLVZQQyB0cmFmZmljIG9ubHkgYnkgY29uc3RydWN0aW9uIOKAlCAwLjAuMC4wLzAgaXMgdW5yZXByZXNlbnRhYmxlIGhlcmUu",
+       "id": "CdkNagValidationFailure",
+       "applies_to": [
+        "AwsSolutions-EC23"
+       ],
+       "is_reason_encoded": true
+      }
+     ]
+    }
+   }
+  },
+  "VpcBedrockEndpointSecurityGroupDBE9E8E4": {
+   "Type": "AWS::EC2::SecurityGroup",
+   "Properties": {
+    "GroupDescription": "TaxTables/Vpc/BedrockEndpoint/SecurityGroup",
+    "SecurityGroupEgress": [
+     {
+      "CidrIp": "0.0.0.0/0",
+      "Description": "Allow all outbound traffic by default",
+      "IpProtocol": "-1"
+     }
+    ],
+    "SecurityGroupIngress": [
+     {
+      "CidrIp": {
+       "Fn::GetAtt": [
+        "Vpc8378EB38",
+        "CidrBlock"
+       ]
+      },
+      "Description": {
+       "Fn::Join": [
+        "",
+        [
+         "from ",
+         {
+          "Fn::GetAtt": [
+           "Vpc8378EB38",
+           "CidrBlock"
+          ]
+         },
+         ":443"
+        ]
+       ]
+      },
+      "FromPort": 443,
+      "IpProtocol": "tcp",
+      "ToPort": 443
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "TaxTables/Vpc"
+     }
+    ],
+    "VpcId": {
+     "Ref": "Vpc8378EB38"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Vpc/BedrockEndpoint/SecurityGroup/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "VGhlIGVuZHBvaW50IHNlY3VyaXR5IGdyb3Vwcycgb25seSBpbmdyZXNzIGlzIGFsbG93LWZyb20tVlBDLUNJRFIsIGV4cHJlc3NlZCBhcyBhIEZuOjpHZXRBdHQgdG9rZW4gdGhlIHJ1bGUgY2Fubm90IHJlc29sdmUgYXQgc3ludGguIFRoZSBWUEMgaXMgZnVsbHkgaXNvbGF0ZWQgKG5vIElHVywgbm8gTkFUKSwgc28gdGhlIHJ1bGUgYWRtaXRzIGludHJhLVZQQyB0cmFmZmljIG9ubHkgYnkgY29uc3RydWN0aW9uIOKAlCAwLjAuMC4wLzAgaXMgdW5yZXByZXNlbnRhYmxlIGhlcmUu",
+       "id": "CdkNagValidationFailure",
+       "applies_to": [
+        "AwsSolutions-EC23"
+       ],
+       "is_reason_encoded": true
+      }
+     ]
+    }
+   }
+  },
+  "VpcBedrockEndpoint67430A7D": {
+   "Type": "AWS::EC2::VPCEndpoint",
+   "Properties": {
+    "PrivateDnsEnabled": true,
+    "SecurityGroupIds": [
+     {
+      "Fn::GetAtt": [
+       "VpcBedrockEndpointSecurityGroupDBE9E8E4",
+       "GroupId"
+      ]
+     }
+    ],
+    "ServiceName": {
+     "Fn::Join": [
+      "",
+      [
+       "com.amazonaws.",
+       {
+        "Ref": "AWS::Region"
+       },
+       ".bedrock-runtime"
+      ]
+     ]
+    },
+    "SubnetIds": [
+     {
+      "Ref": "VpcisolatedSubnet1SubnetE62B1B9B"
+     },
+     {
+      "Ref": "VpcisolatedSubnet2Subnet39217055"
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "TaxTables/Vpc"
+     }
+    ],
+    "VpcEndpointType": "Interface",
+    "VpcId": {
+     "Ref": "Vpc8378EB38"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Vpc/BedrockEndpoint/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "VGhlIGVuZHBvaW50IHNlY3VyaXR5IGdyb3Vwcycgb25seSBpbmdyZXNzIGlzIGFsbG93LWZyb20tVlBDLUNJRFIsIGV4cHJlc3NlZCBhcyBhIEZuOjpHZXRBdHQgdG9rZW4gdGhlIHJ1bGUgY2Fubm90IHJlc29sdmUgYXQgc3ludGguIFRoZSBWUEMgaXMgZnVsbHkgaXNvbGF0ZWQgKG5vIElHVywgbm8gTkFUKSwgc28gdGhlIHJ1bGUgYWRtaXRzIGludHJhLVZQQyB0cmFmZmljIG9ubHkgYnkgY29uc3RydWN0aW9uIOKAlCAwLjAuMC4wLzAgaXMgdW5yZXByZXNlbnRhYmxlIGhlcmUu",
+       "id": "CdkNagValidationFailure",
+       "applies_to": [
+        "AwsSolutions-EC23"
+       ],
+       "is_reason_encoded": true
+      }
+     ]
+    }
+   }
+  },
+  "VpcLogsEndpointSecurityGroup09D326E8": {
+   "Type": "AWS::EC2::SecurityGroup",
+   "Properties": {
+    "GroupDescription": "TaxTables/Vpc/LogsEndpoint/SecurityGroup",
+    "SecurityGroupEgress": [
+     {
+      "CidrIp": "0.0.0.0/0",
+      "Description": "Allow all outbound traffic by default",
+      "IpProtocol": "-1"
+     }
+    ],
+    "SecurityGroupIngress": [
+     {
+      "CidrIp": {
+       "Fn::GetAtt": [
+        "Vpc8378EB38",
+        "CidrBlock"
+       ]
+      },
+      "Description": {
+       "Fn::Join": [
+        "",
+        [
+         "from ",
+         {
+          "Fn::GetAtt": [
+           "Vpc8378EB38",
+           "CidrBlock"
+          ]
+         },
+         ":443"
+        ]
+       ]
+      },
+      "FromPort": 443,
+      "IpProtocol": "tcp",
+      "ToPort": 443
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "TaxTables/Vpc"
+     }
+    ],
+    "VpcId": {
+     "Ref": "Vpc8378EB38"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Vpc/LogsEndpoint/SecurityGroup/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "VGhlIGVuZHBvaW50IHNlY3VyaXR5IGdyb3Vwcycgb25seSBpbmdyZXNzIGlzIGFsbG93LWZyb20tVlBDLUNJRFIsIGV4cHJlc3NlZCBhcyBhIEZuOjpHZXRBdHQgdG9rZW4gdGhlIHJ1bGUgY2Fubm90IHJlc29sdmUgYXQgc3ludGguIFRoZSBWUEMgaXMgZnVsbHkgaXNvbGF0ZWQgKG5vIElHVywgbm8gTkFUKSwgc28gdGhlIHJ1bGUgYWRtaXRzIGludHJhLVZQQyB0cmFmZmljIG9ubHkgYnkgY29uc3RydWN0aW9uIOKAlCAwLjAuMC4wLzAgaXMgdW5yZXByZXNlbnRhYmxlIGhlcmUu",
+       "id": "CdkNagValidationFailure",
+       "applies_to": [
+        "AwsSolutions-EC23"
+       ],
+       "is_reason_encoded": true
+      }
+     ]
+    }
+   }
+  },
+  "VpcLogsEndpointDA7F7E44": {
+   "Type": "AWS::EC2::VPCEndpoint",
+   "Properties": {
+    "PrivateDnsEnabled": true,
+    "SecurityGroupIds": [
+     {
+      "Fn::GetAtt": [
+       "VpcLogsEndpointSecurityGroup09D326E8",
+       "GroupId"
+      ]
+     }
+    ],
+    "ServiceName": {
+     "Fn::Join": [
+      "",
+      [
+       "com.amazonaws.",
+       {
+        "Ref": "AWS::Region"
+       },
+       ".logs"
+      ]
+     ]
+    },
+    "SubnetIds": [
+     {
+      "Ref": "VpcisolatedSubnet1SubnetE62B1B9B"
+     },
+     {
+      "Ref": "VpcisolatedSubnet2Subnet39217055"
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "TaxTables/Vpc"
+     }
+    ],
+    "VpcEndpointType": "Interface",
+    "VpcId": {
+     "Ref": "Vpc8378EB38"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Vpc/LogsEndpoint/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "VGhlIGVuZHBvaW50IHNlY3VyaXR5IGdyb3Vwcycgb25seSBpbmdyZXNzIGlzIGFsbG93LWZyb20tVlBDLUNJRFIsIGV4cHJlc3NlZCBhcyBhIEZuOjpHZXRBdHQgdG9rZW4gdGhlIHJ1bGUgY2Fubm90IHJlc29sdmUgYXQgc3ludGguIFRoZSBWUEMgaXMgZnVsbHkgaXNvbGF0ZWQgKG5vIElHVywgbm8gTkFUKSwgc28gdGhlIHJ1bGUgYWRtaXRzIGludHJhLVZQQyB0cmFmZmljIG9ubHkgYnkgY29uc3RydWN0aW9uIOKAlCAwLjAuMC4wLzAgaXMgdW5yZXByZXNlbnRhYmxlIGhlcmUu",
+       "id": "CdkNagValidationFailure",
+       "applies_to": [
+        "AwsSolutions-EC23"
+       ],
+       "is_reason_encoded": true
+      }
+     ]
+    }
+   }
+  },
+  "VpcStatesEndpointSecurityGroup5655DCB6": {
+   "Type": "AWS::EC2::SecurityGroup",
+   "Properties": {
+    "GroupDescription": "TaxTables/Vpc/StatesEndpoint/SecurityGroup",
+    "SecurityGroupEgress": [
+     {
+      "CidrIp": "0.0.0.0/0",
+      "Description": "Allow all outbound traffic by default",
+      "IpProtocol": "-1"
+     }
+    ],
+    "SecurityGroupIngress": [
+     {
+      "CidrIp": {
+       "Fn::GetAtt": [
+        "Vpc8378EB38",
+        "CidrBlock"
+       ]
+      },
+      "Description": {
+       "Fn::Join": [
+        "",
+        [
+         "from ",
+         {
+          "Fn::GetAtt": [
+           "Vpc8378EB38",
+           "CidrBlock"
+          ]
+         },
+         ":443"
+        ]
+       ]
+      },
+      "FromPort": 443,
+      "IpProtocol": "tcp",
+      "ToPort": 443
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "TaxTables/Vpc"
+     }
+    ],
+    "VpcId": {
+     "Ref": "Vpc8378EB38"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Vpc/StatesEndpoint/SecurityGroup/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "VGhlIGVuZHBvaW50IHNlY3VyaXR5IGdyb3Vwcycgb25seSBpbmdyZXNzIGlzIGFsbG93LWZyb20tVlBDLUNJRFIsIGV4cHJlc3NlZCBhcyBhIEZuOjpHZXRBdHQgdG9rZW4gdGhlIHJ1bGUgY2Fubm90IHJlc29sdmUgYXQgc3ludGguIFRoZSBWUEMgaXMgZnVsbHkgaXNvbGF0ZWQgKG5vIElHVywgbm8gTkFUKSwgc28gdGhlIHJ1bGUgYWRtaXRzIGludHJhLVZQQyB0cmFmZmljIG9ubHkgYnkgY29uc3RydWN0aW9uIOKAlCAwLjAuMC4wLzAgaXMgdW5yZXByZXNlbnRhYmxlIGhlcmUu",
+       "id": "CdkNagValidationFailure",
+       "applies_to": [
+        "AwsSolutions-EC23"
+       ],
+       "is_reason_encoded": true
+      }
+     ]
+    }
+   }
+  },
+  "VpcStatesEndpoint55D87CA4": {
+   "Type": "AWS::EC2::VPCEndpoint",
+   "Properties": {
+    "PrivateDnsEnabled": true,
+    "SecurityGroupIds": [
+     {
+      "Fn::GetAtt": [
+       "VpcStatesEndpointSecurityGroup5655DCB6",
+       "GroupId"
+      ]
+     }
+    ],
+    "ServiceName": {
+     "Fn::Join": [
+      "",
+      [
+       "com.amazonaws.",
+       {
+        "Ref": "AWS::Region"
+       },
+       ".states"
+      ]
+     ]
+    },
+    "SubnetIds": [
+     {
+      "Ref": "VpcisolatedSubnet1SubnetE62B1B9B"
+     },
+     {
+      "Ref": "VpcisolatedSubnet2Subnet39217055"
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "TaxTables/Vpc"
+     }
+    ],
+    "VpcEndpointType": "Interface",
+    "VpcId": {
+     "Ref": "Vpc8378EB38"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Vpc/StatesEndpoint/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "VGhlIGVuZHBvaW50IHNlY3VyaXR5IGdyb3Vwcycgb25seSBpbmdyZXNzIGlzIGFsbG93LWZyb20tVlBDLUNJRFIsIGV4cHJlc3NlZCBhcyBhIEZuOjpHZXRBdHQgdG9rZW4gdGhlIHJ1bGUgY2Fubm90IHJlc29sdmUgYXQgc3ludGguIFRoZSBWUEMgaXMgZnVsbHkgaXNvbGF0ZWQgKG5vIElHVywgbm8gTkFUKSwgc28gdGhlIHJ1bGUgYWRtaXRzIGludHJhLVZQQyB0cmFmZmljIG9ubHkgYnkgY29uc3RydWN0aW9uIOKAlCAwLjAuMC4wLzAgaXMgdW5yZXByZXNlbnRhYmxlIGhlcmUu",
+       "id": "CdkNagValidationFailure",
+       "applies_to": [
+        "AwsSolutions-EC23"
+       ],
+       "is_reason_encoded": true
+      }
+     ]
+    }
+   }
+  },
+  "VpcXRayEndpointSecurityGroupD15B693D": {
+   "Type": "AWS::EC2::SecurityGroup",
+   "Properties": {
+    "GroupDescription": "TaxTables/Vpc/XRayEndpoint/SecurityGroup",
+    "SecurityGroupEgress": [
+     {
+      "CidrIp": "0.0.0.0/0",
+      "Description": "Allow all outbound traffic by default",
+      "IpProtocol": "-1"
+     }
+    ],
+    "SecurityGroupIngress": [
+     {
+      "CidrIp": {
+       "Fn::GetAtt": [
+        "Vpc8378EB38",
+        "CidrBlock"
+       ]
+      },
+      "Description": {
+       "Fn::Join": [
+        "",
+        [
+         "from ",
+         {
+          "Fn::GetAtt": [
+           "Vpc8378EB38",
+           "CidrBlock"
+          ]
+         },
+         ":443"
+        ]
+       ]
+      },
+      "FromPort": 443,
+      "IpProtocol": "tcp",
+      "ToPort": 443
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "TaxTables/Vpc"
+     }
+    ],
+    "VpcId": {
+     "Ref": "Vpc8378EB38"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Vpc/XRayEndpoint/SecurityGroup/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "VGhlIGVuZHBvaW50IHNlY3VyaXR5IGdyb3Vwcycgb25seSBpbmdyZXNzIGlzIGFsbG93LWZyb20tVlBDLUNJRFIsIGV4cHJlc3NlZCBhcyBhIEZuOjpHZXRBdHQgdG9rZW4gdGhlIHJ1bGUgY2Fubm90IHJlc29sdmUgYXQgc3ludGguIFRoZSBWUEMgaXMgZnVsbHkgaXNvbGF0ZWQgKG5vIElHVywgbm8gTkFUKSwgc28gdGhlIHJ1bGUgYWRtaXRzIGludHJhLVZQQyB0cmFmZmljIG9ubHkgYnkgY29uc3RydWN0aW9uIOKAlCAwLjAuMC4wLzAgaXMgdW5yZXByZXNlbnRhYmxlIGhlcmUu",
+       "id": "CdkNagValidationFailure",
+       "applies_to": [
+        "AwsSolutions-EC23"
+       ],
+       "is_reason_encoded": true
+      }
+     ]
+    }
+   }
+  },
+  "VpcXRayEndpoint7EEF95F3": {
+   "Type": "AWS::EC2::VPCEndpoint",
+   "Properties": {
+    "PrivateDnsEnabled": true,
+    "SecurityGroupIds": [
+     {
+      "Fn::GetAtt": [
+       "VpcXRayEndpointSecurityGroupD15B693D",
+       "GroupId"
+      ]
+     }
+    ],
+    "ServiceName": {
+     "Fn::Join": [
+      "",
+      [
+       "com.amazonaws.",
+       {
+        "Ref": "AWS::Region"
+       },
+       ".xray"
+      ]
+     ]
+    },
+    "SubnetIds": [
+     {
+      "Ref": "VpcisolatedSubnet1SubnetE62B1B9B"
+     },
+     {
+      "Ref": "VpcisolatedSubnet2Subnet39217055"
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "TaxTables/Vpc"
+     }
+    ],
+    "VpcEndpointType": "Interface",
+    "VpcId": {
+     "Ref": "Vpc8378EB38"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Vpc/XRayEndpoint/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "VGhlIGVuZHBvaW50IHNlY3VyaXR5IGdyb3Vwcycgb25seSBpbmdyZXNzIGlzIGFsbG93LWZyb20tVlBDLUNJRFIsIGV4cHJlc3NlZCBhcyBhIEZuOjpHZXRBdHQgdG9rZW4gdGhlIHJ1bGUgY2Fubm90IHJlc29sdmUgYXQgc3ludGguIFRoZSBWUEMgaXMgZnVsbHkgaXNvbGF0ZWQgKG5vIElHVywgbm8gTkFUKSwgc28gdGhlIHJ1bGUgYWRtaXRzIGludHJhLVZQQyB0cmFmZmljIG9ubHkgYnkgY29uc3RydWN0aW9uIOKAlCAwLjAuMC4wLzAgaXMgdW5yZXByZXNlbnRhYmxlIGhlcmUu",
+       "id": "CdkNagValidationFailure",
+       "applies_to": [
+        "AwsSolutions-EC23"
+       ],
+       "is_reason_encoded": true
+      }
+     ]
+    }
+   }
+  },
+  "CustomVpcRestrictDefaultSGCustomResourceProviderRole26592FE0": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Version": "2012-10-17",
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ]
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Sub": "arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+     }
+    ],
+    "Policies": [
+     {
+      "PolicyName": "Inline",
+      "PolicyDocument": {
+       "Version": "2012-10-17",
+       "Statement": [
+        {
+         "Effect": "Allow",
+         "Action": [
+          "ec2:AuthorizeSecurityGroupIngress",
+          "ec2:AuthorizeSecurityGroupEgress",
+          "ec2:RevokeSecurityGroupIngress",
+          "ec2:RevokeSecurityGroupEgress"
+         ],
+         "Resource": [
+          {
+           "Fn::Join": [
+            "",
+            [
+             "arn:",
+             {
+              "Ref": "AWS::Partition"
+             },
+             ":ec2:",
+             {
+              "Ref": "AWS::Region"
+             },
+             ":",
+             {
+              "Ref": "AWS::AccountId"
+             },
+             ":security-group/",
+             {
+              "Fn::GetAtt": [
+               "Vpc8378EB38",
+               "DefaultSecurityGroup"
+              ]
+             }
+            ]
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Custom::VpcRestrictDefaultSGCustomResourceProvider/Role"
+   }
+  },
+  "CustomVpcRestrictDefaultSGCustomResourceProviderHandlerDC833E5E": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Code": {
+     "S3Bucket": {
+      "Fn::Sub": "cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}"
+     },
+     "S3Key": "02b51ab524e7bcf8f477de3e71e5f9a72e448301b26ba62e9e75a14f9c55a093.zip"
+    },
+    "Timeout": 900,
+    "MemorySize": 128,
+    "Handler": "__entrypoint__.handler",
+    "Role": {
+     "Fn::GetAtt": [
+      "CustomVpcRestrictDefaultSGCustomResourceProviderRole26592FE0",
+      "Arn"
+     ]
+    },
+    "Runtime": "nodejs24.x",
+    "Description": "Lambda function for removing all inbound/outbound rules from the VPC default security group"
+   },
+   "DependsOn": [
+    "CustomVpcRestrictDefaultSGCustomResourceProviderRole26592FE0"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Custom::VpcRestrictDefaultSGCustomResourceProvider/Handler",
+    "aws:asset:path": "asset.02b51ab524e7bcf8f477de3e71e5f9a72e448301b26ba62e9e75a14f9c55a093",
+    "aws:asset:property": "Code"
+   }
+  },
+  "AccessLogs8B620ECA": {
+   "Type": "AWS::S3::Bucket",
+   "Properties": {
+    "BucketEncryption": {
+     "ServerSideEncryptionConfiguration": [
+      {
+       "ServerSideEncryptionByDefault": {
+        "SSEAlgorithm": "AES256"
+       }
+      }
+     ]
+    },
+    "LifecycleConfiguration": {
+     "Rules": [
+      {
+       "ExpirationInDays": 90,
+       "Status": "Enabled"
+      }
+     ]
+    },
+    "OwnershipControls": {
+     "Rules": [
+      {
+       "ObjectOwnership": "BucketOwnerEnforced"
+      }
+     ]
+    },
+    "PublicAccessBlockConfiguration": {
+     "BlockPublicAcls": true,
+     "BlockPublicPolicy": true,
+     "IgnorePublicAcls": true,
+     "RestrictPublicBuckets": true
+    }
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/AccessLogs/Resource"
+   }
+  },
+  "AccessLogsPolicyABDC4D2D": {
+   "Type": "AWS::S3::BucketPolicy",
+   "Properties": {
+    "Bucket": {
+     "Ref": "AccessLogs8B620ECA"
+    },
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": "s3:*",
+       "Condition": {
+        "Bool": {
+         "aws:SecureTransport": "false"
+        }
+       },
+       "Effect": "Deny",
+       "Principal": {
+        "AWS": "*"
+       },
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "AccessLogs8B620ECA",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "AccessLogs8B620ECA",
+             "Arn"
+            ]
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": "s3:PutObject",
+       "Condition": {
+        "ArnLike": {
+         "aws:SourceArn": {
+          "Fn::GetAtt": [
+           "Documents7E5B2978",
+           "Arn"
+          ]
+         }
+        },
+        "StringEquals": {
+         "aws:SourceAccount": {
+          "Ref": "AWS::AccountId"
+         }
+        }
+       },
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "logging.s3.amazonaws.com"
+       },
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          {
+           "Fn::GetAtt": [
+            "AccessLogs8B620ECA",
+            "Arn"
+           ]
+          },
+          "/documents/*"
+         ]
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/AccessLogs/Policy/Resource"
+   }
+  },
+  "Documents7E5B2978": {
+   "Type": "AWS::S3::Bucket",
+   "Properties": {
+    "BucketEncryption": {
+     "ServerSideEncryptionConfiguration": [
+      {
+       "ServerSideEncryptionByDefault": {
+        "SSEAlgorithm": "AES256"
+       }
+      }
+     ]
+    },
+    "LifecycleConfiguration": {
+     "Rules": [
+      {
+       "AbortIncompleteMultipartUpload": {
+        "DaysAfterInitiation": 2
+       },
+       "NoncurrentVersionExpiration": {
+        "NoncurrentDays": 30
+       },
+       "Status": "Enabled"
+      }
+     ]
+    },
+    "LoggingConfiguration": {
+     "DestinationBucketName": {
+      "Ref": "AccessLogs8B620ECA"
+     },
+     "LogFilePrefix": "documents/"
+    },
+    "PublicAccessBlockConfiguration": {
+     "BlockPublicAcls": true,
+     "BlockPublicPolicy": true,
+     "IgnorePublicAcls": true,
+     "RestrictPublicBuckets": true
+    },
+    "VersioningConfiguration": {
+     "Status": "Enabled"
+    }
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Documents/Resource"
+   }
+  },
+  "DocumentsPolicy2E972B69": {
+   "Type": "AWS::S3::BucketPolicy",
+   "Properties": {
+    "Bucket": {
+     "Ref": "Documents7E5B2978"
+    },
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": "s3:*",
+       "Condition": {
+        "Bool": {
+         "aws:SecureTransport": "false"
+        }
+       },
+       "Effect": "Deny",
+       "Principal": {
+        "AWS": "*"
+       },
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "Documents7E5B2978",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "Documents7E5B2978",
+             "Arn"
+            ]
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      }
+     ],
+     "Version": "2012-10-17"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Documents/Policy/Resource"
+   }
+  },
+  "DbSg495F8305": {
+   "Type": "AWS::EC2::SecurityGroup",
+   "Properties": {
+    "GroupDescription": "TaxTables/DbSg",
+    "SecurityGroupEgress": [
+     {
+      "CidrIp": "255.255.255.255/32",
+      "Description": "Disallow all traffic",
+      "FromPort": 252,
+      "IpProtocol": "icmp",
+      "ToPort": 86
+     }
+    ],
+    "VpcId": {
+     "Ref": "Vpc8378EB38"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/DbSg/Resource"
+   }
+  },
+  "DbSgfromTaxTablesProxySgC8BAAA6354337BAAED5D": {
+   "Type": "AWS::EC2::SecurityGroupIngress",
+   "Properties": {
+    "Description": "proxy to database",
+    "FromPort": 5433,
+    "GroupId": {
+     "Fn::GetAtt": [
+      "DbSg495F8305",
+      "GroupId"
+     ]
+    },
+    "IpProtocol": "tcp",
+    "SourceSecurityGroupId": {
+     "Fn::GetAtt": [
+      "ProxySgDFD428A2",
+      "GroupId"
+     ]
+    },
+    "ToPort": 5433
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/DbSg/from TaxTablesProxySgC8BAAA63:5433"
+   }
+  },
+  "DbSgfromTaxTablesProxySgC8BAAA63IndirectPort2AFA5668": {
+   "Type": "AWS::EC2::SecurityGroupIngress",
+   "Properties": {
+    "Description": "Allow connections to the database Instance from the Proxy",
+    "FromPort": {
+     "Fn::GetAtt": [
+      "DatabaseB269D8BB",
+      "Endpoint.Port"
+     ]
+    },
+    "GroupId": {
+     "Fn::GetAtt": [
+      "DbSg495F8305",
+      "GroupId"
+     ]
+    },
+    "IpProtocol": "tcp",
+    "SourceSecurityGroupId": {
+     "Fn::GetAtt": [
+      "ProxySgDFD428A2",
+      "GroupId"
+     ]
+    },
+    "ToPort": {
+     "Fn::GetAtt": [
+      "DatabaseB269D8BB",
+      "Endpoint.Port"
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/DbSg/from TaxTablesProxySgC8BAAA63:{IndirectPort}"
+   }
+  },
+  "ProxySgDFD428A2": {
+   "Type": "AWS::EC2::SecurityGroup",
+   "Properties": {
+    "GroupDescription": "TaxTables/ProxySg",
+    "VpcId": {
+     "Ref": "Vpc8378EB38"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/ProxySg/Resource"
+   }
+  },
+  "ProxySgfromTaxTablesLambdaSg4993A0C05433EAF6C8E1": {
+   "Type": "AWS::EC2::SecurityGroupIngress",
+   "Properties": {
+    "Description": "lambdas to proxy",
+    "FromPort": 5433,
+    "GroupId": {
+     "Fn::GetAtt": [
+      "ProxySgDFD428A2",
+      "GroupId"
+     ]
+    },
+    "IpProtocol": "tcp",
+    "SourceSecurityGroupId": {
+     "Fn::GetAtt": [
+      "LambdaSg30A6108C",
+      "GroupId"
+     ]
+    },
+    "ToPort": 5433
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/ProxySg/from TaxTablesLambdaSg4993A0C0:5433"
+   }
+  },
+  "ProxySgtoTaxTablesDbSg4F8049DC5433156F895B": {
+   "Type": "AWS::EC2::SecurityGroupEgress",
+   "Properties": {
+    "Description": "proxy to database",
+    "DestinationSecurityGroupId": {
+     "Fn::GetAtt": [
+      "DbSg495F8305",
+      "GroupId"
+     ]
+    },
+    "FromPort": 5433,
+    "GroupId": {
+     "Fn::GetAtt": [
+      "ProxySgDFD428A2",
+      "GroupId"
+     ]
+    },
+    "IpProtocol": "tcp",
+    "ToPort": 5433
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/ProxySg/to TaxTablesDbSg4F8049DC:5433"
+   }
+  },
+  "ProxySgtoTaxTablesDbSg4F8049DCIndirectPortAD9E3C19": {
+   "Type": "AWS::EC2::SecurityGroupEgress",
+   "Properties": {
+    "Description": "Allow connections to the database Instance from the Proxy",
+    "DestinationSecurityGroupId": {
+     "Fn::GetAtt": [
+      "DbSg495F8305",
+      "GroupId"
+     ]
+    },
+    "FromPort": {
+     "Fn::GetAtt": [
+      "DatabaseB269D8BB",
+      "Endpoint.Port"
+     ]
+    },
+    "GroupId": {
+     "Fn::GetAtt": [
+      "ProxySgDFD428A2",
+      "GroupId"
+     ]
+    },
+    "IpProtocol": "tcp",
+    "ToPort": {
+     "Fn::GetAtt": [
+      "DatabaseB269D8BB",
+      "Endpoint.Port"
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/ProxySg/to TaxTablesDbSg4F8049DC:{IndirectPort}"
+   }
+  },
+  "LambdaSg30A6108C": {
+   "Type": "AWS::EC2::SecurityGroup",
+   "Properties": {
+    "GroupDescription": "TaxTables/LambdaSg",
+    "SecurityGroupEgress": [
+     {
+      "CidrIp": "0.0.0.0/0",
+      "Description": "Allow all outbound traffic by default",
+      "IpProtocol": "-1"
+     }
+    ],
+    "VpcId": {
+     "Ref": "Vpc8378EB38"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/LambdaSg/Resource"
+   }
+  },
+  "DatabaseSubnetGroup7D60F180": {
+   "Type": "AWS::RDS::DBSubnetGroup",
+   "Properties": {
+    "DBSubnetGroupDescription": "Subnet group for Database database",
+    "SubnetIds": [
+     {
+      "Ref": "VpcisolatedSubnet1SubnetE62B1B9B"
+     },
+     {
+      "Ref": "VpcisolatedSubnet2Subnet39217055"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Database/SubnetGroup/Default"
+   }
+  },
+  "TaxTablesDatabaseSecret60CB69D53fdaad7efa858a3daf9490cf0a702aeb": {
+   "Type": "AWS::SecretsManager::Secret",
+   "Properties": {
+    "Description": {
+     "Fn::Join": [
+      "",
+      [
+       "Generated by the CDK for stack: ",
+       {
+        "Ref": "AWS::StackName"
+       }
+      ]
+     ]
+    },
+    "GenerateSecretString": {
+     "ExcludeCharacters": " %+~`#$&*()|[]{}:;<>?!'/@\"\\",
+     "GenerateStringKey": "password",
+     "PasswordLength": 30,
+     "SecretStringTemplate": "{\"username\":\"tax_ingest\"}"
+    }
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Database/Secret/Resource"
+   }
+  },
+  "DatabaseSecretAttachmentE5D1B020": {
+   "Type": "AWS::SecretsManager::SecretTargetAttachment",
+   "Properties": {
+    "SecretId": {
+     "Ref": "TaxTablesDatabaseSecret60CB69D53fdaad7efa858a3daf9490cf0a702aeb"
+    },
+    "TargetId": {
+     "Ref": "DatabaseB269D8BB"
+    },
+    "TargetType": "AWS::RDS::DBInstance"
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Database/Secret/Attachment/Resource"
+   }
+  },
+  "DatabaseSecretAttachmentRotation5592F5B2": {
+   "Type": "AWS::SecretsManager::RotationSchedule",
+   "Properties": {
+    "HostedRotationLambda": {
+     "ExcludeCharacters": " %+~`#$&*()|[]{}:;<>?!'/@\"\\",
+     "RotationType": "PostgreSQLSingleUser",
+     "VpcSecurityGroupIds": {
+      "Fn::GetAtt": [
+       "LambdaSg30A6108C",
+       "GroupId"
+      ]
+     },
+     "VpcSubnetIds": {
+      "Fn::Join": [
+       "",
+       [
+        {
+         "Ref": "VpcisolatedSubnet1SubnetE62B1B9B"
+        },
+        ",",
+        {
+         "Ref": "VpcisolatedSubnet2Subnet39217055"
+        }
+       ]
+      ]
+     }
+    },
+    "RotationRules": {
+     "ScheduleExpression": "rate(30 days)"
+    },
+    "SecretId": {
+     "Ref": "DatabaseSecretAttachmentE5D1B020"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Database/Secret/Attachment/Rotation/Resource"
+   }
+  },
+  "DatabaseSecretAttachmentPolicy5ACFE6CA": {
+   "Type": "AWS::SecretsManager::ResourcePolicy",
+   "Properties": {
+    "ResourcePolicy": {
+     "Statement": [
+      {
+       "Action": "secretsmanager:DeleteSecret",
+       "Effect": "Deny",
+       "Principal": {
+        "AWS": {
+         "Fn::Join": [
+          "",
+          [
+           "arn:",
+           {
+            "Ref": "AWS::Partition"
+           },
+           ":iam::",
+           {
+            "Ref": "AWS::AccountId"
+           },
+           ":root"
+          ]
+         ]
+        }
+       },
+       "Resource": "*"
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "SecretId": {
+     "Ref": "DatabaseSecretAttachmentE5D1B020"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Database/Secret/Attachment/Policy/Resource"
+   }
+  },
+  "DatabaseB269D8BB": {
+   "Type": "AWS::RDS::DBInstance",
+   "Properties": {
+    "AllocatedStorage": "100",
+    "AutoMinorVersionUpgrade": true,
+    "BackupRetentionPeriod": 7,
+    "CopyTagsToSnapshot": true,
+    "DBInstanceClass": "db.t4g.medium",
+    "DBName": "tax",
+    "DBSubnetGroupName": {
+     "Ref": "DatabaseSubnetGroup7D60F180"
+    },
+    "DeletionProtection": true,
+    "EnableCloudwatchLogsExports": [
+     "postgresql"
+    ],
+    "Engine": "postgres",
+    "EngineVersion": "18.3",
+    "MasterUserPassword": {
+     "Fn::Join": [
+      "",
+      [
+       "{{resolve:secretsmanager:",
+       {
+        "Ref": "TaxTablesDatabaseSecret60CB69D53fdaad7efa858a3daf9490cf0a702aeb"
+       },
+       ":SecretString:password::}}"
+      ]
+     ]
+    },
+    "MasterUsername": "tax_ingest",
+    "MultiAZ": true,
+    "Port": "5433",
+    "PubliclyAccessible": false,
+    "StorageEncrypted": true,
+    "StorageType": "gp2",
+    "VPCSecurityGroups": [
+     {
+      "Fn::GetAtt": [
+       "DbSg495F8305",
+       "GroupId"
+      ]
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Snapshot",
+   "DeletionPolicy": "Snapshot",
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Database/Resource"
+   }
+  },
+  "ProxyIAMRole2FE8AB0F": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "rds.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Proxy/IAMRole/Resource"
+   }
+  },
+  "ProxyIAMRoleDefaultPolicy59EB0117": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "secretsmanager:DescribeSecret",
+        "secretsmanager:GetSecretValue"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Ref": "DatabaseSecretAttachmentE5D1B020"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "ProxyIAMRoleDefaultPolicy59EB0117",
+    "Roles": [
+     {
+      "Ref": "ProxyIAMRole2FE8AB0F"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Proxy/IAMRole/DefaultPolicy/Resource"
+   }
+  },
+  "ProxyCB0DFB71": {
+   "Type": "AWS::RDS::DBProxy",
+   "Properties": {
+    "Auth": [
+     {
+      "AuthScheme": "SECRETS",
+      "IAMAuth": "REQUIRED",
+      "SecretArn": {
+       "Ref": "DatabaseSecretAttachmentE5D1B020"
+      }
+     }
+    ],
+    "DBProxyName": "Proxy",
+    "EngineFamily": "POSTGRESQL",
+    "RequireTLS": true,
+    "RoleArn": {
+     "Fn::GetAtt": [
+      "ProxyIAMRole2FE8AB0F",
+      "Arn"
+     ]
+    },
+    "VpcSecurityGroupIds": [
+     {
+      "Fn::GetAtt": [
+       "ProxySgDFD428A2",
+       "GroupId"
+      ]
+     }
+    ],
+    "VpcSubnetIds": [
+     {
+      "Ref": "VpcisolatedSubnet1SubnetE62B1B9B"
+     },
+     {
+      "Ref": "VpcisolatedSubnet2Subnet39217055"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Proxy/Resource"
+   }
+  },
+  "ProxyProxyTargetGroupB462B5C5": {
+   "Type": "AWS::RDS::DBProxyTargetGroup",
+   "Properties": {
+    "ConnectionPoolConfigurationInfo": {},
+    "DBInstanceIdentifiers": [
+     {
+      "Ref": "DatabaseB269D8BB"
+     }
+    ],
+    "DBProxyName": {
+     "Ref": "ProxyCB0DFB71"
+    },
+    "TargetGroupName": "default"
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Proxy/ProxyTargetGroup"
+   }
+  },
+  "IngestApiLogs705BF5B0": {
+   "Type": "AWS::Logs::LogGroup",
+   "Properties": {
+    "RetentionInDays": 30
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/IngestApiLogs/Resource"
+   }
+  },
+  "IngestApiServiceRole0BC49898": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     },
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+       ]
+      ]
+     }
+    ]
+   },
+   "DependsOn": [
+    "VpcisolatedSubnet1RouteTableAssociationD259E31A",
+    "VpcisolatedSubnet2RouteTableAssociation25A4716F"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/IngestApi/ServiceRole/Resource"
+   }
+  },
+  "IngestApiServiceRoleDefaultPolicy644440D3": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "xray:PutTelemetryRecords",
+        "xray:PutTraceSegments"
+       ],
+       "Effect": "Allow",
+       "Resource": "*"
+      },
+      {
+       "Action": [
+        "s3:Abort*",
+        "s3:PutObject",
+        "s3:PutObjectLegalHold",
+        "s3:PutObjectRetention",
+        "s3:PutObjectTagging",
+        "s3:PutObjectVersionTagging"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          {
+           "Fn::GetAtt": [
+            "Documents7E5B2978",
+            "Arn"
+           ]
+          },
+          "/*"
+         ]
+        ]
+       }
+      },
+      {
+       "Action": "rds-db:connect",
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          "arn:",
+          {
+           "Ref": "AWS::Partition"
+          },
+          ":rds-db:",
+          {
+           "Ref": "AWS::Region"
+          },
+          ":",
+          {
+           "Ref": "AWS::AccountId"
+          },
+          ":dbuser:",
+          {
+           "Fn::Select": [
+            6,
+            {
+             "Fn::Split": [
+              ":",
+              {
+               "Fn::GetAtt": [
+                "ProxyCB0DFB71",
+                "DBProxyArn"
+               ]
+              }
+             ]
+            }
+           ]
+          },
+          "/tax_ingest"
+         ]
+        ]
+       }
+      },
+      {
+       "Action": "states:StartExecution",
+       "Effect": "Allow",
+       "Resource": {
+        "Ref": "PipelineC660917D"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "IngestApiServiceRoleDefaultPolicy644440D3",
+    "Roles": [
+     {
+      "Ref": "IngestApiServiceRole0BC49898"
+     }
+    ]
+   },
+   "DependsOn": [
+    "VpcisolatedSubnet1RouteTableAssociationD259E31A",
+    "VpcisolatedSubnet2RouteTableAssociation25A4716F"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/IngestApi/ServiceRole/DefaultPolicy/Resource"
+   }
+  },
+  "IngestApi90DC3F9D": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Architectures": [
+     "arm64"
+    ],
+    "Code": {
+     "S3Bucket": {
+      "Fn::Sub": "cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}"
+     },
+     "S3Key": "1161239821b56f22a49eb01a7863c22842fb065beeb0d16f9755880522d3cadd.zip"
+    },
+    "Environment": {
+     "Variables": {
+      "POWERTOOLS_SERVICE_NAME": "tax-tables",
+      "POWERTOOLS_LOG_LEVEL": "INFO",
+      "DB_PROXY_ENDPOINT": {
+       "Fn::GetAtt": [
+        "ProxyCB0DFB71",
+        "Endpoint"
+       ]
+      },
+      "DB_PORT": "5433",
+      "DB_NAME": "tax",
+      "DB_USER": "tax_ingest",
+      "DOCUMENTS_BUCKET": {
+       "Ref": "Documents7E5B2978"
+      },
+      "PIPELINE_STATE_MACHINE_ARN": {
+       "Ref": "PipelineC660917D"
+      }
+     }
+    },
+    "Handler": "tax_tables.aws.handlers.api",
+    "LoggingConfig": {
+     "LogGroup": {
+      "Ref": "IngestApiLogs705BF5B0"
+     }
+    },
+    "MemorySize": 1024,
+    "Role": {
+     "Fn::GetAtt": [
+      "IngestApiServiceRole0BC49898",
+      "Arn"
+     ]
+    },
+    "Runtime": "python3.12",
+    "Timeout": 29,
+    "TracingConfig": {
+     "Mode": "Active"
+    },
+    "VpcConfig": {
+     "SecurityGroupIds": [
+      {
+       "Fn::GetAtt": [
+        "LambdaSg30A6108C",
+        "GroupId"
+       ]
+      }
+     ],
+     "SubnetIds": [
+      {
+       "Ref": "VpcisolatedSubnet1SubnetE62B1B9B"
+      },
+      {
+       "Ref": "VpcisolatedSubnet2Subnet39217055"
+      }
+     ]
+    }
+   },
+   "DependsOn": [
+    "IngestApiServiceRoleDefaultPolicy644440D3",
+    "IngestApiServiceRole0BC49898",
+    "VpcisolatedSubnet1RouteTableAssociationD259E31A",
+    "VpcisolatedSubnet2RouteTableAssociation25A4716F"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/IngestApi/Resource",
+    "aws:asset:path": "asset.1161239821b56f22a49eb01a7863c22842fb065beeb0d16f9755880522d3cadd",
+    "aws:asset:is-bundled": false,
+    "aws:asset:property": "Code",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "UnVudGltZSBwaW5uZWQgdG8gUHl0aG9uIDMuMTIg4oCUIHRoZSBpbnRlcnByZXRlciB0aGUgZW50aXJlIHByb2plY3QgaXMgZGV2ZWxvcGVkLCB0eXBlZCAobXlweSBzdHJpY3QpLCBhbmQgQ0ktdGVzdGVkIG9uIChyZXF1aXJlcy1weXRob24gPj0zLjEyKS4gTW92aW5nIHRoZSBmbGVldCB0byBhIG5ld2VyIHJ1bnRpbWUgYmVmb3JlIHRoZSB0ZXN0IG1hdHJpeCBtb3ZlcyBpcyB0aGUgYWN0dWFsIHRlY2huaWNhbCBkZWJ0IHRoaXMgcnVsZSB3YXJucyBhYm91dDsgcmV2aXNpdGVkIG9uIGV2ZXJ5IGRlcGVuZGVuY3kgcmVmcmVzaC4=",
+       "id": "AwsSolutions-L1",
+       "is_reason_encoded": true
+      }
+     ]
+    }
+   }
+  },
+  "ExtractLogs704CFF44": {
+   "Type": "AWS::Logs::LogGroup",
+   "Properties": {
+    "RetentionInDays": 30
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/ExtractLogs/Resource"
+   }
+  },
+  "ExtractServiceRole6BDAB9D3": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     },
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+       ]
+      ]
+     }
+    ]
+   },
+   "DependsOn": [
+    "VpcisolatedSubnet1RouteTableAssociationD259E31A",
+    "VpcisolatedSubnet2RouteTableAssociation25A4716F"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Extract/ServiceRole/Resource"
+   }
+  },
+  "ExtractServiceRoleDefaultPolicyA527D161": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "textract:AnalyzeDocument",
+        "xray:PutTelemetryRecords",
+        "xray:PutTraceSegments"
+       ],
+       "Effect": "Allow",
+       "Resource": "*"
+      },
+      {
+       "Action": [
+        "s3:GetBucket*",
+        "s3:GetObject*",
+        "s3:List*"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "Documents7E5B2978",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "Documents7E5B2978",
+             "Arn"
+            ]
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "ExtractServiceRoleDefaultPolicyA527D161",
+    "Roles": [
+     {
+      "Ref": "ExtractServiceRole6BDAB9D3"
+     }
+    ]
+   },
+   "DependsOn": [
+    "VpcisolatedSubnet1RouteTableAssociationD259E31A",
+    "VpcisolatedSubnet2RouteTableAssociation25A4716F"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Extract/ServiceRole/DefaultPolicy/Resource"
+   }
+  },
+  "Extract9BA700EA": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Architectures": [
+     "arm64"
+    ],
+    "Code": {
+     "S3Bucket": {
+      "Fn::Sub": "cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}"
+     },
+     "S3Key": "1161239821b56f22a49eb01a7863c22842fb065beeb0d16f9755880522d3cadd.zip"
+    },
+    "Environment": {
+     "Variables": {
+      "POWERTOOLS_SERVICE_NAME": "tax-tables",
+      "POWERTOOLS_LOG_LEVEL": "INFO",
+      "DB_PROXY_ENDPOINT": {
+       "Fn::GetAtt": [
+        "ProxyCB0DFB71",
+        "Endpoint"
+       ]
+      },
+      "DB_PORT": "5433",
+      "DB_NAME": "tax",
+      "DB_USER": "tax_ingest",
+      "DOCUMENTS_BUCKET": {
+       "Ref": "Documents7E5B2978"
+      },
+      "EXTRACTION_OCR_ENGINE": "textract"
+     }
+    },
+    "Handler": "tax_tables.aws.handlers.extract_document",
+    "LoggingConfig": {
+     "LogGroup": {
+      "Ref": "ExtractLogs704CFF44"
+     }
+    },
+    "MemorySize": 2048,
+    "Role": {
+     "Fn::GetAtt": [
+      "ExtractServiceRole6BDAB9D3",
+      "Arn"
+     ]
+    },
+    "Runtime": "python3.12",
+    "Timeout": 300,
+    "TracingConfig": {
+     "Mode": "Active"
+    },
+    "VpcConfig": {
+     "SecurityGroupIds": [
+      {
+       "Fn::GetAtt": [
+        "LambdaSg30A6108C",
+        "GroupId"
+       ]
+      }
+     ],
+     "SubnetIds": [
+      {
+       "Ref": "VpcisolatedSubnet1SubnetE62B1B9B"
+      },
+      {
+       "Ref": "VpcisolatedSubnet2Subnet39217055"
+      }
+     ]
+    }
+   },
+   "DependsOn": [
+    "ExtractServiceRoleDefaultPolicyA527D161",
+    "ExtractServiceRole6BDAB9D3",
+    "VpcisolatedSubnet1RouteTableAssociationD259E31A",
+    "VpcisolatedSubnet2RouteTableAssociation25A4716F"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Extract/Resource",
+    "aws:asset:path": "asset.1161239821b56f22a49eb01a7863c22842fb065beeb0d16f9755880522d3cadd",
+    "aws:asset:is-bundled": false,
+    "aws:asset:property": "Code",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "UnVudGltZSBwaW5uZWQgdG8gUHl0aG9uIDMuMTIg4oCUIHRoZSBpbnRlcnByZXRlciB0aGUgZW50aXJlIHByb2plY3QgaXMgZGV2ZWxvcGVkLCB0eXBlZCAobXlweSBzdHJpY3QpLCBhbmQgQ0ktdGVzdGVkIG9uIChyZXF1aXJlcy1weXRob24gPj0zLjEyKS4gTW92aW5nIHRoZSBmbGVldCB0byBhIG5ld2VyIHJ1bnRpbWUgYmVmb3JlIHRoZSB0ZXN0IG1hdHJpeCBtb3ZlcyBpcyB0aGUgYWN0dWFsIHRlY2huaWNhbCBkZWJ0IHRoaXMgcnVsZSB3YXJucyBhYm91dDsgcmV2aXNpdGVkIG9uIGV2ZXJ5IGRlcGVuZGVuY3kgcmVmcmVzaC4=",
+       "id": "AwsSolutions-L1",
+       "is_reason_encoded": true
+      }
+     ]
+    }
+   }
+  },
+  "MapAndVerifyLogsBC7C41D7": {
+   "Type": "AWS::Logs::LogGroup",
+   "Properties": {
+    "RetentionInDays": 30
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/MapAndVerifyLogs/Resource"
+   }
+  },
+  "MapAndVerifyServiceRole5576DC5A": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     },
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+       ]
+      ]
+     }
+    ]
+   },
+   "DependsOn": [
+    "VpcisolatedSubnet1RouteTableAssociationD259E31A",
+    "VpcisolatedSubnet2RouteTableAssociation25A4716F"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/MapAndVerify/ServiceRole/Resource"
+   }
+  },
+  "MapAndVerifyServiceRoleDefaultPolicy78639DE4": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "xray:PutTelemetryRecords",
+        "xray:PutTraceSegments"
+       ],
+       "Effect": "Allow",
+       "Resource": "*"
+      },
+      {
+       "Action": [
+        "bedrock:InvokeModel",
+        "bedrock:InvokeModelWithResponseStream"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          "arn:",
+          {
+           "Ref": "AWS::Partition"
+          },
+          ":bedrock:*::foundation-model/anthropic.*"
+         ]
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "MapAndVerifyServiceRoleDefaultPolicy78639DE4",
+    "Roles": [
+     {
+      "Ref": "MapAndVerifyServiceRole5576DC5A"
+     }
+    ]
+   },
+   "DependsOn": [
+    "VpcisolatedSubnet1RouteTableAssociationD259E31A",
+    "VpcisolatedSubnet2RouteTableAssociation25A4716F"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/MapAndVerify/ServiceRole/DefaultPolicy/Resource"
+   }
+  },
+  "MapAndVerifyF30EE2AA": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Architectures": [
+     "arm64"
+    ],
+    "Code": {
+     "S3Bucket": {
+      "Fn::Sub": "cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}"
+     },
+     "S3Key": "1161239821b56f22a49eb01a7863c22842fb065beeb0d16f9755880522d3cadd.zip"
+    },
+    "Environment": {
+     "Variables": {
+      "POWERTOOLS_SERVICE_NAME": "tax-tables",
+      "POWERTOOLS_LOG_LEVEL": "INFO",
+      "DB_PROXY_ENDPOINT": {
+       "Fn::GetAtt": [
+        "ProxyCB0DFB71",
+        "Endpoint"
+       ]
+      },
+      "DB_PORT": "5433",
+      "DB_NAME": "tax",
+      "DB_USER": "tax_ingest",
+      "DOCUMENTS_BUCKET": {
+       "Ref": "Documents7E5B2978"
+      },
+      "SCHEMA_MAPPER_MODEL": "anthropic.claude-opus-5",
+      "RECORD_VERIFIER_MODEL": "anthropic.claude-opus-5"
+     }
+    },
+    "Handler": "tax_tables.aws.handlers.map_and_verify",
+    "LoggingConfig": {
+     "LogGroup": {
+      "Ref": "MapAndVerifyLogsBC7C41D7"
+     }
+    },
+    "MemorySize": 1024,
+    "Role": {
+     "Fn::GetAtt": [
+      "MapAndVerifyServiceRole5576DC5A",
+      "Arn"
+     ]
+    },
+    "Runtime": "python3.12",
+    "Timeout": 900,
+    "TracingConfig": {
+     "Mode": "Active"
+    },
+    "VpcConfig": {
+     "SecurityGroupIds": [
+      {
+       "Fn::GetAtt": [
+        "LambdaSg30A6108C",
+        "GroupId"
+       ]
+      }
+     ],
+     "SubnetIds": [
+      {
+       "Ref": "VpcisolatedSubnet1SubnetE62B1B9B"
+      },
+      {
+       "Ref": "VpcisolatedSubnet2Subnet39217055"
+      }
+     ]
+    }
+   },
+   "DependsOn": [
+    "MapAndVerifyServiceRoleDefaultPolicy78639DE4",
+    "MapAndVerifyServiceRole5576DC5A",
+    "VpcisolatedSubnet1RouteTableAssociationD259E31A",
+    "VpcisolatedSubnet2RouteTableAssociation25A4716F"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/MapAndVerify/Resource",
+    "aws:asset:path": "asset.1161239821b56f22a49eb01a7863c22842fb065beeb0d16f9755880522d3cadd",
+    "aws:asset:is-bundled": false,
+    "aws:asset:property": "Code",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "UnVudGltZSBwaW5uZWQgdG8gUHl0aG9uIDMuMTIg4oCUIHRoZSBpbnRlcnByZXRlciB0aGUgZW50aXJlIHByb2plY3QgaXMgZGV2ZWxvcGVkLCB0eXBlZCAobXlweSBzdHJpY3QpLCBhbmQgQ0ktdGVzdGVkIG9uIChyZXF1aXJlcy1weXRob24gPj0zLjEyKS4gTW92aW5nIHRoZSBmbGVldCB0byBhIG5ld2VyIHJ1bnRpbWUgYmVmb3JlIHRoZSB0ZXN0IG1hdHJpeCBtb3ZlcyBpcyB0aGUgYWN0dWFsIHRlY2huaWNhbCBkZWJ0IHRoaXMgcnVsZSB3YXJucyBhYm91dDsgcmV2aXNpdGVkIG9uIGV2ZXJ5IGRlcGVuZGVuY3kgcmVmcmVzaC4=",
+       "id": "AwsSolutions-L1",
+       "is_reason_encoded": true
+      }
+     ]
+    }
+   }
+  },
+  "PersistLogs3A3DD33E": {
+   "Type": "AWS::Logs::LogGroup",
+   "Properties": {
+    "RetentionInDays": 30
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/PersistLogs/Resource"
+   }
+  },
+  "PersistServiceRole82E20C4A": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     },
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+       ]
+      ]
+     }
+    ]
+   },
+   "DependsOn": [
+    "VpcisolatedSubnet1RouteTableAssociationD259E31A",
+    "VpcisolatedSubnet2RouteTableAssociation25A4716F"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Persist/ServiceRole/Resource"
+   }
+  },
+  "PersistServiceRoleDefaultPolicyD05C3640": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "xray:PutTelemetryRecords",
+        "xray:PutTraceSegments"
+       ],
+       "Effect": "Allow",
+       "Resource": "*"
+      },
+      {
+       "Action": "rds-db:connect",
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          "arn:",
+          {
+           "Ref": "AWS::Partition"
+          },
+          ":rds-db:",
+          {
+           "Ref": "AWS::Region"
+          },
+          ":",
+          {
+           "Ref": "AWS::AccountId"
+          },
+          ":dbuser:",
+          {
+           "Fn::Select": [
+            6,
+            {
+             "Fn::Split": [
+              ":",
+              {
+               "Fn::GetAtt": [
+                "ProxyCB0DFB71",
+                "DBProxyArn"
+               ]
+              }
+             ]
+            }
+           ]
+          },
+          "/tax_ingest"
+         ]
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "PersistServiceRoleDefaultPolicyD05C3640",
+    "Roles": [
+     {
+      "Ref": "PersistServiceRole82E20C4A"
+     }
+    ]
+   },
+   "DependsOn": [
+    "VpcisolatedSubnet1RouteTableAssociationD259E31A",
+    "VpcisolatedSubnet2RouteTableAssociation25A4716F"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Persist/ServiceRole/DefaultPolicy/Resource"
+   }
+  },
+  "Persist419B710D": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Architectures": [
+     "arm64"
+    ],
+    "Code": {
+     "S3Bucket": {
+      "Fn::Sub": "cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}"
+     },
+     "S3Key": "1161239821b56f22a49eb01a7863c22842fb065beeb0d16f9755880522d3cadd.zip"
+    },
+    "Environment": {
+     "Variables": {
+      "POWERTOOLS_SERVICE_NAME": "tax-tables",
+      "POWERTOOLS_LOG_LEVEL": "INFO",
+      "DB_PROXY_ENDPOINT": {
+       "Fn::GetAtt": [
+        "ProxyCB0DFB71",
+        "Endpoint"
+       ]
+      },
+      "DB_PORT": "5433",
+      "DB_NAME": "tax",
+      "DB_USER": "tax_ingest",
+      "DOCUMENTS_BUCKET": {
+       "Ref": "Documents7E5B2978"
+      }
+     }
+    },
+    "Handler": "tax_tables.aws.handlers.persist_records",
+    "LoggingConfig": {
+     "LogGroup": {
+      "Ref": "PersistLogs3A3DD33E"
+     }
+    },
+    "MemorySize": 1024,
+    "Role": {
+     "Fn::GetAtt": [
+      "PersistServiceRole82E20C4A",
+      "Arn"
+     ]
+    },
+    "Runtime": "python3.12",
+    "Timeout": 120,
+    "TracingConfig": {
+     "Mode": "Active"
+    },
+    "VpcConfig": {
+     "SecurityGroupIds": [
+      {
+       "Fn::GetAtt": [
+        "LambdaSg30A6108C",
+        "GroupId"
+       ]
+      }
+     ],
+     "SubnetIds": [
+      {
+       "Ref": "VpcisolatedSubnet1SubnetE62B1B9B"
+      },
+      {
+       "Ref": "VpcisolatedSubnet2Subnet39217055"
+      }
+     ]
+    }
+   },
+   "DependsOn": [
+    "PersistServiceRoleDefaultPolicyD05C3640",
+    "PersistServiceRole82E20C4A",
+    "VpcisolatedSubnet1RouteTableAssociationD259E31A",
+    "VpcisolatedSubnet2RouteTableAssociation25A4716F"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Persist/Resource",
+    "aws:asset:path": "asset.1161239821b56f22a49eb01a7863c22842fb065beeb0d16f9755880522d3cadd",
+    "aws:asset:is-bundled": false,
+    "aws:asset:property": "Code",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "UnVudGltZSBwaW5uZWQgdG8gUHl0aG9uIDMuMTIg4oCUIHRoZSBpbnRlcnByZXRlciB0aGUgZW50aXJlIHByb2plY3QgaXMgZGV2ZWxvcGVkLCB0eXBlZCAobXlweSBzdHJpY3QpLCBhbmQgQ0ktdGVzdGVkIG9uIChyZXF1aXJlcy1weXRob24gPj0zLjEyKS4gTW92aW5nIHRoZSBmbGVldCB0byBhIG5ld2VyIHJ1bnRpbWUgYmVmb3JlIHRoZSB0ZXN0IG1hdHJpeCBtb3ZlcyBpcyB0aGUgYWN0dWFsIHRlY2huaWNhbCBkZWJ0IHRoaXMgcnVsZSB3YXJucyBhYm91dDsgcmV2aXNpdGVkIG9uIGV2ZXJ5IGRlcGVuZGVuY3kgcmVmcmVzaC4=",
+       "id": "AwsSolutions-L1",
+       "is_reason_encoded": true
+      }
+     ]
+    }
+   }
+  },
+  "AdjudicateLogs8DA0540F": {
+   "Type": "AWS::Logs::LogGroup",
+   "Properties": {
+    "RetentionInDays": 30
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/AdjudicateLogs/Resource"
+   }
+  },
+  "AdjudicateServiceRole076708AA": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     },
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+       ]
+      ]
+     }
+    ]
+   },
+   "DependsOn": [
+    "VpcisolatedSubnet1RouteTableAssociationD259E31A",
+    "VpcisolatedSubnet2RouteTableAssociation25A4716F"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Adjudicate/ServiceRole/Resource"
+   }
+  },
+  "AdjudicateServiceRoleDefaultPolicy57C206E0": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "xray:PutTelemetryRecords",
+        "xray:PutTraceSegments"
+       ],
+       "Effect": "Allow",
+       "Resource": "*"
+      },
+      {
+       "Action": [
+        "bedrock:InvokeModel",
+        "bedrock:InvokeModelWithResponseStream"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          "arn:",
+          {
+           "Ref": "AWS::Partition"
+          },
+          ":bedrock:*::foundation-model/anthropic.*"
+         ]
+        ]
+       }
+      },
+      {
+       "Action": "rds-db:connect",
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          "arn:",
+          {
+           "Ref": "AWS::Partition"
+          },
+          ":rds-db:",
+          {
+           "Ref": "AWS::Region"
+          },
+          ":",
+          {
+           "Ref": "AWS::AccountId"
+          },
+          ":dbuser:",
+          {
+           "Fn::Select": [
+            6,
+            {
+             "Fn::Split": [
+              ":",
+              {
+               "Fn::GetAtt": [
+                "ProxyCB0DFB71",
+                "DBProxyArn"
+               ]
+              }
+             ]
+            }
+           ]
+          },
+          "/tax_ingest"
+         ]
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "AdjudicateServiceRoleDefaultPolicy57C206E0",
+    "Roles": [
+     {
+      "Ref": "AdjudicateServiceRole076708AA"
+     }
+    ]
+   },
+   "DependsOn": [
+    "VpcisolatedSubnet1RouteTableAssociationD259E31A",
+    "VpcisolatedSubnet2RouteTableAssociation25A4716F"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Adjudicate/ServiceRole/DefaultPolicy/Resource"
+   }
+  },
+  "AdjudicateB1101833": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Architectures": [
+     "arm64"
+    ],
+    "Code": {
+     "S3Bucket": {
+      "Fn::Sub": "cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}"
+     },
+     "S3Key": "1161239821b56f22a49eb01a7863c22842fb065beeb0d16f9755880522d3cadd.zip"
+    },
+    "Environment": {
+     "Variables": {
+      "POWERTOOLS_SERVICE_NAME": "tax-tables",
+      "POWERTOOLS_LOG_LEVEL": "INFO",
+      "DB_PROXY_ENDPOINT": {
+       "Fn::GetAtt": [
+        "ProxyCB0DFB71",
+        "Endpoint"
+       ]
+      },
+      "DB_PORT": "5433",
+      "DB_NAME": "tax",
+      "DB_USER": "tax_ingest",
+      "DOCUMENTS_BUCKET": {
+       "Ref": "Documents7E5B2978"
+      },
+      "ADJUDICATOR_MODEL": "anthropic.claude-opus-5"
+     }
+    },
+    "Handler": "tax_tables.aws.handlers.adjudicate_queue",
+    "LoggingConfig": {
+     "LogGroup": {
+      "Ref": "AdjudicateLogs8DA0540F"
+     }
+    },
+    "MemorySize": 1024,
+    "Role": {
+     "Fn::GetAtt": [
+      "AdjudicateServiceRole076708AA",
+      "Arn"
+     ]
+    },
+    "Runtime": "python3.12",
+    "Timeout": 600,
+    "TracingConfig": {
+     "Mode": "Active"
+    },
+    "VpcConfig": {
+     "SecurityGroupIds": [
+      {
+       "Fn::GetAtt": [
+        "LambdaSg30A6108C",
+        "GroupId"
+       ]
+      }
+     ],
+     "SubnetIds": [
+      {
+       "Ref": "VpcisolatedSubnet1SubnetE62B1B9B"
+      },
+      {
+       "Ref": "VpcisolatedSubnet2Subnet39217055"
+      }
+     ]
+    }
+   },
+   "DependsOn": [
+    "AdjudicateServiceRoleDefaultPolicy57C206E0",
+    "AdjudicateServiceRole076708AA",
+    "VpcisolatedSubnet1RouteTableAssociationD259E31A",
+    "VpcisolatedSubnet2RouteTableAssociation25A4716F"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Adjudicate/Resource",
+    "aws:asset:path": "asset.1161239821b56f22a49eb01a7863c22842fb065beeb0d16f9755880522d3cadd",
+    "aws:asset:is-bundled": false,
+    "aws:asset:property": "Code",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "UnVudGltZSBwaW5uZWQgdG8gUHl0aG9uIDMuMTIg4oCUIHRoZSBpbnRlcnByZXRlciB0aGUgZW50aXJlIHByb2plY3QgaXMgZGV2ZWxvcGVkLCB0eXBlZCAobXlweSBzdHJpY3QpLCBhbmQgQ0ktdGVzdGVkIG9uIChyZXF1aXJlcy1weXRob24gPj0zLjEyKS4gTW92aW5nIHRoZSBmbGVldCB0byBhIG5ld2VyIHJ1bnRpbWUgYmVmb3JlIHRoZSB0ZXN0IG1hdHJpeCBtb3ZlcyBpcyB0aGUgYWN0dWFsIHRlY2huaWNhbCBkZWJ0IHRoaXMgcnVsZSB3YXJucyBhYm91dDsgcmV2aXNpdGVkIG9uIGV2ZXJ5IGRlcGVuZGVuY3kgcmVmcmVzaC4=",
+       "id": "AwsSolutions-L1",
+       "is_reason_encoded": true
+      }
+     ]
+    }
+   }
+  },
+  "PipelineLogsB6C63DF7": {
+   "Type": "AWS::Logs::LogGroup",
+   "Properties": {
+    "RetentionInDays": 30
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/PipelineLogs/Resource"
+   }
+  },
+  "PipelineRoleD68726F7": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "states.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Pipeline/Role/Resource"
+   }
+  },
+  "PipelineRoleDefaultPolicyC7A05455": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": "lambda:InvokeFunction",
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "AdjudicateB1101833",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::GetAtt": [
+          "Extract9BA700EA",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::GetAtt": [
+          "MapAndVerifyF30EE2AA",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::GetAtt": [
+          "Persist419B710D",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "AdjudicateB1101833",
+             "Arn"
+            ]
+           },
+           ":*"
+          ]
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "Extract9BA700EA",
+             "Arn"
+            ]
+           },
+           ":*"
+          ]
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "MapAndVerifyF30EE2AA",
+             "Arn"
+            ]
+           },
+           ":*"
+          ]
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "Persist419B710D",
+             "Arn"
+            ]
+           },
+           ":*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": [
+        "logs:CreateLogDelivery",
+        "logs:DeleteLogDelivery",
+        "logs:DescribeLogGroups",
+        "logs:DescribeResourcePolicies",
+        "logs:GetLogDelivery",
+        "logs:ListLogDeliveries",
+        "logs:PutResourcePolicy",
+        "logs:UpdateLogDelivery",
+        "xray:GetSamplingRules",
+        "xray:GetSamplingTargets",
+        "xray:PutTelemetryRecords",
+        "xray:PutTraceSegments"
+       ],
+       "Effect": "Allow",
+       "Resource": "*"
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "PipelineRoleDefaultPolicyC7A05455",
+    "Roles": [
+     {
+      "Ref": "PipelineRoleD68726F7"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Pipeline/Role/DefaultPolicy/Resource"
+   }
+  },
+  "PipelineC660917D": {
+   "Type": "AWS::StepFunctions::StateMachine",
+   "Properties": {
+    "DefinitionString": {
+     "Fn::Join": [
+      "",
+      [
+       "{\"StartAt\":\"PerDocument\",\"States\":{\"PerDocument\":{\"Type\":\"Map\",\"End\":true,\"ItemsPath\":\"$.documents\",\"ItemProcessor\":{\"ProcessorConfig\":{\"Mode\":\"DISTRIBUTED\",\"ExecutionType\":\"STANDARD\"},\"StartAt\":\"ExtractStep\",\"States\":{\"ExtractStep\":{\"Next\":\"MapAndVerifyStep\",\"Retry\":[{\"ErrorEquals\":[\"Lambda.ClientExecutionTimeoutException\",\"Lambda.ServiceException\",\"Lambda.AWSLambdaException\",\"Lambda.SdkClientException\"],\"IntervalSeconds\":2,\"MaxAttempts\":6,\"BackoffRate\":2}],\"Type\":\"Task\",\"Resource\":\"",
+       {
+        "Fn::GetAtt": [
+         "Extract9BA700EA",
+         "Arn"
+        ]
+       },
+       "\"},\"MapAndVerifyStep\":{\"Next\":\"PersistStep\",\"Retry\":[{\"ErrorEquals\":[\"Lambda.ClientExecutionTimeoutException\",\"Lambda.ServiceException\",\"Lambda.AWSLambdaException\",\"Lambda.SdkClientException\"],\"IntervalSeconds\":2,\"MaxAttempts\":6,\"BackoffRate\":2}],\"Type\":\"Task\",\"Resource\":\"",
+       {
+        "Fn::GetAtt": [
+         "MapAndVerifyF30EE2AA",
+         "Arn"
+        ]
+       },
+       "\"},\"PersistStep\":{\"Next\":\"AdjudicateStep\",\"Retry\":[{\"ErrorEquals\":[\"Lambda.ClientExecutionTimeoutException\",\"Lambda.ServiceException\",\"Lambda.AWSLambdaException\",\"Lambda.SdkClientException\"],\"IntervalSeconds\":2,\"MaxAttempts\":6,\"BackoffRate\":2}],\"Type\":\"Task\",\"Resource\":\"",
+       {
+        "Fn::GetAtt": [
+         "Persist419B710D",
+         "Arn"
+        ]
+       },
+       "\"},\"AdjudicateStep\":{\"End\":true,\"Retry\":[{\"ErrorEquals\":[\"Lambda.ClientExecutionTimeoutException\",\"Lambda.ServiceException\",\"Lambda.AWSLambdaException\",\"Lambda.SdkClientException\"],\"IntervalSeconds\":2,\"MaxAttempts\":6,\"BackoffRate\":2}],\"Type\":\"Task\",\"Resource\":\"",
+       {
+        "Fn::GetAtt": [
+         "AdjudicateB1101833",
+         "Arn"
+        ]
+       },
+       "\"}}},\"MaxConcurrency\":8}}}"
+      ]
+     ]
+    },
+    "LoggingConfiguration": {
+     "Destinations": [
+      {
+       "CloudWatchLogsLogGroup": {
+        "LogGroupArn": {
+         "Fn::GetAtt": [
+          "PipelineLogsB6C63DF7",
+          "Arn"
+         ]
+        }
+       }
+      }
+     ],
+     "Level": "ALL"
+    },
+    "RoleArn": {
+     "Fn::GetAtt": [
+      "PipelineRoleD68726F7",
+      "Arn"
+     ]
+    },
+    "TracingConfiguration": {
+     "Enabled": true
+    }
+   },
+   "DependsOn": [
+    "PipelineRoleDefaultPolicyC7A05455",
+    "PipelineRoleD68726F7"
+   ],
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Pipeline/Resource"
+   }
+  },
+  "PipelineDistributedMapPolicyA711FCDB": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": "states:StartExecution",
+       "Effect": "Allow",
+       "Resource": {
+        "Ref": "PipelineC660917D"
+       }
+      },
+      {
+       "Action": [
+        "states:DescribeExecution",
+        "states:StopExecution"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          "arn:",
+          {
+           "Ref": "AWS::Partition"
+          },
+          ":states:",
+          {
+           "Ref": "AWS::Region"
+          },
+          ":",
+          {
+           "Ref": "AWS::AccountId"
+          },
+          ":execution:",
+          {
+           "Fn::Select": [
+            6,
+            {
+             "Fn::Split": [
+              ":",
+              {
+               "Ref": "PipelineC660917D"
+              }
+             ]
+            }
+           ]
+          },
+          ":*"
+         ]
+        ]
+       }
+      },
+      {
+       "Action": "states:RedriveExecution",
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          "arn:",
+          {
+           "Ref": "AWS::Partition"
+          },
+          ":states:",
+          {
+           "Ref": "AWS::Region"
+          },
+          ":",
+          {
+           "Ref": "AWS::AccountId"
+          },
+          ":execution:",
+          {
+           "Fn::Select": [
+            6,
+            {
+             "Fn::Split": [
+              ":",
+              {
+               "Ref": "PipelineC660917D"
+              }
+             ]
+            }
+           ]
+          },
+          "/*:*"
+         ]
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "PipelineDistributedMapPolicyA711FCDB",
+    "Roles": [
+     {
+      "Ref": "PipelineRoleD68726F7"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Pipeline/DistributedMapPolicy/Resource"
+   }
+  },
+  "ApiAccessLogsE9DF007D": {
+   "Type": "AWS::Logs::LogGroup",
+   "Properties": {
+    "RetentionInDays": 30
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/ApiAccessLogs/Resource"
+   }
+  },
+  "ApiF70053CD": {
+   "Type": "AWS::ApiGateway::RestApi",
+   "Properties": {
+    "Name": "Api"
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Api/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Proxy integration: every request forwards verbatim to the FastAPI app, where Pydantic validates bodies and query parameters strictly (Phase 3 contract tests). A gateway request validator on {proxy+} ANY validates nothing.",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "By design (CLAUDE.md hardening): GET endpoints are public, read-only tax data; the write path enforces X-API-Key in the app with a constant-time compare, backed by WAF managed rules and a per-IP rate limit at the edge. An IAM/Cognito authorizer would gate the public reads the product requires open.",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Same rationale as APIG4: no user pool exists in this design; auth is app-level API key on the single write route.",
+       "id": "AwsSolutions-COG4"
+      }
+     ]
+    }
+   }
+  },
+  "ApiCloudWatchRole73EC6FC4": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "apigateway.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      ]
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Api/CloudWatchRole/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Proxy integration: every request forwards verbatim to the FastAPI app, where Pydantic validates bodies and query parameters strictly (Phase 3 contract tests). A gateway request validator on {proxy+} ANY validates nothing.",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "By design (CLAUDE.md hardening): GET endpoints are public, read-only tax data; the write path enforces X-API-Key in the app with a constant-time compare, backed by WAF managed rules and a per-IP rate limit at the edge. An IAM/Cognito authorizer would gate the public reads the product requires open.",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Same rationale as APIG4: no user pool exists in this design; auth is app-level API key on the single write route.",
+       "id": "AwsSolutions-COG4"
+      }
+     ]
+    }
+   }
+  },
+  "ApiAccountA18C9B29": {
+   "Type": "AWS::ApiGateway::Account",
+   "Properties": {
+    "CloudWatchRoleArn": {
+     "Fn::GetAtt": [
+      "ApiCloudWatchRole73EC6FC4",
+      "Arn"
+     ]
+    }
+   },
+   "DependsOn": [
+    "ApiF70053CD"
+   ],
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Api/Account",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Proxy integration: every request forwards verbatim to the FastAPI app, where Pydantic validates bodies and query parameters strictly (Phase 3 contract tests). A gateway request validator on {proxy+} ANY validates nothing.",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "By design (CLAUDE.md hardening): GET endpoints are public, read-only tax data; the write path enforces X-API-Key in the app with a constant-time compare, backed by WAF managed rules and a per-IP rate limit at the edge. An IAM/Cognito authorizer would gate the public reads the product requires open.",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Same rationale as APIG4: no user pool exists in this design; auth is app-level API key on the single write route.",
+       "id": "AwsSolutions-COG4"
+      }
+     ]
+    }
+   }
+  },
+  "ApiDeploymentB17BE62Dc031f5e4faf2c233d034239e0d74a8a9": {
+   "Type": "AWS::ApiGateway::Deployment",
+   "Properties": {
+    "Description": "Automatically created by the RestApi construct",
+    "RestApiId": {
+     "Ref": "ApiF70053CD"
+    }
+   },
+   "DependsOn": [
+    "ApiproxyANY4946669B",
+    "Apiproxy05443892",
+    "ApiANY40671C4F"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Api/Deployment/Resource",
+    "aws:cdk:do-not-refactor": true,
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Proxy integration: every request forwards verbatim to the FastAPI app, where Pydantic validates bodies and query parameters strictly (Phase 3 contract tests). A gateway request validator on {proxy+} ANY validates nothing.",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "By design (CLAUDE.md hardening): GET endpoints are public, read-only tax data; the write path enforces X-API-Key in the app with a constant-time compare, backed by WAF managed rules and a per-IP rate limit at the edge. An IAM/Cognito authorizer would gate the public reads the product requires open.",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Same rationale as APIG4: no user pool exists in this design; auth is app-level API key on the single write route.",
+       "id": "AwsSolutions-COG4"
+      }
+     ]
+    }
+   }
+  },
+  "ApiDeploymentStagev102147F91": {
+   "Type": "AWS::ApiGateway::Stage",
+   "Properties": {
+    "AccessLogSetting": {
+     "DestinationArn": {
+      "Fn::GetAtt": [
+       "ApiAccessLogsE9DF007D",
+       "Arn"
+      ]
+     },
+     "Format": "{\"requestId\":\"$context.requestId\",\"ip\":\"$context.identity.sourceIp\",\"requestTime\":\"$context.requestTime\",\"httpMethod\":\"$context.httpMethod\",\"resourcePath\":\"$context.resourcePath\",\"status\":\"$context.status\",\"protocol\":\"$context.protocol\",\"responseLength\":\"$context.responseLength\"}"
+    },
+    "DeploymentId": {
+     "Ref": "ApiDeploymentB17BE62Dc031f5e4faf2c233d034239e0d74a8a9"
+    },
+    "MethodSettings": [
+     {
+      "DataTraceEnabled": false,
+      "HttpMethod": "*",
+      "LoggingLevel": "INFO",
+      "MetricsEnabled": true,
+      "ResourcePath": "/*",
+      "ThrottlingBurstLimit": 100,
+      "ThrottlingRateLimit": 50
+     }
+    ],
+    "RestApiId": {
+     "Ref": "ApiF70053CD"
+    },
+    "StageName": "v1",
+    "TracingEnabled": true
+   },
+   "DependsOn": [
+    "ApiAccountA18C9B29"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Api/DeploymentStage.v1/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Proxy integration: every request forwards verbatim to the FastAPI app, where Pydantic validates bodies and query parameters strictly (Phase 3 contract tests). A gateway request validator on {proxy+} ANY validates nothing.",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "By design (CLAUDE.md hardening): GET endpoints are public, read-only tax data; the write path enforces X-API-Key in the app with a constant-time compare, backed by WAF managed rules and a per-IP rate limit at the edge. An IAM/Cognito authorizer would gate the public reads the product requires open.",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Same rationale as APIG4: no user pool exists in this design; auth is app-level API key on the single write route.",
+       "id": "AwsSolutions-COG4"
+      }
+     ]
+    }
+   }
+  },
+  "Apiproxy05443892": {
+   "Type": "AWS::ApiGateway::Resource",
+   "Properties": {
+    "ParentId": {
+     "Fn::GetAtt": [
+      "ApiF70053CD",
+      "RootResourceId"
+     ]
+    },
+    "PathPart": "{proxy+}",
+    "RestApiId": {
+     "Ref": "ApiF70053CD"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Api/Default/{proxy+}/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Proxy integration: every request forwards verbatim to the FastAPI app, where Pydantic validates bodies and query parameters strictly (Phase 3 contract tests). A gateway request validator on {proxy+} ANY validates nothing.",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "By design (CLAUDE.md hardening): GET endpoints are public, read-only tax data; the write path enforces X-API-Key in the app with a constant-time compare, backed by WAF managed rules and a per-IP rate limit at the edge. An IAM/Cognito authorizer would gate the public reads the product requires open.",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Same rationale as APIG4: no user pool exists in this design; auth is app-level API key on the single write route.",
+       "id": "AwsSolutions-COG4"
+      }
+     ]
+    }
+   }
+  },
+  "ApiproxyANYApiPermissionTaxTablesApiD6AF656DANYproxy1F23E91C": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "IngestApi90DC3F9D",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:",
+       {
+        "Ref": "AWS::Region"
+       },
+       ":",
+       {
+        "Ref": "AWS::AccountId"
+       },
+       ":",
+       {
+        "Ref": "ApiF70053CD"
+       },
+       "/",
+       {
+        "Ref": "ApiDeploymentStagev102147F91"
+       },
+       "/*/*"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Api/Default/{proxy+}/ANY/ApiPermission.TaxTablesApiD6AF656D.ANY..{proxy+}",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Proxy integration: every request forwards verbatim to the FastAPI app, where Pydantic validates bodies and query parameters strictly (Phase 3 contract tests). A gateway request validator on {proxy+} ANY validates nothing.",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "By design (CLAUDE.md hardening): GET endpoints are public, read-only tax data; the write path enforces X-API-Key in the app with a constant-time compare, backed by WAF managed rules and a per-IP rate limit at the edge. An IAM/Cognito authorizer would gate the public reads the product requires open.",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Same rationale as APIG4: no user pool exists in this design; auth is app-level API key on the single write route.",
+       "id": "AwsSolutions-COG4"
+      }
+     ]
+    }
+   }
+  },
+  "ApiproxyANYApiPermissionTestTaxTablesApiD6AF656DANYproxy32481C2E": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "IngestApi90DC3F9D",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:",
+       {
+        "Ref": "AWS::Region"
+       },
+       ":",
+       {
+        "Ref": "AWS::AccountId"
+       },
+       ":",
+       {
+        "Ref": "ApiF70053CD"
+       },
+       "/test-invoke-stage/*/*"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Api/Default/{proxy+}/ANY/ApiPermission.Test.TaxTablesApiD6AF656D.ANY..{proxy+}",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Proxy integration: every request forwards verbatim to the FastAPI app, where Pydantic validates bodies and query parameters strictly (Phase 3 contract tests). A gateway request validator on {proxy+} ANY validates nothing.",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "By design (CLAUDE.md hardening): GET endpoints are public, read-only tax data; the write path enforces X-API-Key in the app with a constant-time compare, backed by WAF managed rules and a per-IP rate limit at the edge. An IAM/Cognito authorizer would gate the public reads the product requires open.",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Same rationale as APIG4: no user pool exists in this design; auth is app-level API key on the single write route.",
+       "id": "AwsSolutions-COG4"
+      }
+     ]
+    }
+   }
+  },
+  "ApiproxyANY4946669B": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "NONE",
+    "HttpMethod": "ANY",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:",
+        {
+         "Ref": "AWS::Region"
+        },
+        ":lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "IngestApi90DC3F9D",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "Apiproxy05443892"
+    },
+    "RestApiId": {
+     "Ref": "ApiF70053CD"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Api/Default/{proxy+}/ANY/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Proxy integration: every request forwards verbatim to the FastAPI app, where Pydantic validates bodies and query parameters strictly (Phase 3 contract tests). A gateway request validator on {proxy+} ANY validates nothing.",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "By design (CLAUDE.md hardening): GET endpoints are public, read-only tax data; the write path enforces X-API-Key in the app with a constant-time compare, backed by WAF managed rules and a per-IP rate limit at the edge. An IAM/Cognito authorizer would gate the public reads the product requires open.",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Same rationale as APIG4: no user pool exists in this design; auth is app-level API key on the single write route.",
+       "id": "AwsSolutions-COG4"
+      }
+     ]
+    }
+   }
+  },
+  "ApiANYApiPermissionTaxTablesApiD6AF656DANY904BC8C7": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "IngestApi90DC3F9D",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:",
+       {
+        "Ref": "AWS::Region"
+       },
+       ":",
+       {
+        "Ref": "AWS::AccountId"
+       },
+       ":",
+       {
+        "Ref": "ApiF70053CD"
+       },
+       "/",
+       {
+        "Ref": "ApiDeploymentStagev102147F91"
+       },
+       "/*/"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Api/Default/ANY/ApiPermission.TaxTablesApiD6AF656D.ANY..",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Proxy integration: every request forwards verbatim to the FastAPI app, where Pydantic validates bodies and query parameters strictly (Phase 3 contract tests). A gateway request validator on {proxy+} ANY validates nothing.",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "By design (CLAUDE.md hardening): GET endpoints are public, read-only tax data; the write path enforces X-API-Key in the app with a constant-time compare, backed by WAF managed rules and a per-IP rate limit at the edge. An IAM/Cognito authorizer would gate the public reads the product requires open.",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Same rationale as APIG4: no user pool exists in this design; auth is app-level API key on the single write route.",
+       "id": "AwsSolutions-COG4"
+      }
+     ]
+    }
+   }
+  },
+  "ApiANYApiPermissionTestTaxTablesApiD6AF656DANYBB14FC3E": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "IngestApi90DC3F9D",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:",
+       {
+        "Ref": "AWS::Region"
+       },
+       ":",
+       {
+        "Ref": "AWS::AccountId"
+       },
+       ":",
+       {
+        "Ref": "ApiF70053CD"
+       },
+       "/test-invoke-stage/*/"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Api/Default/ANY/ApiPermission.Test.TaxTablesApiD6AF656D.ANY..",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Proxy integration: every request forwards verbatim to the FastAPI app, where Pydantic validates bodies and query parameters strictly (Phase 3 contract tests). A gateway request validator on {proxy+} ANY validates nothing.",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "By design (CLAUDE.md hardening): GET endpoints are public, read-only tax data; the write path enforces X-API-Key in the app with a constant-time compare, backed by WAF managed rules and a per-IP rate limit at the edge. An IAM/Cognito authorizer would gate the public reads the product requires open.",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Same rationale as APIG4: no user pool exists in this design; auth is app-level API key on the single write route.",
+       "id": "AwsSolutions-COG4"
+      }
+     ]
+    }
+   }
+  },
+  "ApiANY40671C4F": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "NONE",
+    "HttpMethod": "ANY",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:",
+        {
+         "Ref": "AWS::Region"
+        },
+        ":lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "IngestApi90DC3F9D",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Fn::GetAtt": [
+      "ApiF70053CD",
+      "RootResourceId"
+     ]
+    },
+    "RestApiId": {
+     "Ref": "ApiF70053CD"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/Api/Default/ANY/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Proxy integration: every request forwards verbatim to the FastAPI app, where Pydantic validates bodies and query parameters strictly (Phase 3 contract tests). A gateway request validator on {proxy+} ANY validates nothing.",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "By design (CLAUDE.md hardening): GET endpoints are public, read-only tax data; the write path enforces X-API-Key in the app with a constant-time compare, backed by WAF managed rules and a per-IP rate limit at the edge. An IAM/Cognito authorizer would gate the public reads the product requires open.",
+       "id": "AwsSolutions-APIG4"
+      },
+      {
+       "reason": "Same rationale as APIG4: no user pool exists in this design; auth is app-level API key on the single write route.",
+       "id": "AwsSolutions-COG4"
+      }
+     ]
+    }
+   }
+  },
+  "WebAcl": {
+   "Type": "AWS::WAFv2::WebACL",
+   "Properties": {
+    "DefaultAction": {
+     "Allow": {}
+    },
+    "Rules": [
+     {
+      "Name": "AWSManagedRulesCommonRuleSet",
+      "OverrideAction": {
+       "None": {}
+      },
+      "Priority": 0,
+      "Statement": {
+       "ManagedRuleGroupStatement": {
+        "Name": "AWSManagedRulesCommonRuleSet",
+        "VendorName": "AWS"
+       }
+      },
+      "VisibilityConfig": {
+       "CloudWatchMetricsEnabled": true,
+       "MetricName": "commonRules",
+       "SampledRequestsEnabled": true
+      }
+     },
+     {
+      "Action": {
+       "Block": {}
+      },
+      "Name": "RateLimitPerIp",
+      "Priority": 1,
+      "Statement": {
+       "RateBasedStatement": {
+        "AggregateKeyType": "IP",
+        "Limit": 300
+       }
+      },
+      "VisibilityConfig": {
+       "CloudWatchMetricsEnabled": true,
+       "MetricName": "rateLimit",
+       "SampledRequestsEnabled": true
+      }
+     }
+    ],
+    "Scope": "REGIONAL",
+    "VisibilityConfig": {
+     "CloudWatchMetricsEnabled": true,
+     "MetricName": "taxTablesWebAcl",
+     "SampledRequestsEnabled": true
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/WebAcl"
+   }
+  },
+  "WebAclAssociation": {
+   "Type": "AWS::WAFv2::WebACLAssociation",
+   "Properties": {
+    "ResourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":apigateway:",
+       {
+        "Ref": "AWS::Region"
+       },
+       "::/restapis/",
+       {
+        "Ref": "ApiF70053CD"
+       },
+       "/stages/",
+       {
+        "Ref": "ApiDeploymentStagev102147F91"
+       }
+      ]
+     ]
+    },
+    "WebACLArn": {
+     "Fn::GetAtt": [
+      "WebAcl",
+      "Arn"
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/WebAclAssociation"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/31TTW/bMAz9Lb0r6uoAvTtJWwRIUCMpumMgy4yjxZYMfSQzDP/30ZIdO+22k8hH6ol8pCIaPT/THw/samY8O88KkdJmbxk/E4QODfCINp8VJ8uj/EyWJNHiwizsXSrBduBo7ZSz8MHSAkZ8xGJjFBfMCiXJa6GuG5V3aYP5hqRXVuNLLzKrlJC2f/HmrqUFfWQcpjl74E4LW79p5Sr/7H+Btcw1GPMNf/FwS8ycNgvHz6Gh3gpHogrB6xHu/eAsmIGW6MzQZsUsS9FdS2OZ5ECCELd6VospMGRjNTo8ulrcbg7BRKvfdYh9NT+YznsurN6TmJJJloOmTeiy4w1HSI4tTvdUQlD4H5Gdsn5Ue36CzIWJfsN2YJTTHEZp7pGWCFbSZqeG+3iOuUNOoXKUDXfgJtFgY4yVacZo8+ok95vTbczETkCXwhj0utkdmDHYP427gxgL1bHPNQfLzNnQjedby4s6w30CDk4Yq0WK+5ptWUXwD1jYoh5Chn2e+C1hlcjDxmLpnhRbt3ElehUGM+ZcOdRzBVWh6kH0iYe0+cCfj5J2C0X8hAdkKi/Zgj2prIOC1ZIrO14iP/KfkMbLDblZk4/XtmSkc8aq8q/s9yGs4iIy0L4kL21XqpD++747WznbkqTGMuTjnD5F9Gn+8MsIMdPYuCiB7sL5B+0nbYlqBAAA"
+   },
+   "Metadata": {
+    "aws:cdk:path": "TaxTables/CDKMetadata/Default"
+   },
+   "Condition": "CDKMetadataAvailable"
+  }
+ },
+ "Outputs": {
+  "ApiEndpoint4F160690": {
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "https://",
+      {
+       "Ref": "ApiF70053CD"
+      },
+      ".execute-api.",
+      {
+       "Ref": "AWS::Region"
+      },
+      ".",
+      {
+       "Ref": "AWS::URLSuffix"
+      },
+      "/",
+      {
+       "Ref": "ApiDeploymentStagev102147F91"
+      },
+      "/"
+     ]
+    ]
+   }
+  },
+  "ApiUrl": {
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "https://",
+      {
+       "Ref": "ApiF70053CD"
+      },
+      ".execute-api.",
+      {
+       "Ref": "AWS::Region"
+      },
+      ".",
+      {
+       "Ref": "AWS::URLSuffix"
+      },
+      "/",
+      {
+       "Ref": "ApiDeploymentStagev102147F91"
+      },
+      "/"
+     ]
+    ]
+   }
+  },
+  "DocumentsBucket": {
+   "Value": {
+    "Ref": "Documents7E5B2978"
+   }
+  },
+  "PipelineArn": {
+   "Value": {
+    "Ref": "PipelineC660917D"
+   }
+  }
+ },
+ "Conditions": {
+  "CDKMetadataAvailable": {
+   "Fn::Or": [
+    {
+     "Fn::Or": [
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "af-south-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-east-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-northeast-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-northeast-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-northeast-3"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-south-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-south-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-southeast-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-southeast-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-southeast-3"
+       ]
+      }
+     ]
+    },
+    {
+     "Fn::Or": [
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-southeast-4"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ca-central-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ca-west-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "cn-north-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "cn-northwest-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-central-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-central-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-north-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-south-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-south-2"
+       ]
+      }
+     ]
+    },
+    {
+     "Fn::Or": [
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-west-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-west-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-west-3"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "il-central-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "me-central-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "me-south-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "sa-east-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "us-east-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "us-east-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "us-west-1"
+       ]
+      }
+     ]
+    },
+    {
+     "Fn::Equals": [
+      {
+       "Ref": "AWS::Region"
+      },
+      "us-west-2"
+     ]
+    }
+   ]
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}

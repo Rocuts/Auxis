@@ -8,8 +8,8 @@ accuracy:
 	uv run --env-file .env pytest tests/accuracy/test_harness.py::test_end_to_end_accuracy -s -v
 
 lint:
-	uv run ruff check src tests
-	uv run ruff format --check src tests
+	uv run ruff check src tests infra
+	uv run ruff format --check src tests infra
 
 typecheck:
 	uv run mypy
@@ -18,8 +18,17 @@ test:
 	uv run pytest
 
 fmt:
-	uv run ruff format src tests
-	uv run ruff check --fix src tests
+	uv run ruff format src tests infra
+	uv run ruff check --fix src tests infra
+
+# Phase 4 gate sequence, offline by construction: cdk synth (cdk-nag runs
+# as an aspect — an unsuppressed error fails the synth) + cfn-lint over the
+# synthesized template. Runs with no AWS credentials.
+synth:
+	cd infra && npx --yes aws-cdk@2 synth --quiet
+
+synth-check: synth
+	uv run cfn-lint --config-file infra/.cfnlintrc infra/cdk.out/TaxTables.template.json
 
 db-up:
 	docker compose up -d --wait db

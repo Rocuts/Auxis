@@ -1,0 +1,48 @@
+{
+  "version": "54.0.0",
+  "files": {
+    "02b51ab524e7bcf8f477de3e71e5f9a72e448301b26ba62e9e75a14f9c55a093": {
+      "displayName": "TaxTables/Custom::VpcRestrictDefaultSGCustomResourceProvider Code",
+      "source": {
+        "path": "asset.02b51ab524e7bcf8f477de3e71e5f9a72e448301b26ba62e9e75a14f9c55a093",
+        "packaging": "zip"
+      },
+      "destinations": {
+        "current_account-current_region-21e1d885": {
+          "bucketName": "cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}",
+          "objectKey": "02b51ab524e7bcf8f477de3e71e5f9a72e448301b26ba62e9e75a14f9c55a093.zip",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-file-publishing-role-${AWS::AccountId}-${AWS::Region}"
+        }
+      }
+    },
+    "1161239821b56f22a49eb01a7863c22842fb065beeb0d16f9755880522d3cadd": {
+      "displayName": "IngestApi/Code",
+      "source": {
+        "path": "asset.1161239821b56f22a49eb01a7863c22842fb065beeb0d16f9755880522d3cadd",
+        "packaging": "zip"
+      },
+      "destinations": {
+        "current_account-current_region-024e5f54": {
+          "bucketName": "cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}",
+          "objectKey": "1161239821b56f22a49eb01a7863c22842fb065beeb0d16f9755880522d3cadd.zip",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-file-publishing-role-${AWS::AccountId}-${AWS::Region}"
+        }
+      }
+    },
+    "7c34c9f01f0631b05064db2e408b19228a5101568ccc59285356ee837edb8ced": {
+      "displayName": "TaxTables Template",
+      "source": {
+        "path": "TaxTables.template.json",
+        "packaging": "file"
+      },
+      "destinations": {
+        "current_account-current_region-6ec6e3ba": {
+          "bucketName": "cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}",
+          "objectKey": "7c34c9f01f0631b05064db2e408b19228a5101568ccc59285356ee837edb8ced.json",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-file-publishing-role-${AWS::AccountId}-${AWS::Region}"
+        }
+      }
+    }
+  },
+  "dockerImages": {}
+}

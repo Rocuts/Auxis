@@ -605,3 +605,64 @@ one mechanism (cost rides ``AdjudicationError`` into
 ledger: **seven promoted (six fixes), three parked, two previously closed
 = twelve.** The disposition of every one is unchanged; only the header
 under-counted.
+
+## 2026-08-26 — Phase 4: the CDK stack, synthesized and validated offline
+
+**Written conversationally** (the runbook's Phase 4 fan-out — the template
+audit — deliberately deferred: it fires as its own ultracode run, on the
+operator's word, over this committed tree). One environment-agnostic stack:
+no account, no region, so a `fromLookup` is not merely forbidden
+(anti-goal #4) but unrepresentable — grep shows zero call sites.
+
+**Shape** (the IDP reference architecture, specialized): API Gateway (+ WAF
+managed rules and a per-IP rate limit — the platform twin of the Vercel
+Firewall hardening) -> ingest Lambda -> S3 documents bucket + Step
+Functions Distributed Map (`max_concurrency=8`, the bottleneck knob) ->
+extract (Textract) -> map+verify (Bedrock, the bounded ADR 012 pair) ->
+persist (RDS PostgreSQL 18.3 via RDS Proxy, IAM auth, TLS) -> adjudicate.
+Isolated VPC with interface/gateway endpoints and **no NAT**: no path to
+the internet exists for a component handling tax documents, and the
+endpoint list is exactly the service list. PG major pinned to 18 like every
+other target; DB port 5433 like the local compose. Secret rotation is
+implemented (hosted rotation, 30 days), not suppressed. Tracing is Lambda
+active tracing + Powertools env — the X-Ray SDK appears nowhere
+(anti-goal #6, grep-verified).
+
+**Gate results, verbatim-verifiable:**
+- `cdk synth` exit 0 with AWS credentials stripped from the environment
+  (`env -u AWS_ACCESS_KEY_ID ...`); cdk-nag AwsSolutionsChecks runs as an
+  aspect, so synth green *is* nag clean.
+- NagReport: 48 compliant, 47 suppressed, **0 non-compliant**. Seven rule
+  ids suppressed, each with its written justification in the stack source
+  (and recorded in the committed CSV): IAM4 (scoped to the three AWS
+  service-role managed policies, log/ENI baseline), IAM5 (three wildcard
+  classes: Textract has no resource-level permissions; Bedrock scoped to
+  foundation-model/anthropic.* with the cross-region-profile region
+  wildcard; CDK grant shapes), APIG2/APIG4/COG4 (proxy integration with
+  app-layer Pydantic validation; public read-only GETs by design with
+  X-API-Key + WAF on the write path; no user pool exists), L1 (runtime
+  pinned to the project's tested 3.12), and the EC23 validation-failure
+  warning on endpoint SGs (allow-from-VPC-CIDR token in a no-IGW VPC). A
+  drafted S1 suppression turned out dead (cdk-nag scores the log-target
+  bucket compliant) and was removed — no unused suppressions.
+- `cfn-lint` exit 0 on the synthesized template. W3045 was FIXED, not
+  ignored (serverAccessLogsUseBucketPolicy flag + BUCKET_OWNER_ENFORCED);
+  W3005 — CDK's own redundant DependsOn emission — is ignored with a
+  written justification in infra/.cfnlintrc.
+- CI gains an `infra` job running `make synth-check` on every push;
+  GitHub runners hold no AWS credentials, so the offline property is
+  enforced by the environment, not assumed.
+- `infra/cdk.out/` committed (template, manifest, NagReport CSV, staged
+  assets).
+
+**Discoveries en route:** cdk-nag 3.0 removed the `NagSuppressions` helper
+that carries per-resource written justifications — pinned `<3` with the
+reason in pyproject; granular validation-failure suppression takes the rule
+in `appliesTo`, not the id; the S3 log-delivery feature flag is what
+retires the legacy ACL property.
+
+**Open item, stated plainly:** the Lambda handler modules
+(`tax_tables.aws.handlers.*`) and the Textract/Bedrock adapters are the
+deploy-time artifact contract, tracked with Phase 5's hexagonal proof; the
+stack docstring and the README will keep saying the design synthesizes and
+validates but was never deployed. ADR 007 (CDK over Terraform) written.

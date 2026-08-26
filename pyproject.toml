@@ -34,6 +34,16 @@ dev = [
     "pyyaml>=6",
     "types-pyyaml>=6",
 ]
+# Phase 4: the CDK stack synthesizes offline; none of this ever reaches a
+# runtime bundle. cfn-lint validates the synthesized template in CI.
+infra = [
+    "aws-cdk-lib>=2.200",
+    "constructs>=10.0",
+    # Pinned below 3: cdk-nag 3.0 dropped the NagSuppressions construct-tree
+    # helper this stack's individually-justified suppressions are written with.
+    "cdk-nag>=2.35,<3",
+    "cfn-lint>=1.35",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -44,7 +54,10 @@ packages = ["src/tax_tables"]
 
 [tool.ruff]
 line-length = 100
-src = ["src", "tests"]
+src = ["src", "tests", "infra"]
+# The committed cloud assembly is generated output (and stages a copy of
+# src/); tools run on sources only.
+extend-exclude = ["infra/cdk.out"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "SIM", "C4", "RUF"]
@@ -62,7 +75,8 @@ known-first-party = ["tax_tables", "tests"]
 
 [tool.mypy]
 strict = true
-files = ["src", "tests"]
+files = ["src", "tests", "infra"]
+exclude = "infra/cdk\\.out"
 mypy_path = "src"
 
 [[tool.mypy.overrides]]

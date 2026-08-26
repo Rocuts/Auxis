@@ -1,0 +1,9 @@
+# cfn-lint policy for the synthesized template (make synth-check / CI).
+#
+# W3005 — "dependency already enforced by a GetAtt": the CDK emits an
+# explicit DependsOn alongside every Role GetAtt reference by design
+# (deliberate belt-and-suspenders in the framework's output, tracked
+# upstream as intended behavior). It is redundancy in generated code, not
+# an error in this stack; every other rule runs at full strength.
+ignore_checks:
+  - W3005
