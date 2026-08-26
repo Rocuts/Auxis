@@ -263,3 +263,59 @@ confirmed 7, several with runnable probes. All 7 fixed and pinned by tests:
 Post-fix: make check 184 passed + 1 deliberate skip, extraction report
 unchanged (identical grids, costs, confidences). Gate 2a closed pending
 sign-off.
+
+## 2026-08-25 — Phase 2b: the real SchemaMapper (blocked on credentials at the finish line)
+
+**Adapter.** `AnthropicSchemaMapper` implemented test-first (20 unit tests
+against an injected fake client, red before green). Design decisions:
+
+- **Endpoint/key/model from env** — `SCHEMA_MAPPER_API_KEY/BASE_URL/MODEL`
+  with `ANTHROPIC_*` fallbacks — so the direct API and the Vercel AI
+  Gateway's Anthropic-compatible endpoint are the same adapter, different
+  configuration. Default model `claude-opus-5`; prices env-overridable and
+  feeding per-document `MappingCost` (tokens + USD incl. cache write/read
+  multipliers), the semantic-layer sibling of `ExtractionCost`.
+- **Structured outputs** (`output_config.format` json_schema) with an
+  enum-locked record schema built from the domain enums; one streaming call
+  per document (doc 03 maps 50+ records); the shared conventions prompt
+  carries a cache breakpoint so a five-document run pays for it once.
+- **Decimal end to end.** The model's JSON is parsed with
+  `parse_float=Decimal` — the same rule the harness applies to the oracle —
+  so no float ever touches a mapped value or an attr.
+- **Anti-goal #8 mechanically.** A proposed record failing canonical
+  validation (inverted bounds, non-integral bound, dangling provenance)
+  becomes a `MappingIssue` carrying the raw proposal; the batch survives.
+  Every record must name its source cells/prose blocks; the references are
+  structurally checked against the extracted document and ride into
+  `attrs["provenance"]`. Mapping confidence is floored by the source
+  table's extraction confidence.
+- The serialized grid deliberately excludes the filename: tax_year must be
+  unlearnable from anything except document content (doc 02's trap).
+
+**Conventions provenance.** The mapper prompt's conventions were authored
+from CLAUDE.md, the DDL comments (attribute_key semantics), the domain
+docstrings, and the oracle's `conventions` block — schema documentation the
+brief directs us to read — accessed once through the licensed
+`tests/accuracy` loader. No expected-record values were viewed; the
+jurisdiction spelling is not documented anywhere, so the prompt derives it
+from document text ("US" federal / printed name sub-national) and the
+accuracy run will judge that choice honestly.
+
+**Pipeline.** `pipeline.run_document` composes grid -> mapper -> triage ->
+persist behind ports; the repository grew a public `queue_review` (mapping
+issues and triage rejections land with provenance; one entry per finding).
+`tools/pipeline_report` runs any set of PDFs end-to-end and dumps every
+intermediate artifact as JSON; it reads only PDFs and env.
+`test_end_to_end_accuracy` is now the real Phase 2 gate: PDFs -> router ->
+real mapper -> comparison, printing accuracy by document, by record type,
+and per-document mapper cost (`make accuracy`).
+
+**The smoke test did its job.** Before any fan-out, one minimal call:
+`ANTHROPIC_API_KEY` in `.env` turned out to be an empty line (a `sed`
+redaction had made it look set). No ambient key, no `ant` profile. Probed
+the Vercel AI Gateway with the project's OIDC token: authentication works
+(the 403 is a model policy, not auth), but the free tier blocks every
+Claude model, and topping up credits is a human decision. Asked; decision:
+continue everything credential-independent, run the accuracy gate when the
+key lands. `make check`: 208 passed + the credential skip, ruff + mypy
+strict clean.
