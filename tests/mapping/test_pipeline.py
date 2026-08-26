@@ -657,9 +657,9 @@ class TestAdjudicatorContainment:
         repository.queue_review(
             handle.id, [{"reason": "future_writer: something new", "source_page": 1}]
         )
-        from tax_tables.pipeline import _adjudicate_queue
+        from tax_tables.pipeline import adjudicate_open_items
 
-        outcomes = _adjudicate_queue(
+        outcomes = adjudicate_open_items(
             repository,
             _ConfidentAdjudicator(),
             handle.id,
@@ -702,7 +702,7 @@ class TestAdjudicatorContainment:
         """Re-ingesting a document re-adjudicates only items with no stored
         proposal (promoted review minor): the below-threshold proposal from
         pass one awaits its human; the errored item is retried."""
-        from tax_tables.pipeline import _adjudicate_queue
+        from tax_tables.pipeline import adjudicate_open_items
 
         repository = _MemoryRepository()
         handle = repository.register_document(sha256="ab" * 32, filename="x.pdf", byte_size=1)
@@ -714,7 +714,7 @@ class TestAdjudicatorContainment:
             ],
         )
         first = _TransportFailingAdjudicator("mapping")
-        outcomes = _adjudicate_queue(
+        outcomes = adjudicate_open_items(
             repository, first, handle.id, _stamped_scan_extracted(), Decimal("0.9")
         )
         assert sorted(o.disposition for o in outcomes) == ["error", "proposal_stored"]
@@ -728,7 +728,9 @@ class TestAdjudicatorContainment:
                 return super().adjudicate(item, extracted)
 
         second = _Counting()
-        _adjudicate_queue(repository, second, handle.id, _stamped_scan_extracted(), Decimal("0.9"))
+        adjudicate_open_items(
+            repository, second, handle.id, _stamped_scan_extracted(), Decimal("0.9")
+        )
         # Only the errored (never-proposed) item is re-examined; the
         # overlap item's stored proposal is not paid for again.
         assert second.seen == ["mapping: unreadable cell"]
@@ -736,7 +738,7 @@ class TestAdjudicatorContainment:
     def test_error_outcome_carries_the_failed_calls_cost(self) -> None:
         """A truncated response was still paid for: the error outcome keeps
         the spend the port error carries (promoted review minor)."""
-        from tax_tables.pipeline import _adjudicate_queue
+        from tax_tables.pipeline import adjudicate_open_items
         from tax_tables.ports.adjudicator import AdjudicationError
 
         spent = MappingCost(engine="test-model", api_calls=1, output_tokens=500)
@@ -748,7 +750,7 @@ class TestAdjudicatorContainment:
         repository = _MemoryRepository()
         handle = repository.register_document(sha256="ab" * 32, filename="x.pdf", byte_size=1)
         repository.queue_review(handle.id, [{"reason": "confidence_floor: 0.5", "source_page": 1}])
-        (outcome,) = _adjudicate_queue(
+        (outcome,) = adjudicate_open_items(
             repository, _PaidFailure(), handle.id, _stamped_scan_extracted(), Decimal("0.9")
         )
         assert outcome.disposition == "error"

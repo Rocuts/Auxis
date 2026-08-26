@@ -22,9 +22,11 @@ Design rules carried over from the rest of the repo:
 - Tracing is Powertools Tracer over Lambda active tracing (anti-goal #6:
   the X-Ray SDK is in maintenance; the SDK never appears in the bundle).
 - Handlers are addressed as ``tax_tables.aws.handlers.*`` inside the
-  ``src/`` asset: the deploy-time artifact contract. Those modules land
-  with the Textract/Bedrock adapter work (tracked for Phase 5's hexagonal
-  proof); nothing here implies a deployment that does not exist.
+  ``src/`` asset: real, unit-tested code (tests/aws pins every handler
+  string in this template to a callable). The Textract and Bedrock
+  adapters behind them are likewise real and fixture-tested. What remains
+  deploy-time is the dependency layer build (README, honest limitations);
+  nothing here implies a deployment that does not exist.
 
 Every cdk-nag suppression is individually justified inline, next to the
 resource it covers.

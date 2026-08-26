@@ -728,3 +728,57 @@ defect 8. CI's check job now installs the infra group so the audit pins run
 (a skip in CI would be a silent lie); post-fix: synth exit 0 credential-
 stripped, cfn-lint clean, nag 51 compliant / 47 suppressed / 0
 non-compliant, make check 377 passed + the credential skip.
+
+## 2026-08-26 — The deploy-time contract closed, keyless
+
+The audit's remaining critical (handlers absent from the asset) and
+CLAUDE.md's "AWS adapters real, complete, unit-tested" both close in one
+motion, all of it credential-free:
+
+**Textract TableExtractor** (40 tests): parses the documented
+BLOCK/CELL/RELATIONSHIPS shape — merged-cell continuations to None (the
+shared convention), cell confidence as the MIN of word confidences (mean
+rewards dropout, the 2a lesson), prose grouped and classified by the shared
+heuristic, OcrPageStats from word confidences, one AnalyzeDocument call per
+page priced like every other engine. Tested against
+fixtures/textract/05_response.json — HAND-CONSTRUCTED per CLAUDE.md's
+standing instruction and labeled as such in the JSON itself, its generator,
+and the tests; content transcribed from the real scanned fixture via the
+local OCR (285 words, matching the local pass exactly; the oracle was never
+opened). The generator regenerates the file byte-identically. Honest
+deviations recorded in the generator docstring: the merged cell models
+Textract's caption-band folding (document 05's real header is flat), and
+one glyph the local engine misread is transcribed correctly rather than
+replicating another engine's error into this engine's modelled response.
+
+**Bedrock semantic adapters** (28 tests): the hexagonal proof at its
+thinnest — anthropic's AnthropicBedrock client injected into the SAME three
+adapters; zero duplicated prompts, schemas, parsers, or cost math. Per-role
+timeouts imported (not copied) from the adapters so drift fails loudly; the
+"sigv4" sentinel satisfies the config's key requirement while documenting
+that auth is SigV4; model-id drift between the stack and the factories is
+pinned mechanically (a test AST-parses the stack). Structured-outputs
+acceptance by a live Bedrock runtime is named as a deploy-time
+verification item, with fail-closed parsers guaranteeing a loud failure.
+
+**tax_tables.aws.handlers** (8 tests): the five entry points the template
+addresses, recomposing the shared pipeline at the state boundaries from
+its now-public pieces (dispute_findings, issue_entry,
+adjudicate_open_items). A test pins every template handler string to a
+callable. StepFunctionsJobRunner stages the blob to S3 and starts the
+execution, and never raises past a 202 the client already earned (the
+queued row is the recovery path — tested). The extract handler pins the
+router's economics on AWS: a text-layer document makes ZERO Textract calls
+(the fake explodes if touched). persist_records preserves the accounting
+invariant against the real database; adjudicate_queue keeps the shared
+FLAG-only auto-resolve rule. CanonicalRecord's strict mode forced the
+payload round-trip through JSON validation — recorded because it is the
+kind of seam a split pipeline hides until it doesn't.
+
+Wiring: `aws` extra (boto3, mangum — never in the Vercel bundle), the
+cloud assembly re-synthesized (the src/ asset now ships the handlers),
+README.md created with the honest-limitations section: never deployed, the
+dependency-layer/secrets/role-creation deploy gaps, the endpoint inventory
+with its two deliberate omissions, and the credential-blocked accuracy
+gate. Post-everything: make check 453 passed + the credential skip; synth
+exit 0 credential-stripped; cfn-lint clean.

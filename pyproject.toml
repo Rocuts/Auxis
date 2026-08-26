@@ -19,6 +19,13 @@ dependencies = [
 ocr = [
     "pytesseract>=0.3.13",
 ]
+# AWS-target runtime: boto3 ships in the Lambda runtime anyway; mangum is
+# the API Gateway <-> ASGI bridge for the api handler. Neither may ride
+# the Vercel bundle.
+aws = [
+    "boto3>=1.34",
+    "mangum>=0.17",
+]
 
 [dependency-groups]
 dev = [
@@ -33,6 +40,10 @@ dev = [
     "httpx>=0.27",
     "pyyaml>=6",
     "types-pyyaml>=6",
+    # The aws extra mirrored for the handler unit tests (same pattern as
+    # pytesseract above); runtime images use the `aws` extra instead.
+    "boto3>=1.34",
+    "mangum>=0.17",
 ]
 # Phase 4: the CDK stack synthesizes offline; none of this ever reaches a
 # runtime bundle. cfn-lint validates the synthesized template in CI.
@@ -78,6 +89,12 @@ strict = true
 files = ["src", "tests", "infra"]
 exclude = "infra/cdk\\.out"
 mypy_path = "src:infra"
+
+[[tool.mypy.overrides]]
+# boto3 ships untyped; the handlers import it lazily and every call site is
+# behind an injectable collaborator the tests type themselves.
+module = ["boto3", "boto3.*"]
+ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 # None of the PDF/OCR libraries ship type stubs.
