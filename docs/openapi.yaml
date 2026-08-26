@@ -1,0 +1,670 @@
+openapi: 3.1.0
+info:
+  title: Tax Table Ingestion Service
+  description: 'Accepts PDF documents containing tax tables, extracts and normalizes
+    the tabular data, and exposes the canonical records. Uploads are processed asynchronously:
+    POST /documents returns 202 with a job id; poll GET /jobs/{job_id}.'
+  version: 0.1.0
+paths:
+  /documents:
+    post:
+      summary: Upload a PDF for ingestion (asynchronous)
+      operationId: upload_document_documents_post
+      parameters:
+      - name: X-API-Key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Api-Key
+      responses:
+        '202':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IngestAccepted'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    get:
+      summary: Uploaded documents
+      operationId: read_documents_documents_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DocumentOut'
+                title: Response Read Documents Documents Get
+  /jobs/{job_id}:
+    get:
+      summary: Job status and counts
+      operationId: read_job_jobs__job_id__get
+      parameters:
+      - name: job_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Job Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobOut'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /documents/{document_id}:
+    get:
+      summary: One document
+      operationId: read_document_documents__document_id__get
+      parameters:
+      - name: document_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Document Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentOut'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /records:
+    get:
+      summary: Canonical records
+      operationId: read_records_records_get
+      parameters:
+      - name: tax_year
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+            maximum: 2999
+            minimum: 1900
+          - type: 'null'
+          title: Tax Year
+      - name: jurisdiction
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            minLength: 2
+          - type: 'null'
+          title: Jurisdiction
+      - name: record_type
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - $ref: '#/components/schemas/RecordType'
+          - type: 'null'
+          title: Record Type
+      - name: filing_status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - $ref: '#/components/schemas/FilingStatus'
+          - type: 'null'
+          title: Filing Status
+      - name: effective_on
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Effective On
+      - name: include_superseded
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+          title: Include Superseded
+      - name: min_confidence
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: number
+            maximum: 1.0
+            minimum: 0.0
+          - type: string
+            pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
+          - type: 'null'
+          title: Min Confidence
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Cursor
+      - name: limit
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+            maximum: 200
+            minimum: 1
+          - type: 'null'
+          title: Limit
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecordsPage'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /records/resolve:
+    get:
+      summary: The bracket containing an amount (a data lookup, not tax advice)
+      operationId: resolve_records_resolve_get
+      parameters:
+      - name: amount
+        in: query
+        required: true
+        schema:
+          type: integer
+          minimum: 0
+          title: Amount
+      - name: tax_year
+        in: query
+        required: true
+        schema:
+          type: integer
+          maximum: 2999
+          minimum: 1900
+          title: Tax Year
+      - name: filing_status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - $ref: '#/components/schemas/FilingStatus'
+          - type: 'null'
+          title: Filing Status
+      - name: taxpayer_class
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Taxpayer Class
+      - name: jurisdiction
+        in: query
+        required: false
+        schema:
+          type: string
+          default: US
+          title: Jurisdiction
+      - name: record_type
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/RecordType'
+          default: ordinary_income_bracket
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResolveOut'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /internal/sweep:
+    post:
+      summary: Process queued jobs (cron / queue-subscriber path)
+      operationId: sweep_internal_sweep_post
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 50
+          minimum: 1
+          default: 10
+          title: Limit
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SweepOut'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+components:
+  schemas:
+    DocumentOut:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        sha256:
+          type: string
+          title: Sha256
+        filename:
+          type: string
+          title: Filename
+        content_type:
+          type: string
+          title: Content Type
+        byte_size:
+          type: integer
+          title: Byte Size
+        page_count:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Page Count
+        source_kind:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Source Kind
+        uploaded_at:
+          type: string
+          format: date-time
+          title: Uploaded At
+      type: object
+      required:
+      - id
+      - sha256
+      - filename
+      - content_type
+      - byte_size
+      - page_count
+      - source_kind
+      - uploaded_at
+      title: DocumentOut
+    FilingStatus:
+      type: string
+      enum:
+      - single
+      - married_filing_jointly
+      - married_filing_separately
+      - head_of_household
+      - qualifying_surviving_spouse
+      title: FilingStatus
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    IngestAccepted:
+      properties:
+        document_id:
+          type: string
+          format: uuid
+          title: Document Id
+        job_id:
+          type: string
+          format: uuid
+          title: Job Id
+        duplicate:
+          type: boolean
+          title: Duplicate
+      type: object
+      required:
+      - document_id
+      - job_id
+      - duplicate
+      title: IngestAccepted
+      description: '202 body: the upload was accepted; the pipeline runs asynchronously.
+
+        ``duplicate`` is True when this PDF (by sha256) was already known and an
+
+        existing job was returned instead of new work being started.'
+    JobOut:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        document_id:
+          type: string
+          format: uuid
+          title: Document Id
+        status:
+          type: string
+          title: Status
+        attempt:
+          type: integer
+          title: Attempt
+        records_extracted:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Records Extracted
+        records_persisted:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Records Persisted
+        review_count:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Review Count
+        error:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Error
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        started_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Started At
+        finished_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Finished At
+      type: object
+      required:
+      - id
+      - document_id
+      - status
+      - attempt
+      - records_extracted
+      - records_persisted
+      - review_count
+      - error
+      - created_at
+      - started_at
+      - finished_at
+      title: JobOut
+    RecordOut:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        document_id:
+          type: string
+          format: uuid
+          title: Document Id
+        source_page:
+          type: integer
+          title: Source Page
+        table_id:
+          type: string
+          title: Table Id
+        record_type:
+          type: string
+          title: Record Type
+        jurisdiction:
+          type: string
+          title: Jurisdiction
+        attribute_key:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Attribute Key
+        filing_status:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Filing Status
+        taxpayer_class:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Taxpayer Class
+        tax_year:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Tax Year
+        effective_from:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Effective From
+        effective_to:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Effective To
+        lifecycle_status:
+          type: string
+          title: Lifecycle Status
+        lower_bound:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Lower Bound
+        upper_bound:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Upper Bound
+        rate:
+          anyOf:
+          - type: string
+            pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
+          - type: 'null'
+          title: Rate
+        amount:
+          anyOf:
+          - type: string
+            pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
+          - type: 'null'
+          title: Amount
+        currency:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Currency
+        attrs:
+          additionalProperties: true
+          type: object
+          title: Attrs
+        confidence:
+          type: string
+          pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
+          title: Confidence
+        review_status:
+          type: string
+          title: Review Status
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+      type: object
+      required:
+      - id
+      - document_id
+      - source_page
+      - table_id
+      - record_type
+      - jurisdiction
+      - attribute_key
+      - filing_status
+      - taxpayer_class
+      - tax_year
+      - effective_from
+      - effective_to
+      - lifecycle_status
+      - lower_bound
+      - upper_bound
+      - rate
+      - amount
+      - currency
+      - attrs
+      - confidence
+      - review_status
+      - created_at
+      - updated_at
+      title: RecordOut
+      description: 'One canonical fact, bounds restored to the inclusive integers
+        the
+
+        corpus states (the range type''s half-open form is storage detail).'
+    RecordType:
+      type: string
+      enum:
+      - ordinary_income_bracket
+      - preferential_gain_bracket
+      - special_gain_rate
+      - standard_deduction
+      - additional_standard_deduction
+      - dependent_deduction_rule
+      - sales_tax_rate
+      - employment_tax_rate
+      - wage_base
+      - surtax_threshold
+      - withholding_allowance
+      title: RecordType
+    RecordsPage:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/RecordOut'
+          type: array
+          title: Items
+        next_cursor:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Next Cursor
+      type: object
+      required:
+      - items
+      title: RecordsPage
+      description: 'Cursor-paginated records. ``next_cursor`` is opaque; None means
+        the
+
+        walk is complete. Pass it back as ``?cursor=`` to continue.'
+    ResolveOut:
+      properties:
+        amount:
+          type: integer
+          title: Amount
+        record:
+          $ref: '#/components/schemas/RecordOut'
+      type: object
+      required:
+      - amount
+      - record
+      title: ResolveOut
+      description: 'The bracket record containing the queried amount — a data lookup,
+
+        deliberately not shaped like (and never to be read as) a computed tax
+
+        liability.'
+    SweepOut:
+      properties:
+        processed:
+          items:
+            type: string
+            format: uuid
+          type: array
+          title: Processed
+      type: object
+      required:
+      - processed
+      title: SweepOut
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+        input:
+          title: Input
+        ctx:
+          type: object
+          title: Context
+      type: object
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError

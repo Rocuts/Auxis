@@ -5,9 +5,11 @@ description = "Accept tax-table PDFs, extract and normalize tabular data, persis
 requires-python = ">=3.12"
 dependencies = [
     "anthropic>=1.0.0",
+    "fastapi>=0.132",
     "pdfplumber>=0.11.10",
     "psycopg[binary]>=3.2",
     "pydantic>=2.9",
+    "uvicorn>=0.30",
 ]
 
 [project.optional-dependencies]
@@ -26,6 +28,11 @@ dev = [
     # Dev and CI exercise the local OCR adapter's tests, so the extra is
     # mirrored here; runtime images use the `ocr` extra instead.
     "pytesseract>=0.3.13",
+    # Contract tests drive the FastAPI app through starlette's TestClient
+    # (httpx transport); the OpenAPI export tool serializes to YAML.
+    "httpx>=0.27",
+    "pyyaml>=6",
+    "types-pyyaml>=6",
 ]
 
 [build-system]

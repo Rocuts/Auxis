@@ -1,4 +1,4 @@
-.PHONY: check lint typecheck test fmt db-up db-down accuracy
+.PHONY: check lint typecheck test fmt db-up db-down accuracy api openapi
 
 check: lint typecheck test
 
@@ -26,3 +26,11 @@ db-up:
 
 db-down:
 	docker compose down -v
+
+# Serve the API locally against .env (DATABASE_URL, API_KEY, CRON_SECRET).
+api:
+	uv run --env-file .env uvicorn tax_tables.api.main:app --port 8000
+
+# Regenerate docs/openapi.yaml; a stale export fails the contract tests.
+openapi:
+	uv run python -m tax_tables.tools.export_openapi

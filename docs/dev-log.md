@@ -529,3 +529,66 @@ finding #1).
 
 Post-fix: make check 328 passed + the credential skip, ruff + mypy strict
 clean.
+
+## 2026-08-26 — Phase 3: the API surface, hardened, contract-tested
+
+**Scope shipped** (gate signed on the amendment; user directed proceeding
+straight here): the full CLAUDE.md surface — POST /documents (202 + job id,
+never blocking on extraction), GET /jobs/{id}, GET /records with filters and
+cursor pagination, GET /documents (+/{id}), GET /records/resolve — plus the
+hardening: X-API-Key on the POST (constant-time compare), CRON_SECRET bearer
+on the sweep endpoint (the cron/queue-subscriber path), and the upload
+guards (10 MB cap, %PDF magic, parse check, page cap) each firing before a
+byte reaches the pipeline. Per-IP rate limiting stays a Vercel Firewall rule
+for Phase 3.5, not application code.
+
+**Design decisions:**
+- *Read side is plain SQL, deliberately.* The pipeline's driven dependencies
+  are ports because they swap per target; the API read model runs identical
+  psycopg statements on RDS, Neon, and the local container — a read port
+  would be an interface with one implementation. Recorded in
+  api/queries.py's docstring.
+- *Keyset pagination on (created_at, id)* — both immutable — so a walk is
+  stable under concurrent inserts: nothing that existed at walk start is
+  skipped or repeated, whatever lands mid-walk. Pinned by a contract test
+  that inserts a second document between pages. Opaque base64 cursor;
+  malformed cursors are 400, not 500.
+- *Enqueue idempotency, three-valued:* live job -> returned as-is (the
+  partial unique index settles the race, not a check); latest job succeeded
+  -> no re-processing (re-upload is a no-op end to end); latest failed ->
+  fresh job (re-upload is the retry path). All three pinned.
+- *202-then-'missing credentials':* an upload against a misconfigured
+  service is a valid upload — HTTP stays 202, and the truth lands on the
+  job, typed (error.type == missing_credentials, message naming env VARS,
+  never values). The contract test strips every credential var via
+  monkeypatch so it passes identically on any shell; a live run through
+  uvicorn reproduced it end to end.
+- *Jobs and blobs:* BlobStore port (bytea adapter — the blob writes on the
+  same connection as the document row), JobRunner port with NullJobRunner
+  for request-scoped targets; sweep_pending claims with FOR UPDATE SKIP
+  LOCKED so concurrent sweepers never double-process. The repository gained
+  from_connection() (borrowed, close() a no-op) so the API's request
+  connection serves the upload transaction.
+- *OpenAPI 3.1* exported to docs/openapi.yaml (make openapi); a contract
+  test regenerates the schema and diffs the committed file, so a stale
+  export fails CI. Decimals serialize as exact-digit strings — for tax data
+  exactness outranks a native JSON number, noted in the schema module.
+
+**Two integration honesty notes.** FastAPI cannot resolve function-local
+dependency aliases under `from __future__ import annotations` (the app
+module documents why it omits the import). And starlette's TestClient is
+typed against the installed httpx2, not httpx — the contract tests annotate
+accordingly rather than casting.
+
+**Gate evidence.** make check: 368 passed + the credential skip (40 API
+contract tests), ruff + mypy strict clean. The two named gate assertions are
+tests: tax_year=2026 excludes superseded (test_records.py) and pagination
+stable across concurrent inserts (ibid.). Live demonstration against
+uvicorn + the docker Postgres: a 3-page cursor walk over 7 seeded synthetic
+records terminating in a null cursor; superseded hidden by default and
+surfaced flagged with include_superseded; resolve returning [9001, 38000]
+for amount 12500 (single) and the open-top estates/trusts bracket for
+500000; POST unauthenticated -> 401; authenticated -> 202; sweep with the
+bearer -> the job fails typed as missing_credentials. Router re-shown on
+the five fixtures: 01-04 deterministic_text at $0/0 calls, 05 -> ocr
+(tesseract, conf 0.92), report gate line green.
