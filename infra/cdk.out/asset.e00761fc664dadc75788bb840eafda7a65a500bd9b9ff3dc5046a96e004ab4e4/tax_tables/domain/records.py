@@ -68,8 +68,22 @@ class LifecycleStatus(StrEnum):
 
 
 class ReviewStatus(StrEnum):
+    """A *record's* own standing in the fact table."""
+
     CLEAN = "clean"
     NEEDS_REVIEW = "needs_review"
+
+
+class ReviewQueueStatus(StrEnum):
+    """A *queue item's* lifecycle — a different vocabulary from
+    :class:`ReviewStatus`, and deliberately not merged with it: a record can
+    be ``needs_review`` while every queue item naming it is ``resolved``, and
+    a queue item can exist for data that never became a record at all.
+    Mirrors the ``review_queue.status`` CHECK constraint."""
+
+    OPEN = "open"
+    RESOLVED = "resolved"
+    DISMISSED = "dismissed"
 
 
 class CanonicalRecord(BaseModel):

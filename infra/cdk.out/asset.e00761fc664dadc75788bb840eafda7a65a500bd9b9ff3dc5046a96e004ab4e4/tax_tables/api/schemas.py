@@ -109,6 +109,46 @@ class ResolveOut(BaseModel):
     record: RecordOut
 
 
+class ReviewOut(BaseModel):
+    """One review-queue item: what could not be parsed confidently, with its
+    provenance, plus the adjudication audit trail.
+
+    ``resolution`` carries the adjudicator's citated payload. On a closed
+    item it is the audit record of what resolved it; on an item still
+    ``open`` it is a stored proposal below the auto-resolve threshold,
+    awaiting a human (ADR 012). ``resolved_by`` and ``resolved_at`` are
+    non-null exactly when the item has left ``open`` — the database enforces
+    that, so a closed item without its trail is unrepresentable rather than
+    merely unexpected.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    id: UUID
+    document_id: UUID
+    source_page: int | None
+    table_id: str | None
+    row_index: int | None
+    col_index: int | None
+    raw_value: str | None
+    reason: str
+    status: str
+    resolution: dict[str, Any] | None
+    resolved_by: str | None
+    resolved_at: datetime | None
+    created_at: datetime
+
+
+class ReviewsPage(BaseModel):
+    """Cursor-paginated review items; same opaque cursor contract as
+    :class:`RecordsPage`."""
+
+    model_config = ConfigDict(frozen=True)
+
+    items: list[ReviewOut]
+    next_cursor: str | None = Field(default=None)
+
+
 class SweepOut(BaseModel):
     model_config = ConfigDict(frozen=True)
 

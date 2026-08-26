@@ -938,3 +938,84 @@ source rather than recollection:
 
 Post-5a: `make check` 469 passed + the credential skip; `make diagrams` 2/2
 under both majors; all internal doc links resolve.
+
+## 2026-08-26 — Two 5a-gate dispositions: the tracing contradiction, and a read-only review surface
+
+**Tracing, stated precisely.** Anti-goal #6 forbade the AWS X-Ray SDK and then
+recommended Powertools Tracer, which is a wrapper over it — the prohibition and
+the recommendation could not both be satisfied, and the contradiction had
+already reached the CDK stack docstring. Resolved against primary metadata
+rather than recollection.
+
+What the shipped bundle actually contains: **neither package.** `uv.lock` has
+zero occurrences of `aws-xray-sdk` and zero of `aws-lambda-powertools`, and
+nothing in `src/` imports either. Tracing on the AWS target is
+`Tracing.ACTIVE` — a platform setting; AWS documents that "Lambda
+automatically creates trace segments for function invocations and sends them to
+X-Ray", with no library in the deployment package. An SDK is needed only to
+*extend* the invocation subsegment with custom spans.
+
+The dependency question has a clean answer. `aws-lambda-powertools`'s published
+metadata (v3.34.0) gates `aws-xray-sdk<3.0.0,>=2.8.0` on `extra == "tracer" or
+extra == "all"`; its base distribution requires only `jmespath` and
+`typing-extensions`. So Powertools stays the CLAUDE.md Lambda toolkit for
+Logger / Idempotency / batch partial failure, and **only the Tracer extra is out
+of bounds**. Resolution: *no `aws-xray-sdk`, direct or transitive; tracing is
+the platform's; if in-code spans are ever wanted, OpenTelemetry, never
+Powertools Tracer.* Anti-goal #6 amended to bind the dependency graph rather
+than only imports, ADR 013 written, stack docstring and comments corrected.
+
+The resolution is **enforced, not asserted**: `tests/test_tracing_policy.py`
+greps `pyproject.toml`, `uv.lock`, and every module in `src/`, and rejects any
+`aws-lambda-powertools[...]` carrying `tracer` or `all`. A lockfile grep and
+the written policy can no longer drift.
+
+This also disposes of two findings parked from the Phase 4 audit ("the X-Ray
+endpoint and `xray:Put*` grants have no caller"). They do have one: AWS puts the
+`xray:PutTraceSegments` / `PutTelemetryRecords` requirement on the **function's
+execution role**, which is evidence that delivery is credentialed from — and
+originates in — the execution environment. The VPC has no internet path, so the
+endpoint is what that traverses. Whether it is *strictly* required from an
+isolated subnet stays a deploy-time verification item, held to the same standard
+as everything else here that has never been deployed.
+
+**Honest-limitation #10, promoted halfway.** `GET /reviews` (filters `status`,
+`document_id`; cursor pagination on `(created_at, id)`, the same stable keyset
+walk the records listing uses) and `GET /reviews/{id}` with the full
+adjudication audit trail. Twelve contract tests, written first, all red before
+the routes existed.
+
+Two design points worth recording. First, `list_reviews` has **no default status
+filter**, deliberately unlike `list_records` — there, hiding superseded rows is
+the load-bearing default; here, silently hiding closed items would misreport the
+queue's history, so a caller asks for `open` when they want the work list.
+Second, the detail view returns `resolution` **whatever the status**: on a closed
+row it is the audit record, and on a row still `open` it is the adjudicator's
+below-threshold proposal awaiting a human (ADR 012) — and a reviewer cannot act
+on a proposal they cannot see.
+
+No write path, and the omission is asserted rather than intended: `TestNoWritePath`
+checks 405 on POST/PUT/PATCH/DELETE for both paths, and an OpenAPI contract test
+pins `{"get"}` as the complete method set for each. Resolving an item is a human
+judgment with legal weight over tax data; exposing it would mean designing
+reviewer identity, authorization, and an approval trail, none of which this
+exercise scopes. The database keeps the guarantee regardless of route: the
+`closed_rows_carry_audit_trail` constraint makes a closed item without its
+`resolved_by` / `resolved_at` unrepresentable. Limitation #10 rewritten to say
+exactly that, the C4 Level 1 reviewer arrow redrawn one-way, and the endpoint
+inventory pin in `test_openapi.py` extended (it is an exhaustive set assertion,
+so a new route cannot appear undocumented).
+
+**Foresight recorded for Phase 3.5 (structural, operator present).** The upload
+cap must be documented **per target** there too. The README's limitation #6 is
+now a table: local 10 MB (the application cap), AWS **~4.4 MB** (derived — API
+Gateway's 10 MB payload cap is not binding; Lambda's 6 MB synchronous
+invocation payload with base64 expansion is), and Vercel **TBD**. Vercel's
+platform documentation currently states 100 MB request bodies, up from a
+historical 4.5 MB; that figure is quoted, not exercised, and the gap between
+the two numbers is exactly what should be measured rather than trusted. Measure
+it empirically during 3.5 and land the number next to the AWS entry.
+
+Post-dispositions: `make check` **487 passed** + the credential skip;
+`make diagrams` 2/2 under both Mermaid majors; synth exit 0 credential-stripped;
+cfn-lint clean; cdk-nag 58 compliant / 53 suppressed / 0 non-compliant.

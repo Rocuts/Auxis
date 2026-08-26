@@ -19,15 +19,14 @@ Design rules carried over from the rest of the repo:
 - No NAT gateways: Lambdas live in isolated subnets and reach AWS services
   through VPC endpoints only — cheaper, and no path to the internet exists
   for a component that handles tax documents.
-- Tracing is Lambda ACTIVE tracing — a platform setting, not a library, so
-  no tracing SDK ships in the bundle. Stated carefully because the earlier
-  wording ("Powertools Tracer ... the SDK never appears in the bundle") was
-  self-contradicting: Powertools' Tracer is a wrapper over aws-xray-sdk and
-  pulls it in, which anti-goal #6 forbids. Powertools is not a dependency of
-  this project (see pyproject), so nothing here imports either one; the
-  POWERTOOLS_* variables below configure Logger for the dependency layer a
-  deploy pipeline would add. If structured tracing is ever wanted in code,
-  the anti-goal points at OpenTelemetry, not Powertools Tracer.
+- Tracing is Lambda ACTIVE tracing — a platform setting, not a library: AWS
+  documents that Lambda creates and sends the trace segments itself, so no
+  tracing SDK ships in the bundle (ADR 013). Powertools stays the designed
+  Lambda toolkit for Logger / Idempotency / batch partial failure, but never
+  its `tracer` or `all` extra, which are what pull `aws-xray-sdk` — the SDK
+  anti-goal #6 forbids. The POWERTOOLS_* variables below configure Logger for
+  the dependency layer a deploy pipeline would add; today neither package is
+  in `uv.lock`, and tests/test_tracing_policy.py keeps it that way.
 - Handlers are addressed as ``tax_tables.aws.handlers.*`` inside the
   ``src/`` asset: real, unit-tested code (tests/aws pins every handler
   string in this template to a callable). The Textract and Bedrock
@@ -166,6 +165,10 @@ class TaxTablesStack(cdk.Stack):
             ("BedrockEndpoint", ec2.InterfaceVpcEndpointAwsService.BEDROCK_RUNTIME),
             ("LogsEndpoint", ec2.InterfaceVpcEndpointAwsService.CLOUDWATCH_LOGS),
             ("StatesEndpoint", ec2.InterfaceVpcEndpointAwsService.STEP_FUNCTIONS),
+            # Active tracing's delivery is credentialed from the function's
+            # OWN execution role (AWS puts xray:PutTraceSegments /
+            # PutTelemetryRecords there), so it originates inside the VPC —
+            # which has no NAT and no internet path. ADR 013.
             ("XRayEndpoint", ec2.InterfaceVpcEndpointAwsService.XRAY),
         ):
             vpc.add_interface_endpoint(name, service=service, subnets=isolated).add_to_policy(
@@ -362,10 +365,10 @@ class TaxTablesStack(cdk.Stack):
                 tracing=lambda_.Tracing.ACTIVE,
                 log_group=log_group,
                 environment={
-                    # Powertools Logger configuration (not Tracer — see
-                    # the module docstring: Tracer would pull in the X-Ray
-                    # SDK anti-goal #6 forbids). Tracing is the platform's,
-                    # set by `tracing=ACTIVE` below.
+                    # Powertools Logger configuration (never Tracer: its
+                    # extra pulls the aws-xray-sdk anti-goal #6 forbids —
+                    # ADR 013). Tracing is the platform's, set by
+                    # `tracing=ACTIVE` below.
                     "POWERTOOLS_SERVICE_NAME": "tax-tables",
                     "POWERTOOLS_LOG_LEVEL": "INFO",
                     "DB_PROXY_ENDPOINT": proxy.endpoint,

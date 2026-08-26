@@ -189,3 +189,76 @@ def resolve_bracket(
             )
             .fetchone()
         )
+
+
+_REVIEW_COLUMNS = """
+    id, document_id, source_page, table_id, row_index, col_index,
+    raw_value, reason, status, resolution, resolved_by, resolved_at,
+    created_at
+"""
+
+
+def get_review(conn: psycopg.Connection[Any], review_id: UUID) -> dict[str, Any] | None:
+    """One queue item with its full adjudication audit trail.
+
+    ``resolution`` is returned whatever the status: on a closed row it is the
+    audit record of what resolved the item, and on a row still ``open`` it is
+    the adjudicator's stored proposal awaiting a human (ADR 012). A reviewer
+    cannot act on a proposal they cannot see, so the read surface does not
+    hide it behind the status.
+    """
+    with conn.transaction():
+        return (
+            conn.cursor(row_factory=dict_row)
+            .execute(
+                f"SELECT {_REVIEW_COLUMNS} FROM review_queue WHERE id = %s",
+                (review_id,),
+            )
+            .fetchone()
+        )
+
+
+def list_reviews(
+    conn: psycopg.Connection[Any],
+    *,
+    status: str | None = None,
+    document_id: UUID | None = None,
+    after: tuple[datetime, UUID] | None = None,
+    limit: int = 50,
+) -> list[dict[str, Any]]:
+    """One page of queue items, keyset-ordered on ``(created_at, id)`` — the
+    same stable walk the records listing uses.
+
+    No default status filter: unlike ``list_records``, where hiding
+    superseded rows is the load-bearing default, a review listing that
+    silently hid closed items would misreport the queue's history. Callers
+    ask for ``open`` when they want the work list.
+    """
+    clauses: list[str] = []
+    params: list[Any] = []
+    if status is not None:
+        clauses.append("status = %s")
+        params.append(status)
+    if document_id is not None:
+        clauses.append("document_id = %s")
+        params.append(document_id)
+    if after is not None:
+        clauses.append("(created_at, id) > (%s, %s)")
+        params.extend(after)
+    where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
+    params.append(limit)
+    with conn.transaction():
+        return (
+            conn.cursor(row_factory=dict_row)
+            .execute(
+                f"""
+            SELECT {_REVIEW_COLUMNS}
+            FROM review_queue
+            {where}
+            ORDER BY created_at, id
+            LIMIT %s
+            """,
+                params,
+            )
+            .fetchall()
+        )

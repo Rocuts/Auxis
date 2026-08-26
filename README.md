@@ -64,7 +64,7 @@ make api                      # http://localhost:8000/docs
 Run everything the project can verify without credentials:
 
 ```bash
-make check       # ruff + mypy --strict + pytest (469 passed, 1 skipped)
+make check       # ruff + mypy --strict + pytest (487 passed, 1 skipped)
 make synth-check # cdk synth with NO AWS credentials, then cfn-lint
 make diagrams    # every README mermaid block, under two Mermaid majors
 ```
@@ -100,7 +100,7 @@ flowchart TB
     svc -->|"Cell grid in, canonical records out<br/>HTTPS/JSON"| llm
     svc -.->|"Same ports, AWS adapters<br/>synthesized but never deployed"| aws
     svc -->|"Records, jobs, review queue<br/>TCP/TLS"| db
-    reviewer -->|"Reads the review queue<br/>directly - no HTTP surface yet"| db
+    reviewer -->|"GET /reviews - read-only;<br/>resolving is not an HTTP action"| svc
 
     class consumer,reviewer person
     class svc core
@@ -109,10 +109,11 @@ flowchart TB
 ```
 
 Two things in that picture are deliberately uncomfortable and are stated
-rather than hidden: the AWS system is dashed because it was **designed and
-validated but never deployed**, and the reviewer reaches the queue through
-the database because the review queue has **no HTTP endpoint yet** (see
-[Honest limitations](#honest-limitations)).
+rather than hidden. The AWS system is dashed because it was **designed and
+validated but never deployed**. And the reviewer's arrow is one-way: they can
+*read* the queue over HTTP, but resolving an item is a human judgment this API
+does not accept — the write half is out of scope by decision, not by omission
+(see [Honest limitations](#honest-limitations)).
 
 ### C4 Level 3 — Components
 
@@ -320,6 +321,8 @@ goes stale.
 | `GET` | `/records` | public | `tax_year`, `jurisdiction`, `record_type`, `filing_status`, `effective_on`, `include_superseded`, `min_confidence`; **cursor** pagination |
 | `GET` | `/records/resolve` | public | the bracket containing an amount |
 | `GET` | `/documents`, `/documents/{id}` | public | provenance |
+| `GET` | `/reviews` | public | everything the pipeline refused to guess; filters `status`, `document_id`; **cursor** pagination |
+| `GET` | `/reviews/{id}` | public | one item with its adjudication audit trail |
 | `POST` | `/internal/sweep` | `CRON_SECRET` bearer | the cron / queue-subscriber path |
 
 `GET /records?tax_year=2026` returns active 2026 records and excludes
@@ -329,6 +332,11 @@ superseded ones. That is a test, not a claim.
 lookup, and the response deliberately does not read as a computed tax
 liability.
 
+The review surface is **read-only, and the schema pins it that way** — a
+contract test asserts that `/reviews` and `/reviews/{id}` expose `get` and
+nothing else, so "no write path" survives a future edit that adds a handler
+without revisiting the decision.
+
 ---
 
 ## Accuracy
@@ -336,7 +344,7 @@ liability.
 > **TBD — gate open.** The 128/128 field-level accuracy run executes the real
 > mapper and the independent verifier against the Anthropic API and is blocked
 > on a funded key. It runs with `make accuracy` the moment one lands in `.env`.
-> Everything else in `make check` (469 tests) runs keyless.
+> Everything else in `make check` (487 tests) runs keyless.
 >
 > The table below is the shape the harness prints. **No numbers are filled in
 > because none have been measured.** Target is 128/128; below that, every
@@ -610,13 +618,20 @@ Consolidated, and deliberately specific. If something is unproven, it says so.
    extracted grid and mapped records ride the 256 KB per-state payload quota.
    The Map Run's *aggregate* output is exported to S3; the inter-step payload
    is not. Document 03 is the one that approaches the limit.
-6. **The documented 10 MB upload cap is a per-target number.** It holds for
-   the local target and for Vercel (whose functions accept 100 MB request
-   bodies). On the AWS target the binding constraint is smaller: API Gateway
-   caps payloads at 10 MB, but a Lambda proxy integration base64-encodes the
-   binary body into a 6 MB synchronous invocation payload, so the real ceiling
-   is roughly **4.4 MB**. Uploads above that would need a presigned-S3 ingest
-   path, which is designed-for but not built.
+6. **The documented 10 MB upload cap is a per-target number, and only one
+   target's real ceiling is known.** The application-level cap
+   (`MAX_UPLOAD_BYTES`, default 10 MB) is enforced before a byte reaches the
+   pipeline, but each platform imposes its own body limit underneath it, and
+   the smaller of the two wins.
+
+   | Target | Real ceiling | Basis |
+   |---|---|---|
+   | local / `docker compose` | 10 MB | the application cap; nothing smaller underneath |
+   | AWS | **~4.4 MB** | API Gateway caps payloads at 10 MB, but a Lambda proxy integration base64-encodes the binary body into a 6 MB synchronous invocation payload — 6 MB ÷ 4/3. Derived, not measured. |
+   | Vercel | **TBD — measure in Phase 3.5** | Platform documentation currently states 100 MB request bodies, up from a historical 4.5 MB. That is a documented figure this project has not exercised, and the gap between the two numbers is exactly the kind of thing that should be measured rather than quoted. |
+
+   Uploads above a platform ceiling would need a presigned-upload ingest path,
+   which is designed-for but not built.
 7. **The VPC endpoint policies are account-scoped, not action-scoped.** All
    seven endpoints require `aws:PrincipalAccount` to be this account, which
    closes the cross-account exfiltration path an unrestricted S3 gateway
@@ -652,10 +667,19 @@ Consolidated, and deliberately specific. If something is unproven, it says so.
 
 ### The service
 
-10. **The review queue has no HTTP surface.** It is a table. Items are
-    created, flagged, adjudicated, and audited correctly, and the adjudicator
-    resolves what it can — but a human reviewer reads and resolves the
-    remainder through the database. An endpoint is designed-for and not built.
+10. **The review queue is readable over HTTP but not writable, on purpose.**
+    `GET /reviews` and `GET /reviews/{id}` expose every queued item with its
+    provenance and its full adjudication audit trail — including the
+    below-threshold *proposals* the adjudicator stores on items that stay
+    open, since a reviewer cannot act on a proposal they cannot see. There is
+    **no write path**: resolving or dismissing an item is a human judgment
+    with legal weight over tax data, and exposing it would mean designing
+    reviewer identity, authorization, and an approval trail — none of which
+    this exercise scopes. A human resolves the remainder through the
+    database, where the `closed_rows_carry_audit_trail` constraint makes a
+    closed item without its `resolved_by` / `resolved_at` unrepresentable
+    whichever route closed it. The omission is asserted by a contract test,
+    not merely intended.
 11. **`GET` endpoints are unauthenticated by design**, being read-only tax
     data. The write path enforces `X-API-Key` with a constant-time compare,
     and per-IP rate limiting is an edge rule (WAF on AWS; a Vercel Firewall

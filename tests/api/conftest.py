@@ -115,3 +115,53 @@ def seed_records(records: list[CanonicalRecord], *, sha_prefix: str = "aa") -> U
         outcome = repository.ingest(handle.id, records)
         assert outcome.persisted == len(records), "seed records must not collide"
         return handle.id
+
+
+def seed_reviews(
+    entries: list[dict[str, Any]],
+    *,
+    sha_prefix: str = "cc",
+    document_id: UUID | None = None,
+) -> tuple[UUID, list[UUID]]:
+    """Queue synthetic review items under a document; returns the document id
+    and the item ids in insertion order.
+
+    Each entry may carry ``resolve`` (a resolution mapping plus ``resolved_by``)
+    or ``propose`` (a stored proposal that leaves the item open) so a test can
+    build the three states the audit-trail constraint distinguishes.
+    """
+    with PostgresRecordRepository(TEST_DSN) as repository:
+        if document_id is None:
+            handle = repository.register_document(
+                sha256=sha_prefix * 32, filename=f"{sha_prefix}_review.pdf", byte_size=1
+            )
+            document_id = handle.id
+        before = _review_ids(repository, document_id)
+        repository.queue_review(
+            document_id,
+            [
+                {k: v for k, v in entry.items() if k not in ("resolve", "propose")}
+                for entry in entries
+            ],
+        )
+        created = [item for item in _review_ids(repository, document_id) if item not in before]
+        for entry, item_id in zip(entries, created, strict=True):
+            if "resolve" in entry:
+                payload = dict(entry["resolve"])
+                repository.resolve_review(
+                    item_id,
+                    resolution=payload.get("resolution", {"note": "resolved"}),
+                    resolved_by=payload.get("resolved_by", "adjudicator:test-model"),
+                )
+            elif "propose" in entry:
+                repository.propose_resolution(item_id, entry["propose"])
+        return document_id, created
+
+
+def _review_ids(repository: PostgresRecordRepository, document_id: UUID) -> list[UUID]:
+    rows = repository.connection.execute(
+        "SELECT id FROM review_queue WHERE document_id = %s ORDER BY created_at, id",
+        (document_id,),
+    ).fetchall()
+    repository.connection.commit()
+    return [row[0] for row in rows]

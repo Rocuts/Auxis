@@ -71,8 +71,16 @@ unless told otherwise.
    calls during synth and break the offline-synth requirement.
 5. **Never run `cdk deploy`, `cdk bootstrap`, or any command that mutates AWS.**
    There is no account and no budget.
-6. **Do not use the AWS X-Ray SDK** — it entered maintenance mode in February 2026.
-   Use Powertools Tracer or OpenTelemetry.
+6. **Do not use the AWS X-Ray SDK — directly or transitively.** It entered
+   maintenance mode in February 2026, and this binds the *dependency graph*, not
+   just imports: `aws-lambda-powertools[tracer]` and `[all]` pull
+   `aws-xray-sdk`, so Powertools may be depended on only WITHOUT those extras
+   (its base distribution requires just `jmespath` and `typing-extensions`).
+   Tracing on the AWS target is Lambda **active tracing** — a platform setting
+   that ships no library. If in-code spans are ever needed, use OpenTelemetry;
+   never Powertools Tracer, which is a wrapper over the forbidden SDK.
+   `tests/test_tracing_policy.py` enforces this against `pyproject.toml`,
+   `uv.lock`, and `src/` (ADR 013).
 7. **Do not build a generic "any document" system.** Scope to the five document
    shapes below. Generality is a cost here, not a virtue.
 8. **Never silently drop or guess a value.** A cell that cannot be parsed

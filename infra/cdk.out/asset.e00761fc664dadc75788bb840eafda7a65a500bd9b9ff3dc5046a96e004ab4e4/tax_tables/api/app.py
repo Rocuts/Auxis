@@ -42,10 +42,12 @@ from tax_tables.api.schemas import (
     RecordOut,
     RecordsPage,
     ResolveOut,
+    ReviewOut,
+    ReviewsPage,
     SweepOut,
 )
 from tax_tables.api.settings import MAX_PAGE_SIZE, ApiSettings
-from tax_tables.domain.records import FilingStatus, RecordType
+from tax_tables.domain.records import FilingStatus, RecordType, ReviewQueueStatus
 from tax_tables.ports.jobs import JobRunner, NullJobRunner
 from tax_tables.service.jobs import enqueue_ingest, sweep_pending
 
@@ -235,6 +237,49 @@ def create_app(settings: ApiSettings, *, runner: JobRunner | None = None) -> Fas
         if row is None:
             raise HTTPException(status_code=404, detail="no active bracket contains this amount")
         return ResolveOut(amount=amount, record=RecordOut(**row))
+
+    @app.get(
+        "/reviews",
+        response_model=ReviewsPage,
+        summary="Review-queue items (read-only)",
+    )
+    def read_reviews(
+        conn: Conn,
+        response: Response,
+        status: ReviewQueueStatus | None = None,
+        document_id: UUID | None = None,
+        cursor: str | None = None,
+        limit: Annotated[int | None, Query(ge=1, le=MAX_PAGE_SIZE)] = None,
+    ) -> ReviewsPage:
+        """Everything the pipeline refused to guess (anti-goal #8), with its
+        provenance. Read-only by design: resolving an item is a human
+        judgment that this API deliberately does not accept over HTTP."""
+        page_size = min(limit or settings.default_page_size, settings.max_page_size)
+        rows = queries.list_reviews(
+            conn,
+            status=None if status is None else status.value,
+            document_id=document_id,
+            after=None if cursor is None else _decode_cursor(cursor),
+            limit=page_size + 1,
+        )
+        has_more = len(rows) > page_size
+        rows = rows[:page_size]
+        next_cursor = (
+            _encode_cursor(rows[-1]["created_at"], rows[-1]["id"]) if has_more and rows else None
+        )
+        response.headers["Cache-Control"] = "no-store"
+        return ReviewsPage(items=[ReviewOut(**row) for row in rows], next_cursor=next_cursor)
+
+    @app.get(
+        "/reviews/{review_id}",
+        response_model=ReviewOut,
+        summary="One review item, with its adjudication audit trail",
+    )
+    def read_review(review_id: UUID, conn: Conn) -> ReviewOut:
+        row = queries.get_review(conn, review_id)
+        if row is None:
+            raise HTTPException(status_code=404, detail="review item not found")
+        return ReviewOut(**row)
 
     @app.post(
         "/internal/sweep",

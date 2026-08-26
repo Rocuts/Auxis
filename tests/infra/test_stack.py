@@ -421,3 +421,20 @@ class TestPromotedAuditFindings:
         iam5 = [s for s in suppressions if s["id"] == "AwsSolutions-IAM5"]
         assert len(iam5) == 1
         assert iam5[0].get("applies_to"), "unscoped: any future wildcard is pre-excused"
+
+
+class TestTracingPolicy:
+    def test_every_function_uses_platform_active_tracing(self, template: Template) -> None:
+        """ADR 013: tracing is the platform's, so no tracing library ever
+        needs to ship. If this regressed to PassThrough, someone would
+        reach for an SDK to replace it — and the only mature one is the
+        SDK anti-goal #6 forbids."""
+        functions = _resources(template, "AWS::Lambda::Function")
+        app = {
+            name: fn["Properties"]
+            for name, fn in functions.items()
+            if str(fn["Properties"].get("Handler", "")).startswith("tax_tables.")
+        }
+        assert len(app) == 6
+        for name, props in app.items():
+            assert props.get("TracingConfig", {}).get("Mode") == "Active", name

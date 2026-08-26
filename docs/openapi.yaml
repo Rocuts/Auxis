@@ -256,6 +256,90 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /reviews:
+    get:
+      summary: Review-queue items (read-only)
+      description: 'Everything the pipeline refused to guess (anti-goal #8), with
+        its
+
+        provenance. Read-only by design: resolving an item is a human
+
+        judgment that this API deliberately does not accept over HTTP.'
+      operationId: read_reviews_reviews_get
+      parameters:
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - $ref: '#/components/schemas/ReviewQueueStatus'
+          - type: 'null'
+          title: Status
+      - name: document_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Document Id
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Cursor
+      - name: limit
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+            maximum: 200
+            minimum: 1
+          - type: 'null'
+          title: Limit
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewsPage'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /reviews/{review_id}:
+    get:
+      summary: One review item, with its adjudication audit trail
+      operationId: read_review_reviews__review_id__get
+      parameters:
+      - name: review_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Review Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewOut'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /internal/sweep:
     post:
       summary: Process queued jobs (cron / queue-subscriber path)
@@ -630,6 +714,138 @@ components:
         deliberately not shaped like (and never to be read as) a computed tax
 
         liability.'
+    ReviewOut:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        document_id:
+          type: string
+          format: uuid
+          title: Document Id
+        source_page:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Source Page
+        table_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Table Id
+        row_index:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Row Index
+        col_index:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Col Index
+        raw_value:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Raw Value
+        reason:
+          type: string
+          title: Reason
+        status:
+          type: string
+          title: Status
+        resolution:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Resolution
+        resolved_by:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Resolved By
+        resolved_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Resolved At
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+      type: object
+      required:
+      - id
+      - document_id
+      - source_page
+      - table_id
+      - row_index
+      - col_index
+      - raw_value
+      - reason
+      - status
+      - resolution
+      - resolved_by
+      - resolved_at
+      - created_at
+      title: ReviewOut
+      description: 'One review-queue item: what could not be parsed confidently, with
+        its
+
+        provenance, plus the adjudication audit trail.
+
+
+        ``resolution`` carries the adjudicator''s citated payload. On a closed
+
+        item it is the audit record of what resolved it; on an item still
+
+        ``open`` it is a stored proposal below the auto-resolve threshold,
+
+        awaiting a human (ADR 012). ``resolved_by`` and ``resolved_at`` are
+
+        non-null exactly when the item has left ``open`` — the database enforces
+
+        that, so a closed item without its trail is unrepresentable rather than
+
+        merely unexpected.'
+    ReviewQueueStatus:
+      type: string
+      enum:
+      - open
+      - resolved
+      - dismissed
+      title: ReviewQueueStatus
+      description: 'A *queue item''s* lifecycle — a different vocabulary from
+
+        :class:`ReviewStatus`, and deliberately not merged with it: a record can
+
+        be ``needs_review`` while every queue item naming it is ``resolved``, and
+
+        a queue item can exist for data that never became a record at all.
+
+        Mirrors the ``review_queue.status`` CHECK constraint.'
+    ReviewsPage:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/ReviewOut'
+          type: array
+          title: Items
+        next_cursor:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Next Cursor
+      type: object
+      required:
+      - items
+      title: ReviewsPage
+      description: 'Cursor-paginated review items; same opaque cursor contract as
+
+        :class:`RecordsPage`.'
     SweepOut:
       properties:
         processed:

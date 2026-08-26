@@ -18,6 +18,7 @@ line rather than implying code that does not exist.
 | 010 | [Vision-OCR as the Vercel extractor for scanned input](010-vision-ocr-vercel-extractor.md) | 3.5 | accepted; **implementation pending** |
 | 011 | [Blob-in-Postgres (`bytea`) vs Vercel Blob](011-blob-in-postgres-vs-vercel-blob.md) | 3.5 | accepted, implemented |
 | 012 | [Runtime multi-agent semantic layer: mapper + verifier + adjudicator](012-runtime-multi-agent-semantic-layer.md) | 2 | accepted, implemented |
+| 013 | [Tracing without the X-Ray SDK, directly or transitively](013-tracing-without-the-xray-sdk.md) | 5 | accepted, enforced by test |
 | — | [Orchestration alignment with Anthropic's published criteria](adr-orchestration-alignment.md) | all | reference |
 
 ## The rejections are the load-bearing ones
