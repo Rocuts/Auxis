@@ -425,12 +425,81 @@ class TestFormatReport:
 
 
 def test_end_to_end_accuracy() -> None:
-    pytest.skip(
-        reason=(
-            "Phase 2b: SchemaMapper adapter does not exist yet; the accuracy "
-            "table only ever comes from a run against the real mapping API — "
-            "never from stubs (anti-goals #1/#8)."
+    """The Phase 2 gate: PDFs -> router -> real SchemaMapper -> comparison.
+
+    Accuracy is judged on the mapper's raw output (triage never mutates its
+    inputs, and persistence is not part of field accuracy). The tables the
+    gate asks for — by document, by record type, and per-document mapper
+    cost — are printed regardless of outcome; run via ``make accuracy`` to
+    see them. Skips only when no mapping credential is configured: the
+    accuracy table only ever comes from a run against the real mapping API,
+    never from stubs (anti-goals #1/#8).
+    """
+    from tax_tables.adapters.anthropic_mapper import (
+        AnthropicSchemaMapper,
+        MapperConfig,
+        MapperConfigError,
+    )
+    from tax_tables.adapters.pdfplumber_extractor import PdfplumberExtractor
+    from tax_tables.adapters.tesseract_extractor import TesseractExtractor
+    from tax_tables.extraction.router import ExtractionRouter
+    from tax_tables.pipeline import run_document
+
+    try:
+        config = MapperConfig.from_env()
+    except MapperConfigError:
+        pytest.skip(
+            reason=(
+                "no mapping credential (SCHEMA_MAPPER_API_KEY / ANTHROPIC_API_KEY): "
+                "the accuracy table only ever comes from a run against the real "
+                "mapping API — never from stubs (anti-goals #1/#8)."
+            )
         )
+
+    truth = load_ground_truth()
+    router = ExtractionRouter(digital=PdfplumberExtractor(), ocr=TesseractExtractor())
+    mapper = AnthropicSchemaMapper(config)
+
+    actuals: list[ActualRecord] = []
+    cost_rows: list[tuple[str, ...]] = [
+        ("document", "tok_in", "tok_out", "cache_w", "cache_r", "usd", "wall_s")
+    ]
+    for path in iter_source_documents(truth):
+        result = run_document(path.read_bytes(), filename=path.name, router=router, mapper=mapper)
+        actuals.extend((path.name, record) for record in result.mapping.records)
+        cost = result.mapping.cost
+        assert cost is not None  # the real adapter always reports its spend
+        cost_rows.append(
+            (
+                path.name,
+                str(cost.input_tokens),
+                str(cost.output_tokens),
+                str(cost.cache_write_tokens),
+                str(cost.cache_read_tokens),
+                f"{cost.usd:.4f}",
+                f"{cost.wall_seconds:.1f}",
+            )
+        )
+        if result.mapping.issues:
+            print(f"\n{path.name}: {len(result.mapping.issues)} mapping issue(s):")
+            for issue in result.mapping.issues:
+                print(f"  p{issue.source_page} {issue.table_id}: {issue.reason}")
+
+    comparison = compare(truth.expected_records, actuals)
+    print()
+    print(format_report(comparison, by="document"))
+    print()
+    print(format_report(comparison, by="record_type"))
+    widths = [max(len(row[i]) for row in cost_rows) for i in range(len(cost_rows[0]))]
+    print("\nmapper cost by document (engine: " + config.model + ")")
+    for index, row in enumerate(cost_rows):
+        print("  ".join(cell.ljust(widths[i]) for i, cell in enumerate(row)).rstrip())
+        if index == 0:
+            print("  ".join("-" * width for width in widths))
+
+    assert comparison.is_perfect, (
+        f"accuracy {len(comparison.matched)}/{comparison.expected_count} with "
+        f"{len(comparison.spurious)} spurious — every failing record is named above"
     )
 
 
