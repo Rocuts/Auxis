@@ -1,6 +1,9 @@
 # ADR 014 — Semantic-layer model selection, and its pre-registered escalation rule
 
-**Status:** accepted · **Date:** 2026-08-26 (amended same day: §4 carve-out implemented, §5 venue fixed, §6 outcome recorded) · **Phase:** 2b
+**Status:** **CLOSED — 2026-08-27.** Accepted 2026-08-26; amended through §8j;
+closed by operator decision at §8k. Gate 2b's record is final at **81/128** on
+`zai/glm-5.3-flash`, and the escalation is **designed, wired, tested, and
+permanently unfunded.** · **Phase:** 2b
 
 ## Context
 
@@ -1106,6 +1109,70 @@ recorded beside it and its measured variance; short of it ships truthfully
 with every failing record named. **Any miss that is a wrong VALUE rather than
 an absent key would be the first in seven runs and gets its own named
 analysis.** No further runs on either arm.
+
+
+### 8k. CLOSED — escalation designed, wired, tested, and permanently unfunded
+
+**Status:** final operator decision, 2026-08-27. **No purchase occurred. No
+additional spend was made. The free monthly allowance survives intact.** This
+ADR is closed and takes no further amendments.
+
+#### What was decided
+
+Path A is reversed **on cost, before execution**. The escalation that §3
+pre-registered, §5 venued, §8i wired and §8j re-venued is **not funded and will
+not be funded** — an explicit, cost-constrained engineering call, taken with the
+capability finished and sitting on the shelf.
+
+**The gate record stays at 81/128, untouched, permanently.**
+
+#### Why this is a legitimate close and not an abandonment
+
+The distinction this project cares about is between *"we could not"* and *"we
+chose not to"*, and the evidence for the second is on disk:
+
+| Asset | State |
+|---|---|
+| Escalation rule with pre-registered triggers and thresholds | §3, written before the first number existed |
+| Venue analysis, both directions, with the trade named | §5 (direct), §8j (gateway override) |
+| Per-role routing across two endpoints | shipped; `RECORD_VERIFIER_*` / `ADJUDICATOR_*` chains |
+| The inheritance trap that would have lost the run | found by reading the chain, not by burning a run; pinned in `tests/test_enforcement_arm_routing.py` |
+| Enforcement-probe methodology, deliberately asymmetric | `scripts/probe_transport.py` — falsifies enforcement conclusively, never claims to confirm it |
+| Price parity, cache ratios | live-confirmed from the catalogue, not recalled |
+| Both possible arm **labels**, named before any probe ran | §8j |
+
+Everything except the invoice. What was declined is the spend, and the reason
+is that the exercise's remaining questions do not require it: gate 2b's
+failures are **contract-adherence** failures, every one of which was diagnosed
+without escalating, and none of which a larger model was ever shown to fix —
+Trigger A never fired at any of six gates, because at no gate was any miss
+attributable to the model's semantic judgment.
+
+#### The finding that makes the unfunded close defensible
+
+Stated once, precisely, because it is the technical result of this whole ADR:
+
+> **Across six runs and 1,250+ compared fields per scored run, not one mapped
+> value was ever wrong.** Every failure was a key the model did not emit —
+> `actual <absent>` — never a figure it misread. What varied between runs was
+> not the model's reading of the documents but its **adherence to a contract
+> the transport declined to enforce**, and adherence on an unenforced transport
+> is measurably stochastic.
+
+That is why escalation was pre-registered against *conformance* triggers rather
+than accuracy ones, and it is also why not exercising it costs the exercise
+nothing it can demonstrate: the enforcement question is now documented, wired
+and probe-ready for anyone with a budget, and the accuracy question was never
+the model's to answer.
+
+#### What production runs
+
+**The same measured flash configuration as the gate.** No unmeasured
+configuration ships. `zai/glm-5.3-flash` for the mapper and adjudicator,
+`alibaba/qwen-3-235b` for the verifier, both through the AI Gateway on the free
+tier, with `CANONICAL_CONVENTIONS` frozen at `sha256:88b9ca03eaafcf05`
+(SPEC FREEZE v2). The 81/128 record is a measurement *of the thing that ships*,
+which is worth more than a better number measured on something else.
 
 
 ## Consequences

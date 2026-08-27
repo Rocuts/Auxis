@@ -2871,3 +2871,101 @@ Two attempts to repair one regression both made it worse. A project that
 reports only its best number cannot tell a specification from a curve fit, and
 the shape of these six runs is the evidence that this one was applied
 honestly — and that it did not converge.
+
+---
+
+## 2026-08-27 — ADR 014 closed unfunded, and the vision path gets a model
+
+Two decisions and one probe. No gate ran; the 81/128 record is untouched and
+stays that way permanently.
+
+### The escalation closes without ever being spent
+
+The operator reversed Path A on cost before execution. **No purchase occurred,
+so the free monthly allowance survives intact**, and ADR 014 is closed at §8k:
+the escalation is **designed, wired, tested, and permanently unfunded.**
+
+What makes that a legitimate close rather than an abandonment is that
+everything except the invoice is on disk — the pre-registered rule and its
+thresholds, venue analysis in both directions, per-role routing across two
+endpoints, the asymmetric enforcement-probe methodology, live-confirmed price
+parity and cache ratios, and both possible arm labels named before any probe
+could run. The capability is finished; the spend was declined.
+
+The concrete argument for building a thing you then decline to run: reading the
+config chain before spending found a defect that would have destroyed the run.
+Route the mapper to a second endpoint, leave the verifier's routing variables
+unset, and the verifier *inherits* them — posting `alibaba/qwen-3-235b` to
+`api.anthropic.com` with an `sk-ant` key. Every verifier call fails, and the
+harness fails the gate on a verifier failure exactly as on a mapper failure.
+Found by reading, not by losing a run to it, and now pinned in
+`tests/test_enforcement_arm_routing.py`.
+
+**No escalation trigger ever fired, at any of six gates.** Trigger A wants a
+miss attributable to the model's semantic judgment, and there was never one to
+find: across six runs and 1,250+ compared fields per scored run, not one mapped
+value was ever wrong. Every difference was `actual <absent>`. A larger model
+was never shown to fix a contract-adherence defect that a prompt change did fix
+four times over.
+
+### The vision path: one probe, and it closed the hole
+
+The vision-OCR adapter shipped built, 26-test-covered, and pointed at no model
+this project could invoke — its key chain is `VISION_OCR_API_KEY` →
+`ANTHROPIC_API_KEY`, and there is no funded direct credential.
+
+From the gateway catalogue, **162 of 356 models accept image input**. The
+candidate chosen was not the cheapest but the one that raises no new
+entitlement question: **`zai/glm-5.3-flash`** is vision-capable *and* is the
+same id the mapper ran for all six gate runs, so its access is six runs of
+evidence rather than a hypothesis.
+
+One authorized probe, a 220x70 PNG carrying the two token shapes this corpus
+turns on:
+
+```
+input:  RATE 15.3%  /  OVER $250,000
+output: 'RATE 15.3%\n\nOVER $250,000'
+usage:  52 input tokens, 52 output tokens
+```
+
+Exact, including the decimal and the thousands separator. `EXTRACTION_OCR_ENGINE=vision`
+is now wired to it with both price variables set — a role given a MODEL without
+its `USD_PER_MTOK_*` reports at the Opus defaults, which for this id would
+overstate OCR cost roughly thirtyfold. Same trap the verifier documented; it
+applies identically here.
+
+**What the probe does not license:** no full scanned page has been through the
+adapter. Extraction fidelity on document 05's merged cells, its `to` separator
+and its footnote-only rate is a 3.5-LIVE measurement, not a claim made in
+advance. The pre-registered fallback stands — if extraction disappoints,
+document 05 lands in the review queue with its provenance, which is anti-goal
+#8 working rather than a regression.
+
+Also documented in `.env.example`, because it is a genuine surprise: the vision
+key chain does **not** fall back to `SCHEMA_MAPPER_API_KEY`. A deployment whose
+only credential lives there fails closed at config time on the scanned path.
+Correct behaviour, easy to trip over.
+
+### README
+
+The model-selection narrative is now the final story rather than a running
+commentary: the six-run progression with runs 5 and 6 reported at full weight
+beside the high-water mark, the finding of record (zero wrong values; adherence
+on an unenforced transport is the stochastic part), the escalation as
+designed-and-unfunded with its test suite as the evidence, and production
+running the same measured configuration the gate measured.
+
+A criteria-mapping section now states which work the brief asked for and which
+this project imposed on itself. The brief's deliverable — a live service whose
+`GET` returns the stored records — is met in full. The accuracy harness and the
+adversarial oracle are **self-imposed rigor**, and saying so is not a hedge: a
+claim about extraction accuracy that cannot be falsified is not worth making,
+and the price of that position is a shipped 81/128 with every failure named.
+
+The production seed, when 3.5-LIVE runs, is pre-declared as **one more draw of
+the frozen specification** — same prompts, same models, same hash-pinned
+conventions — not a fresh result and not a better one.
+
+`CANONICAL_CONVENTIONS` still hashes `88b9ca03eaafcf05`. 667 passed, 1 skipped;
+diagrams 2/2.

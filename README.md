@@ -35,6 +35,7 @@ that touches a platform is a port with three adapters behind it.
 - [API surface](#api-surface)
 - [Accuracy](#accuracy)
 - [Defense in depth, demonstrated](#defense-in-depth-demonstrated)
+- [Model selection](#model-selection-a-decision-with-a-rule-written-before-the-numbers)
 - [Cost](#cost)
 - [Parallel processing and bottlenecks](#parallel-processing-and-bottlenecks)
 - [Fixture design](#fixture-design)
@@ -52,6 +53,41 @@ that touches a platform is a port with three adapters behind it.
 | Practical approach to PDF extraction and normalization | [The extraction router](#the-extraction-router) and [The semantic layer](#the-semantic-layer) — deterministic first, models only where the task is judgment, and a review queue instead of a guess |
 | Reasoning about parallel processing and bottleneck mitigation | [Parallel processing and bottlenecks](#parallel-processing-and-bottlenecks) — what breaks first at 10,000 documents/day, with the arithmetic and the knobs, on both live targets |
 | Documentation of development steps and tool choices | [`docs/dev-log.md`](docs/dev-log.md), [`docs/decisions/`](docs/decisions/), and [`docs/audit/`](docs/audit/) — including an honest account of how AI assistance was used |
+
+**The brief's own deliverable is met in full:** a live service that accepts a
+tax-table PDF, extracts and normalizes it into one canonical schema, persists
+it, and returns the stored records over `GET`. Every endpoint is implemented,
+contract-tested, and exported to [`docs/openapi.yaml`](docs/openapi.yaml).
+
+### What is beyond the brief, and why it is here
+
+Two of the things this README spends the most words on **were not asked for**,
+and it is worth saying so plainly rather than letting them read as scope the
+brief demanded:
+
+- **The accuracy harness** — field-level scoring of every extracted record
+  against a ground truth, with a natural-key comparison, per-document and
+  per-record-type breakdowns, and a conformance ledger.
+- **The adversarial oracle** — five self-authored PDFs built to break specific
+  naive assumptions, a documented `deliberate_traps` array, and an isolation
+  rule (`src/` may never read the answers) enforced by a test rather than
+  promised.
+
+Neither is required to ship the service. Both exist because *"the extraction
+works"* is a claim, and this project's position is that a claim about
+extraction accuracy which cannot be falsified is not worth making. The cost of
+that position is visible throughout: six measured runs, a best score of
+119/128, a shipped score of 81/128, and two repair attempts that made the
+number worse — all reported rather than smoothed. **A harness you cannot fail
+is a harness that proves nothing**, and the failures below are what the rigor
+bought.
+
+The one thing the harness does *not* speak to is the live URL's own data. When
+the production seed runs in 3.5-LIVE it is reported as **one more declared draw
+of the frozen specification** — the same prompts, the same models, the same
+`sha256`-pinned conventions — not as a fresh result and not as a better one.
+Whatever it returns is another sample of a distribution this README has already
+characterised.
 
 ---
 
@@ -721,6 +757,109 @@ adjudicator's verbatim rationale, is in
 
 ---
 
+## Model selection: a decision with a rule written before the numbers
+
+The semantic layer runs `zai/glm-5.3-flash` for the mapper and adjudicator and
+`alibaba/qwen-3-235b` for the verifier, both through the Vercel AI Gateway on
+the Anthropic Messages protocol. That choice was made on cost — a full
+five-document run maps for roughly `$0.02` against roughly `$0.83` on a
+frontier model — and **cost is not evidence of fitness.** A cheap model that
+maps tax brackets wrongly is not a saving.
+
+So the rule that would overturn the choice was written **before the first
+number existed** ([ADR 014 §3](docs/decisions/014-semantic-layer-model-selection.md)):
+two triggers, explicit thresholds, and a named escalation target. Writing it
+first is the entire point — a threshold chosen after seeing the data is a
+rationalisation of whatever already happened.
+
+### The finding of record
+
+Six gate runs, every one measured against the same frozen specification:
+
+> **Not one mapped value was ever wrong.** Across 1,250+ compared fields per
+> scored run, every single difference the harness found was `actual <absent>` —
+> a key the model did not emit. Never a misread figure, never a transposed
+> digit, never a rate off by a factor of a hundred.
+
+That is a sharper result than the score suggests, and it splits the problem in
+two. The model's **reading** of these documents was correct and consistent from
+the third run onward. What varied was its **adherence to a contract** — whether
+each required key actually appeared — and adherence turns out to be the
+stochastic part:
+
+| Run | Score | What moved |
+|---|---|---|
+| 1-2 | 0/128 | transport framing, then identity vocabulary |
+| 3 | 39/128 | bound semantics, unnamed attribute tail |
+| **4** | **119/128** | one unreconciled paragraph — **the high-water mark** |
+| 5 | 100/128 | the fix for that paragraph over-generalised |
+| 6 | 81/128 | the revert of that fix deleted a load-bearing restatement |
+
+Runs 5 and 6 were pre-registered repair attempts and **both made the number
+worse**. They are reported at full weight, in order, beside the best result
+rather than behind it. A specification tuned run-by-run against its own scoring
+harness stops being a specification, and the shape of these six runs is the
+evidence that this one was not.
+
+### Why adherence was the variable, and why that is a transport fact
+
+The gateway forwards the adapters' `output_config` json_schema request without
+enforcing it for a non-Anthropic model. The contract is honoured by the model's
+instruction-following, not by the transport. That was measured directly, not
+assumed: a toy schema whose `required` list named a key the natural answer
+omits came back missing it.
+
+**So `required` in a JSON schema was a claim the transport did not check, and
+the prompt was the only channel that actually carried the contract.** Four
+separate failures traced to that one shape — the pipeline knowing something it
+never told the model — before it was made unrepresentable by
+`tests/mapping/test_prompt_schema_parity.py`, which walks every role's response
+schema and asserts each required key is named in that role's prompt text.
+
+This is the honest characterisation of running a cheap model on an unenforcing
+transport, and it belongs next to the accuracy number rather than in a
+footnote.
+
+### The escalation: designed, wired, tested — and not funded
+
+The pre-registered escalation was taken all the way to the edge and then
+stopped, deliberately:
+
+| Built | Where |
+|---|---|
+| Escalation rule, triggers, thresholds | [ADR 014 §3](docs/decisions/014-semantic-layer-model-selection.md), pre-registered |
+| Venue analysis, both directions, trade named | ADR 014 §5, §8j |
+| Per-role routing across two endpoints | `RECORD_VERIFIER_*` / `ADJUDICATOR_*` config chains, shipped |
+| The inheritance trap that would have lost the run | [`tests/test_enforcement_arm_routing.py`](tests/test_enforcement_arm_routing.py) — 17 cases |
+| Enforcement-probe methodology | [`scripts/probe_transport.py`](scripts/probe_transport.py) — asymmetric by construction |
+| Price parity and cache ratios | live-confirmed from the model catalogue |
+
+Everything except the invoice. **The spend was declined — an explicit,
+cost-constrained engineering call, taken with the capability finished.**
+
+The trap is worth one line on its own, because finding it is the argument for
+building the thing you decline to run: routing the mapper to a second endpoint
+while leaving the verifier's routing variables unset makes the verifier
+*inherit* them — posting `alibaba/qwen-3-235b` to Anthropic's API with the
+wrong key, failing every verifier call, and failing the gate. That was found by
+reading the config chain before spending, not by losing a run to it.
+
+**No trigger ever fired.** At none of the six gates was a miss attributable to
+the model's semantic judgment, because at none of them was a value wrong. A
+larger model was never shown to fix a contract-adherence defect that a prompt
+change did fix, four times over. Escalating would have bought a different
+transport, not a better reading — a question worth answering with a budget, and
+not one this exercise needed answered to be honest about what it measured.
+
+### What production runs
+
+**The same configuration the gate measured.** No unmeasured configuration
+ships: the same two models, the same endpoint, and `CANONICAL_CONVENTIONS`
+frozen and hash-pinned at `sha256:88b9ca03eaafcf05`. The 81/128 record is a
+measurement *of the thing that ships*, which is worth more than a better number
+measured on something else.
+
+
 ## Cost
 
 The headline finding is structural and holds on every target regardless of
@@ -1065,12 +1204,14 @@ Consolidated, and deliberately specific. If something is unproven, it says so.
    run-by-run against a scoring harness stops being a specification. **The
    cause of the 28 remains unidentified**: the sixth run falsified both the
    leading hypothesis and the competing one, which is a real open question and
-   is stated as one. The escalation route to an enforcing endpoint is
-   budget-gated and remains **blocked, not waived**; no escalation trigger
-   fires, because the model followed the conventions it was given and the
-   conventions were what needed fixing. Full tables in
-   [`docs/dev-log.md`](docs/dev-log.md) and
-   [ADR 014 §6-8g](docs/decisions/014-semantic-layer-model-selection.md).
+   is stated as one. **The escalation to a larger model was designed, wired,
+   tested — and deliberately not funded.** No escalation trigger ever fired at
+   any of the six gates, because at no gate was a miss attributable to the
+   model's semantic judgment; the failures were contract adherence, and a
+   larger model was never shown to fix them. See
+   [Model selection](#model-selection-a-decision-with-a-rule-written-before-the-numbers)
+   for the full close. Full tables in [`docs/dev-log.md`](docs/dev-log.md) and
+   [ADR 014 §6-8k](docs/decisions/014-semantic-layer-model-selection.md).
 2. **Four identity fields are encodings, not extractions — and that boundary
    is deliberate.** `jurisdiction` is `US-FED` or `US-<ISO 3166-2 code>`,
    `taxpayer_class` is `individual` or `estate_or_trust`, and `attribute_key`
@@ -1101,14 +1242,20 @@ Consolidated, and deliberately specific. If something is unproven, it says so.
    `convention_derived` list on the record rather than given a provenance
    citation they cannot support — see
    [ADR 015](docs/decisions/015-convention-derived-discriminators.md).
-5. **The vision-OCR adapter has never run against a real model.** It is
+5. **The vision-OCR adapter has a probed model but no end-to-end run.** It is
    built, and its 26 tests cover every fidelity and fail-closed rule against
-   recorded response shapes — but on the platform each job fails at the
-   mapper's credential check *before* extraction is reached, so no page has
-   been sent to a vision model. What is untested is whether a real model
-   obeys the prompt, not whether the adapter handles what comes back.
-   Document 05 is extracted today by Tesseract (local) or, in the AWS design,
-   Textract.
+   recorded response shapes. As of 2026-08-27 it also has a model confirmed
+   reachable on this credential: `zai/glm-5.3-flash` is vision-capable, and a
+   single authorized probe had it transcribe a rendered `RATE 15.3%` /
+   `OVER $250,000` fragment exactly, for 52 input tokens
+   ([ADR 010 addendum](docs/decisions/010-vision-ocr-vercel-extractor.md)).
+   That closes the access question and **nothing more**: no full scanned page
+   has been through the adapter, so extraction fidelity on document 05's merged
+   cells, its `to` range separator and its footnote-only rate is a 3.5-LIVE
+   measurement and is not asserted here. If it disappoints, document 05 lands
+   in the review queue with its provenance — anti-goal #8 working, not a
+   regression. Document 05 is extracted today by Tesseract in
+   `docker compose`, or by Textract in the AWS design.
 
 ### The AWS stack
 

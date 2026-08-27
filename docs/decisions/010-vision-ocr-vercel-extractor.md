@@ -1,9 +1,13 @@
 # ADR 010 — Vision-OCR as the Vercel `TableExtractor` for scanned input
 
-**Status:** accepted; **implementation pending Phase 3.5 (gate open)** · **Date:** 2026-08-25 · **Phase:** 3.5
+**Status:** accepted; adapter **built and unit-tested**; a vision model is
+**access-probed and wired** as of 2026-08-27; end-to-end use pending 3.5-LIVE ·
+**Date:** 2026-08-25 (addendum 2026-08-27) · **Phase:** 3.5
 
-> The adapter is **not yet built**. Document 05 is currently extracted by
-> Tesseract (local) or the Textract adapter (the AWS design, fixture-tested).
+> Document 05 is extracted by Tesseract in the docker-compose target and by the
+> Textract adapter in the AWS design (fixture-tested). The vision adapter is
+> built with 26 tests over its fidelity and fail-closed rules, and now has a
+> confirmed model behind it — see the addendum at the end of this page.
 
 ## Context
 
@@ -78,3 +82,65 @@ vendors.
 The trade the platform forced is real and worth naming: on Vercel, the OCR
 path costs tokens where the local path costs only CPU. The router is what
 keeps that from mattering for four documents out of five.
+
+---
+
+## Addendum, 2026-08-27 — the model behind the adapter, probed rather than assumed
+
+The adapter shipped with a hole in the middle of it: it was built, tested
+against recorded response shapes, and pointed at **no model that this project
+could actually invoke.** Its config chain defaults to the direct Anthropic
+route, and this project has no funded direct credential (ADR 014 §8k), so
+`README` recorded it honestly as *"the vision-OCR adapter has never run against
+a real model."*
+
+**One authorized probe closed that hole.** From the AI Gateway catalogue, 162
+of 356 models accept image input. The candidate chosen was not the cheapest but
+the one that raises **no new entitlement question at all**:
+
+> **`zai/glm-5.3-flash`** — vision-capable per the catalogue's
+> `modalities.input`, and *the same id the mapper ran for all six gate runs*.
+> Access on this credential is not a hypothesis; it is six runs of evidence.
+
+The probe rendered a 220x70 PNG carrying `RATE 15.3%` / `OVER $250,000` — the
+two token shapes this corpus actually turns on, a percentage and a bounded
+currency amount — and asked for a transcription. It returned:
+
+```
+RATE 15.3%
+
+OVER $250,000
+```
+
+Exact, including the decimal and the thousands separator, for 52 input and 52
+output tokens. Access confirmed, and legibility confirmed with it.
+
+### What is now wired, and the trap in the chain
+
+`EXTRACTION_OCR_ENGINE=vision` with `VISION_OCR_MODEL`, `VISION_OCR_BASE_URL`,
+`VISION_OCR_API_KEY` and **both** price variables. Two notes worth more than
+their length:
+
+1. **The key chain does not include the mapper.** It is
+   `VISION_OCR_API_KEY` → `ANTHROPIC_API_KEY`, with no fall-back to
+   `SCHEMA_MAPPER_API_KEY`. A deployment whose only credential sits in
+   `SCHEMA_MAPPER_API_KEY` therefore fails **closed** at config time on the
+   scanned path. That is the correct failure and not a bug — but it is a
+   surprise, and it is now documented in `.env.example` next to the variable.
+2. **Prices must be set with the model.** A role given a `MODEL` without its
+   `USD_PER_MTOK_*` is reported at the Opus defaults; for this id that would
+   overstate OCR cost by roughly thirty times. The trap is this project's own,
+   already documented for the verifier, and it applies identically here.
+
+### What this does and does not license
+
+It does **not** claim document 05 now maps correctly through the vision path.
+Nothing end-to-end has run: extraction fidelity on a full scanned page — merged
+cells, the `to` range separator, the footnote-only rate — is a 3.5-LIVE
+measurement and is not being asserted in advance. What the probe establishes is
+narrower and sufficient: **the adapter has a reachable, legible model behind it,
+so the scanned path on the live target is a thing that can be exercised rather
+than a hole to be reported.** The pre-registered fail-closed fallback — document
+05 landing in the review queue with its provenance — remains the behaviour if
+extraction disappoints, which is anti-goal #8 working as designed rather than a
+regression.
