@@ -135,12 +135,21 @@ implementations, selected by configuration:
 | Port | AWS adapter (designed, synth-only) | Vercel adapter (live URL) | Local adapter (docker-compose) |
 |---|---|---|---|
 | `BlobStore` | S3 | Postgres `bytea` (default; see ADR) or Vercel Blob | local filesystem |
-| `TableExtractor` | Textract (`AnalyzeDocument`, TABLES) | `pdfplumber` (digital) / **vision-OCR via Anthropic API** (scanned) | `pdfplumber` (digital) / Tesseract (scanned) |
-| `SchemaMapper` | Bedrock | Anthropic API | Anthropic API |
-| `RecordVerifier` | Bedrock | Anthropic API | Anthropic API |
-| `Adjudicator` | Bedrock | Anthropic API | Anthropic API |
+| `TableExtractor` | Textract (`AnalyzeDocument`, TABLES) | `pdfplumber` (digital) / **vision-OCR, Anthropic Messages protocol** (scanned) | `pdfplumber` (digital) / Tesseract (scanned) |
+| `SchemaMapper` | Bedrock | AI Gateway · `zai/glm-5.3-flash` | AI Gateway · `zai/glm-5.3-flash` |
+| `RecordVerifier` | Bedrock | AI Gateway · `alibaba/qwen-3-235b` | AI Gateway · `alibaba/qwen-3-235b` |
+| `Adjudicator` | Bedrock | AI Gateway · inherits the mapper | AI Gateway · inherits the mapper |
 | `JobRunner` | Step Functions Distributed Map | **Vercel Queues** (fallback: cron sweep) | in-process worker pool |
 | `RecordRepository` | psycopg → RDS Proxy | psycopg → Neon (pooled endpoint) | psycopg → Postgres container |
+
+The three semantic roles speak the **Anthropic Messages protocol**; which
+endpoint answers it is configuration. Live and local, that is the **Vercel AI
+Gateway** — `zai/glm-5.3-flash` for the mapper and adjudicator,
+`alibaba/qwen-3-235b` for the verifier (ADR 014). **Direct Anthropic**
+(`api.anthropic.com`) and **Bedrock** (AWS, designed-only) are the other two
+config-selected routes: wired, and neither funded here. No direct-Anthropic
+key is provisioned on this project — a claim of one would be a claim of a
+route that does not exist.
 
 The Vercel adapters run the live demo. The local adapters run the test suite and
 the evaluator's `docker compose up`. The AWS adapters must be real, complete,
@@ -172,7 +181,8 @@ and it is a README headline:
   back to a jobs-table sweep driven by a `vercel.json` cron (minute granularity)
   and record the latency trade-off in the ADR.
 - **No system binaries.** Tesseract cannot be installed into a Vercel function, so
-  document 05 uses a **vision-OCR `TableExtractor` adapter** on the Anthropic API.
+  document 05 uses a **vision-OCR `TableExtractor` adapter** speaking the
+  Anthropic Messages protocol (endpoint by config, as for the semantic roles).
   This does not bend the no-pixels rule — restate it precisely: *the rule binds
   the `SchemaMapper`*, which only ever sees an extracted cell grid.
   `TableExtractor` adapters are the components licensed to read pixels — Textract

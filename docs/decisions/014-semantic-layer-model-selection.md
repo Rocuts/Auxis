@@ -28,6 +28,20 @@ the categories in advance.
 | `RecordVerifier` | `alibaba/qwen-3-235b` | 0.22 / 0.88 | no published discount → full rate |
 | `Adjudicator` | inherits the mapper | 0.075 / 0.25 | 0.2× input |
 
+Three names are doing three different jobs in that table and are worth
+separating once, here, because the rest of this project's documentation now
+uses them in exactly this sense:
+
+- **Protocol** — the **Anthropic Messages protocol**. It is what the three
+  adapter classes speak, and it is why one adapter serves every route.
+- **Endpoint** — configuration. Live and local, it is the **Vercel AI
+  Gateway** (`ai-gateway.vercel.sh`), which accepts that protocol on behalf
+  of non-Anthropic models. **Direct Anthropic** (`api.anthropic.com`) and
+  **Bedrock** (AWS, designed-only) are the other two selectable routes, and
+  neither is funded on this project: no direct-Anthropic key is provisioned,
+  and every measured run recorded here went through the gateway.
+- **Model** — the ids above, chosen per role.
+
 Prices are the gateway catalogue's for those exact ids, read 2026-08-26 from
 `GET https://ai-gateway.vercel.sh/v1/models`. They are set explicitly per role:
 the config chain transfers the mapper's prices to another role **only** while

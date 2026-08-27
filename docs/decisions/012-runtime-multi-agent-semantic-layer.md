@@ -71,8 +71,10 @@ port with an Anthropic-API adapter. Nothing else in the pipeline becomes an agen
   against same-model double-checking. The verifier therefore accepts its own
   model config (`RECORD_VERIFIER_*`), permitting a cheaper or different-family
   model than the mapper. **Applied, not merely available** (2026-08-26): the
-  mapper runs `zai/glm-5.3-flash` and the verifier `alibaba/qwen-3-235b`, a
-  genuinely different family, for about $0.0008 a run — see
+  mapper runs `zai/glm-5.3-flash` and the verifier `alibaba/qwen-3-235b`,
+  both through the Vercel AI Gateway on the Anthropic Messages protocol — one
+  protocol, two vendors, a genuinely different family — for about $0.0008 a
+  run. See
   [ADR 014](014-semantic-layer-model-selection.md), which also pre-registers
   the rule for escalating the mapper on measured evidence.
 

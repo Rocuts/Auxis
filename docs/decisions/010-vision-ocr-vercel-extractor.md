@@ -19,8 +19,12 @@ the one target that serves the live URL.
 
 ## Decision
 
-A **vision-OCR `TableExtractor` adapter** on the Anthropic API: render the
-scanned page to an image and ask a vision-capable model for the cell grid.
+A **vision-OCR `TableExtractor` adapter** speaking the **Anthropic Messages
+protocol**: render the scanned page to an image and ask a vision-capable model
+for the cell grid. The endpoint is configuration, as it is for the semantic
+roles (`VISION_OCR_BASE_URL` / `VISION_OCR_MODEL`, defaulting to direct
+Anthropic); no such key is funded on this project today, which is why this
+adapter has never run against a real model.
 
 ## Why this does not bend the no-pixels rule
 

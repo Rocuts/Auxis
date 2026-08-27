@@ -2421,3 +2421,49 @@ subsequent run reproduced. Every other failure has been a field the schema
 asked for and did not describe well enough to get.
 
 Gate 2b remains **OPEN** at 119/128.
+
+---
+
+## 2026-08-26 — Documentation alignment: protocol, endpoint, model, said the same way everywhere
+
+No code changed and the conventions spec is untouched (ADR 014 §8e froze it).
+This pass reconciles the documentation with what actually ships.
+
+**The defect.** Both C4 diagrams named "Anthropic API" as the semantic
+layer's external system, and the ports tables in the README and CLAUDE.md
+repeated it in six cells. That has not been true since ADR 014: the live and
+local route is the **Vercel AI Gateway** serving `zai/glm-5.3-flash` to the
+mapper and adjudicator and `alibaba/qwen-3-235b` to the verifier. Every
+number in the accuracy and cost sections was measured through that gateway.
+A reader of the diagrams would have concluded the opposite, and worse, would
+have concluded a funded direct-Anthropic route exists here. `ANTHROPIC_API_KEY`
+is empty in this project's environment; the only model credential is a
+gateway key.
+
+**The distinction, fixed in one vocabulary.** Three names were being used
+interchangeably and are now used in exactly one sense each, everywhere:
+
+- **Protocol** — the Anthropic Messages protocol. What the adapter classes
+  speak, and the reason one adapter serves every route.
+- **Endpoint** — configuration. Live and local: the AI Gateway. Direct
+  Anthropic and Bedrock (AWS, designed-only) are the other two selectable
+  routes; both are wired and neither is funded here.
+- **Model** — the ids, chosen per role.
+
+This is the distinction the transport work of the last two days was actually
+about, and the documentation was still describing the world from before it.
+
+**Changed:** C4 L1 node and its relationship label; the C4 L3 semantic
+adapter box (protocol, endpoint and both model ids stated on separate
+lines); the README ports table, semantic-layer section, verifier paragraph
+and cost section; the CLAUDE.md ports table and its vision-OCR row; ADR 010
+(the vision adapter speaks the protocol — it is not a vendor claim, and that
+adapter has still never run); ADR 012 where it names the two model families;
+ADR 014 §1, which now carries the vocabulary itself. `.env.example` records
+the shipped values beside the variable documentation.
+
+`make diagrams`: 2 diagrams, 0 failures, under Mermaid 10 and 11.
+
+The dev-log entries above are not rewritten. They were accurate on the day
+they were written, and a log that edits its own history is worth less than
+one that shows the correction arriving late.

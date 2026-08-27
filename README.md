@@ -96,12 +96,12 @@ flowchart TB
         svc["Tax Table Ingestion Service<br/>[Software System]<br/>Extracts tabular data from PDFs,<br/>normalizes it to one canonical schema,<br/>persists it, and serves it"]
     end
 
-    llm["Anthropic API<br/>[External System]<br/>Semantic mapping, independent<br/>verification, queue adjudication;<br/>vision OCR for scanned input"]
+    llm["Model API<br/>[External System]<br/>Anthropic Messages protocol<br/>live: AI Gateway - GLM + qwen<br/>by config: direct Anthropic / Bedrock"]
     aws["AWS Textract and Bedrock<br/>[External System - designed only]<br/>The AWS target's extraction<br/>and model transport"]
     db[("PostgreSQL 18<br/>[External System]<br/>Neon, RDS, or local container")]
 
     consumer -->|"POST /documents with X-API-Key,<br/>GET /records - HTTPS/JSON"| svc
-    svc -->|"Cell grid in, canonical records out<br/>HTTPS/JSON"| llm
+    svc -->|"Mapping, verification, adjudication;<br/>vision OCR for scanned pages<br/>HTTPS/JSON"| llm
     svc -.->|"Same ports, AWS adapters<br/>synthesized but never deployed"| aws
     svc -->|"Records, jobs, review queue<br/>TCP/TLS"| db
     reviewer -->|"GET /reviews - read-only;<br/>resolving is not an HTTP action"| svc
@@ -155,7 +155,7 @@ flowchart TB
         verifier["RecordVerifier<br/>[Port]<br/>Re-derives in a fresh<br/>context under a skeptic<br/>prompt. Flags, never corrects"]
         triage["Validators and triage<br/>[Component]<br/>Confidence floor, bracket<br/>rules, unit checks"]
         adjudicator["Adjudicator<br/>[Port]<br/>One pass over open queue<br/>items with full evidence"]
-        semantic_a["Anthropic API - local, Vercel<br/>Bedrock - AWS<br/>same prompts, same parsers"]
+        semantic_a["Anthropic Messages protocol<br/>live: AI Gateway - local, Vercel<br/>mapper + adjudicator: zai/glm-5.3-flash<br/>verifier: alibaba/qwen-3-235b<br/>by config: direct Anthropic / Bedrock - AWS<br/>same prompts, same parsers"]
     end
 
     subgraph repo_b["RecordRepository port"]
@@ -207,12 +207,21 @@ The domain and the pipeline do not know that AWS or Vercel exist.
 | Port | local (`docker compose`) | Vercel (live target) | AWS (designed, synth-only) |
 |---|---|---|---|
 | `TableExtractor` | pdfplumber / Tesseract | pdfplumber / vision-OCR | pdfplumber / Textract |
-| `SchemaMapper` | Anthropic API | Anthropic API | Bedrock |
-| `RecordVerifier` | Anthropic API | Anthropic API | Bedrock |
-| `Adjudicator` | Anthropic API | Anthropic API | Bedrock |
+| `SchemaMapper` | AI Gateway · `zai/glm-5.3-flash` | AI Gateway · `zai/glm-5.3-flash` | Bedrock |
+| `RecordVerifier` | AI Gateway · `alibaba/qwen-3-235b` | AI Gateway · `alibaba/qwen-3-235b` | Bedrock |
+| `Adjudicator` | AI Gateway · inherits the mapper | AI Gateway · inherits the mapper | Bedrock |
 | `JobRunner` | in-process worker pool | cron sweep | Step Functions Distributed Map |
 | `RecordRepository` | psycopg → container | psycopg → Neon pooled | psycopg → RDS Proxy |
 | `BlobStore` | filesystem | Postgres `bytea` | S3 |
+
+All three semantic roles speak the **Anthropic Messages protocol**; which
+endpoint answers it is configuration. The live and local route is the **Vercel
+AI Gateway** (`ai-gateway.vercel.sh`), serving `zai/glm-5.3-flash` to the
+mapper and adjudicator and `alibaba/qwen-3-235b` to the verifier. **Direct
+Anthropic** (`api.anthropic.com`) and **Bedrock** (AWS, designed-only) are the
+other two config-selected routes: both are wired and neither is funded here —
+no direct-Anthropic key is provisioned on this project, and every measured run
+in this README went through the gateway.
 
 The Bedrock adapters are the cheapest possible proof that the seam is real:
 they inject `AnthropicBedrock` into the *same three adapter classes*. Zero
@@ -268,6 +277,13 @@ published criteria for adding agents ([ADR 012](docs/decisions/012-runtime-multi
   the item stays with a human. Auto-resolution applies **only** to items whose
   record actually persisted: a queue row standing for data the fact table
   refused is the only live signal of that loss, and never auto-closes.
+
+All three speak the **Anthropic Messages protocol**, and the endpoint is
+configuration — live and local, that is the **Vercel AI Gateway**:
+`zai/glm-5.3-flash` for the mapper and adjudicator, `alibaba/qwen-3-235b` for
+the verifier, a deliberately different family ([ADR
+014](docs/decisions/014-semantic-layer-model-selection.md)). Direct Anthropic
+and Bedrock are the other two config-selected routes, wired but unfunded here.
 
 Everything else stays deterministic on purpose. The first published criterion
 is to find the simplest thing that works, and for structural extraction that
@@ -427,7 +443,8 @@ bundle, and a test enforces both.
 [ADR 012](docs/decisions/012-runtime-multi-agent-semantic-layer.md) argues
 that a second model reviewing its own family's output is an echo, and puts a
 *different* family (`alibaba/qwen-3-235b`) on the mapper's
-(`zai/glm-5.3-flash`) work in a fresh context under a skeptic prompt. That
+(`zai/glm-5.3-flash`) work in a fresh context under a skeptic prompt — both
+through the AI Gateway, one protocol, two vendors. That
 argument was theoretical until this run.
 
 **It named five of the failures before the oracle was ever consulted.** Of
@@ -545,6 +562,14 @@ document with nonzero extraction cost anywhere.
 | `SchemaMapper` | per-token | per-token | per-token |
 | `RecordVerifier` | per-token | per-token | per-token |
 | `Adjudicator` | per open queue item | per open queue item | per open queue item |
+
+The three per-token rows are the **Anthropic Messages protocol** billed at
+whichever endpoint configuration selects. Measured here, live and local, that
+is the **Vercel AI Gateway**: `zai/glm-5.3-flash` at `$0.075` / `$0.25` per
+Mtok for the mapper and adjudicator, `alibaba/qwen-3-235b` at `$0.22` /
+`$0.88` for the verifier. Direct Anthropic and Bedrock are the other two
+config-selected routes and would bill at their own list prices; neither is
+funded here, so no number in this section came from either.
 
 Every price is configuration, not a hardcoded constant, and the accounting is
 arithmetic rather than estimation: the extractor counts API calls, and the
