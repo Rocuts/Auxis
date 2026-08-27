@@ -1,14 +1,17 @@
 # ADR 010 — Vision-OCR as the Vercel `TableExtractor` for scanned input
 
 **Status:** accepted; adapter **built and unit-tested**; a vision model is
-**access-probed and wired** as of 2026-08-27; **still no end-to-end run — the
-3.5-LIVE seed was meant to settle it and did not** ·
+**access-probed and wired**; **one live end-to-end run, 2026-08-27, which
+under-extracted at 3 of 19 records and failed visibly** ·
 **Date:** 2026-08-25 (addendum 2026-08-27) · **Phase:** 3.5
 
 > Document 05 is extracted by Tesseract in the docker-compose target and by the
 > Textract adapter in the AWS design (fixture-tested). The vision adapter is
-> built with 26 tests over its fidelity and fail-closed rules, and now has a
-> confirmed model behind it — see the addendum at the end of this page.
+> built with 26 tests over its fidelity and fail-closed rules, has a confirmed
+> model behind it — see the addendum at the end of this page — and has run
+> once on production: 3 of 19 records persisted, with 19 review items naming
+> what it could not place. Fail-visible, not silent; fidelity at full quality
+> is still unasserted on this target.
 
 ## Context
 
@@ -28,8 +31,9 @@ A **vision-OCR `TableExtractor` adapter** speaking the **Anthropic Messages
 protocol**: render the scanned page to an image and ask a vision-capable model
 for the cell grid. The endpoint is configuration, as it is for the semantic
 roles (`VISION_OCR_BASE_URL` / `VISION_OCR_MODEL`, defaulting to direct
-Anthropic); no such key is funded on this project today, which is why this
-adapter has never run against a real model.
+Anthropic); no such key is funded on this project today, so the adapter is
+pointed at the AI Gateway instead — see the addendum, and the single live run
+it has since had.
 
 ## Why this does not bend the no-pixels rule
 

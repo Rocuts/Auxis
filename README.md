@@ -168,7 +168,7 @@ the upload self-kick instead, and that is what the deployed target runs.
 Run everything the project can verify without credentials:
 
 ```bash
-make check       # ruff + mypy --strict + pytest (689 passed, 1 skipped)
+make check       # ruff + mypy --strict + pytest (705 passed, 1 skipped)
 make synth-check # cdk synth with NO AWS credentials, then cfn-lint
 make diagrams    # every README mermaid block, under two Mermaid majors
 ```
@@ -1039,6 +1039,9 @@ document with nonzero extraction cost anywhere.
 |---|---|---|---|
 | Extraction, documents 01–04 | `$0.00` | `$0.00` | `$0.00` |
 | Extraction, document 05 | Tesseract, `$0.00` (CPU) | vision-OCR, per-token | Textract, `$0.015`/page (list) |
+| `SchemaMapper` | per-token | per-token | per-token |
+| `RecordVerifier` | per-token | per-token | per-token |
+| `Adjudicator` | per open queue item | per open queue item | per open queue item |
 
 **Extraction fidelity is not equal across targets, and document 05 is where
 they part.** This is a measured per-target limitation, stated because a
@@ -1058,9 +1061,6 @@ working rather than a regression. No system binary can exist in a Vercel
 function ([ADR 010](docs/decisions/010-vision-ocr-vercel-extractor.md)), so
 this is the trade that target makes, and the honest reading is that **the
 scanned path is production-ready on the local target and not yet on Vercel.**
-| `SchemaMapper` | per-token | per-token | per-token |
-| `RecordVerifier` | per-token | per-token | per-token |
-| `Adjudicator` | per open queue item | per open queue item | per open queue item |
 
 The three per-token rows are the **Anthropic Messages protocol** billed at
 whichever endpoint configuration selects. Measured here, live and local, that
@@ -1241,16 +1241,16 @@ checks is a coupling that drifts. The reclaim behaviour has its own four tests,
 including `test_live_worker_is_never_stolen` — the one that would catch a lease
 shortened below `maxDuration` by someone who had not read this section.
 
-**What happened next.** The repair was promoted, and it worked on the platform
-that had defeated it: the reclaim fired live at `17:24:16Z`, taking a job whose
-worker the platform had killed and running it to a terminal state — the exact
-transition that was impossible the day before. The five stranded rows were
-closed by `scripts/mark_stranded_jobs.py` — **mark, never delete: the rows are
-the evidence** — and the corpus was re-seeded to the 113 records the live URL
-serves now. Re-seeding the corpus is
-blocked until it is, since a `running` job reads as live to the SHA-256 key.
-The honest status is: *the defect is understood, the fix is tested, the
-deployment is pending a human.*
+**What happened next.** The five stranded rows were closed first, by
+`scripts/mark_stranded_jobs.py` — **mark, never delete: the rows are the
+evidence** — because a `running` job reads as live to the SHA-256 key and
+would have refused its own re-ingest. The repair was then promoted, and it
+worked on the platform that had defeated it: the reclaim fired live at
+`17:24:16Z`, taking a job whose worker the platform had killed and running it
+to a terminal state — the exact transition that was impossible the day before.
+A deliberately sequential re-seed followed and landed the **113** records the
+live URL serves now. Nothing in this repair is pending: it is deployed,
+exercised in production, and measured.
 
 ### Retries are safe, not free — the last measurement of the phase
 
@@ -1512,7 +1512,7 @@ nowhere near deploy-correct. See [`docs/audit/`](docs/audit/) for the full
 > ### What deploying for real taught the system
 >
 > Everything above works because three defects were found **on the live URL
-> and nowhere else** — not by the 689-test suite, not by the six gate runs,
+> and nowhere else** — not by the 705-test suite, not by the six gate runs,
 > not by the adversarial audit. Each was fixed test-first, after the gate that
 > found it had closed:
 >
@@ -1739,27 +1739,27 @@ reader meets the exception before the exception meets them.
    `convention_derived` list on the record rather than given a provenance
    citation they cannot support — see
    [ADR 015](docs/decisions/015-convention-derived-discriminators.md).
-5. **The vision-OCR adapter has a probed model but no end-to-end run.** It is
-   built, and its 26 tests cover every fidelity and fail-closed rule against
-   recorded response shapes. As of 2026-08-27 it also has a model confirmed
-   reachable on this credential: `zai/glm-5.3-flash` is vision-capable, and a
-   single authorized probe had it transcribe a rendered `RATE 15.3%` /
-   `OVER $250,000` fragment exactly, for 52 input tokens
+5. **The vision-OCR adapter has exactly one live end-to-end run, and it
+   under-extracts.** It is built, and its 26 tests cover every fidelity and
+   fail-closed rule against recorded response shapes. `zai/glm-5.3-flash` is
+   vision-capable on this credential: a single authorized probe transcribed a
+   rendered `RATE 15.3%` / `OVER $250,000` fragment exactly, for 52 input
+   tokens
    ([ADR 010 addendum](docs/decisions/010-vision-ocr-vercel-extractor.md)).
-   That closes the access question and **nothing more**: no full scanned page
-   has been through the adapter, so extraction fidelity on document 05's merged
-   cells, its `to` range separator and its footnote-only rate is still not
-   asserted here.
 
-   **The 3.5-LIVE seed was meant to settle this and did not.** Document 05 was
-   uploaded to production on the vision path and its job was killed at
-   `maxDuration` along with the other four, so the branch reality takes —
-   full vision extraction, or fail-closed into the review queue — **remains
-   unmeasured**. Both remain honest outcomes; neither has been observed. The
-   pre-registered fallback still stands: if extraction disappoints, document 05
-   lands in the review queue with its provenance, which is anti-goal #8 working
-   rather than a regression. Document 05 is extracted today by Tesseract in
-   `docker compose`, or by Textract in the AWS design.
+   **The re-seed then measured the branch on production — once.** Document 05
+   yielded **3 of 19** records on the vision path, and the same run queued
+   **19 review items** naming what it could not place. Which of the two
+   pre-registered outcomes the branch takes is therefore no longer an open
+   question: it is **fail-visible, not silent**, the fallback working rather
+   than a regression, and the number is in [Cost](#cost).
+
+   What remains genuinely unasserted is **fidelity at full quality**: no run
+   on this target has read document 05's merged header cells, its `to` range
+   separator and its footnote-only rate correctly. One under-extracting run
+   measures the failure mode, not the ceiling. Document 05 is extracted
+   completely today by Tesseract in `docker compose`, or by Textract in the
+   AWS design.
 
 6. **The production pipeline carries documents end to end, and one of the
    three questions this item used to list is still open.** The first 3.5-LIVE
@@ -1773,9 +1773,9 @@ reader meets the exception before the exception meets them.
    be enough clock for a five-way concurrent fan-out** — the successful
    re-seed was deliberately sequential, and the one concurrent burst that did
    happen was an operator error whose documents landed correctly but whose
-   timings are not gate-comparable. Closing this needs
-   a promotion, `scripts/mark_stranded_jobs.py` against the stranded rows, and
-   one more seed — in that order, each by a human.
+   timings are not gate-comparable. Closing it would take one deliberate
+   concurrent seed against the live URL, which was not run here; the live
+   dataset ships as delivered.
 
 ### The AWS stack
 

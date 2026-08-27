@@ -24,8 +24,8 @@ is written but undeployed says *that*, which is the more useful sentence.
 | 006 | [Hybrid extraction router](006-hybrid-extraction-router.md) — deterministic first, OCR only when unavoidable | 2 | accepted, implemented |
 | 007 | [CDK over Terraform](007-cdk-over-terraform.md) — offline synth | 4 | accepted, implemented |
 | 008 | [Vercel as the live demo target](008-vercel-as-the-live-target.md) | 3.5 | accepted, implemented; **live in production** |
-| 009 | [Cron-sweep `JobRunner` on request-scoped compute](009-cron-sweep-jobrunner.md) — Queues unavailable on this account | 3.5 | accepted, implemented; **amended 2026-08-27** — lease/visibility timeout, fix tested and not deployed |
-| 010 | [Vision-OCR as the Vercel extractor for scanned input](010-vision-ocr-vercel-extractor.md) | 3.5 | accepted, built, model probed; **no end-to-end run** |
+| 009 | [Cron-sweep `JobRunner` on request-scoped compute](009-cron-sweep-jobrunner.md) — Queues unavailable on this account | 3.5 | accepted, implemented; **amended 2026-08-27** — lease/visibility timeout, deployed and observed reclaiming live |
+| 010 | [Vision-OCR as the Vercel extractor for scanned input](010-vision-ocr-vercel-extractor.md) | 3.5 | accepted, built, model probed; **one live run — 3/19, fail-visible** |
 | 011 | [Blob-in-Postgres (`bytea`) vs Vercel Blob](011-blob-in-postgres-vs-vercel-blob.md) | 3.5 | accepted, implemented |
 | 012 | [Runtime multi-agent semantic layer: mapper + verifier + adjudicator](012-runtime-multi-agent-semantic-layer.md) | 2 | accepted, implemented |
 | 013 | [Tracing without the X-Ray SDK, directly or transitively](013-tracing-without-the-xray-sdk.md) | 5 | accepted, enforced by test |

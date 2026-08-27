@@ -12,15 +12,17 @@
 > **https://auxis-johan-rocuts-projects.vercel.app**, public and serving every
 > `GET` at a warm median of 272 ms.
 >
-> **What the decision did not buy, stated here so this page is not read as a
-> success report.** The API surface works on Vercel; the *pipeline* has not
-> completed a document there. The five-fixture seed of 2026-08-27 was killed
-> at `maxDuration` under a five-way fan-out and persisted zero records — the
-> platform's request-scoped compute meeting a free-tier provider allowance,
-> which is exactly the seam this ADR chose to live on. The repair (a
-> lease/visibility timeout, a re-derived `maxDuration`, a smaller cron batch)
-> is written and tested and **not yet deployed**. See the README's bottleneck
-> section for the measurements.
+> **What the decision cost before it paid, stated here so this page is not
+> read as a success report.** The first five-fixture seed of 2026-08-27 was
+> killed at `maxDuration` under a five-way fan-out and persisted **zero**
+> records — the platform's request-scoped compute meeting a free-tier
+> provider allowance, which is exactly the seam this ADR chose to live on.
+> The repair (a lease/visibility timeout, a re-derived `maxDuration`, a
+> smaller cron batch) was then promoted, and a sequential re-seed landed the
+> **113** records the live URL serves now. The pipeline completes documents on
+> this target; what has still never been demonstrated is 1800 s of clock under
+> a five-way *concurrent* fan-out. See the README's bottleneck section for the
+> measurements.
 
 ## Context
 

@@ -11,9 +11,9 @@ amended 2026-08-27 · **Phase:** 3.5
 > original design was wrong in a way only production could show: it claimed
 > `queued` jobs and nothing else, so a worker the platform killed took its job
 > down with it and the backstop could not see the failure it exists to cover.
-> A lease/visibility timeout fixes it. That fix is written and tested; **it has
-> not been deployed** (promotion is a human action), so the live URL still runs
-> the queued-only sweep.
+> A lease/visibility timeout fixes it. That fix is **deployed and exercised in
+> production**: the reclaim fired live at `17:24:16Z`, taking a job whose worker
+> the platform had killed and running it to a terminal state.
 
 ## Context
 
@@ -102,13 +102,16 @@ than reclaimed forever, because every reclaim spends model credit.
 **No migration was needed.** `jobs` already carried `attempt` and `started_at`;
 the lease is a predicate over columns that were there for this.
 
-**What is not claimed.** The lease has four tests, including one that fails if
-a live worker's job is ever stolen, and it has never run on production. The
-five stranded rows are still `running` on the live URL as of 2026-08-27;
-`scripts/mark_stranded_jobs.py` closes them to `failed` with an error payload
-naming the gate — marking, never deleting, because the rows are the evidence —
-and it has not been run either. Both wait on a promotion, which is a human
-action.
+**What is and is not claimed.** The lease has four tests, including one that
+fails if a live worker's job is ever stolen, and it has now run on production:
+the reclaim fired at `17:24:16Z`, taking a job whose worker the platform had
+killed and running it to a terminal state. The five stranded rows were closed
+first by `scripts/mark_stranded_jobs.py` — to `failed`, with an error payload
+naming the gate, marking and never deleting, because the rows are the evidence
+— and a sequential re-seed then landed the 113 records the live URL serves.
+What is **not** claimed is the concurrent case: 1800 s has never been shown to
+be enough clock for a five-way fan-out, and closing that needs one deliberate
+concurrent seed that was not run.
 
 ## Why `FOR UPDATE SKIP LOCKED` is half the design
 
