@@ -394,6 +394,24 @@ CANONICAL_CONVENTIONS = """\
   mean lower_bound 0, upper_bound 9000. "and over", "or more", "No limit"
   as an upper end means upper_bound null (open-ended). A bracket printed
   "$9,001 – $38,000" has lower_bound 9001: transcribe, never re-derive.
+- Bound SEMANTICS are declared here, and they are the enumerated exception
+  to "transcribe, never re-derive". That rule binds FIGURES: never invent a
+  number and never adjust one to taste. It does not decide what the WORDS
+  printed beside a number mean — this schema decides that, and it decides
+  the two top-bracket forms as follows:
+    * "$X and over", "$X or more", "at least $X" are INCLUSIVE: the bracket
+      contains X, so lower_bound = X exactly. "$643,251 and over" ->
+      lower_bound 643251, upper_bound null.
+    * "Over $X", "More than $X", "Above $X", "In excess of $X" are
+      EXCLUSIVE: the bracket begins ABOVE X, so as an inclusive bound in
+      whole currency it is X + 1. "Over $566,700" -> lower_bound 566701,
+      upper_bound null.
+  The + 1 is not a re-derivation of the figure; it is this schema's
+  inclusive-bounds encoding of an exclusive phrase, exactly as null is its
+  encoding of an open top. Emitting lower_bound X for an "Over $X" row
+  asserts the bracket contains X, which the page denies — and it collides
+  with the row below, whose upper_bound IS X. Convert only the bound the
+  phrase governs; every other figure is transcribed as printed.
 - amount: whole integers unless the source prints cents. Amounts without a
   currency sign are still amounts.
 - currency: the ISO 4217 code of the document's denomination. A United
@@ -562,7 +580,28 @@ commentary attrs; "provenance", "source_table_label" and
 
 extra_attrs is an ARRAY of {"key": ..., "value": ...} objects, not an
 object. An empty set of extra attrs is [] or omitted.
+"""
 
+#: Output discipline is per ROLE, and it is deliberately NOT part of the
+#: shared conventions above.
+#:
+#: The conventions are shared verbatim because they are the part that must
+#: not differ (ADR 012): all three roles must judge by one definition of the
+#: target. The response ENVELOPE is the opposite — each role returns a
+#: different one — and while this paragraph lived inside the conventions,
+#: every role inherited the mapper's. That told the verifier and the
+#: adjudicator to put commentary in "issues": a key only the mapper's schema
+#: has, and one both other schemas forbid under ``additionalProperties:
+#: False``.
+#:
+#: On a gateway that forwards ``output_config`` without enforcing it, the
+#: prompt is the ONLY channel that names the envelope — so this was a live
+#: defect, not a tidiness one. The verifier's envelope key was named nowhere
+#: in its prompt while its wrong key was named twice (ADR 014 §8c).
+#:
+#: The mapper's text below is byte-identical to what it was inside the
+#: conventions, so this split changes the mapper's prompt not at all.
+MAPPER_OUTPUT_DISCIPLINE = """\
 ## Output discipline
 
 Return the JSON object and nothing else: no prose before it, no commentary
@@ -571,7 +610,7 @@ about a value belongs in "issues", which is part of the object. Numbers are
 JSON numbers, never quoted strings.
 """
 
-SYSTEM_PROMPT = _MAPPER_ROLE + CANONICAL_CONVENTIONS
+SYSTEM_PROMPT = _MAPPER_ROLE + CANONICAL_CONVENTIONS + MAPPER_OUTPUT_DISCIPLINE
 
 _USER_INSTRUCTION = (
     "Map the following extracted document to canonical records per the "

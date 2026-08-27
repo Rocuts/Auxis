@@ -658,8 +658,24 @@ Consolidated, and deliberately specific. If something is unproven, it says so.
 
 ### Gates still open
 
-1. **The accuracy gate has been run and failed: 0/128 on the baseline model,
-   and escalating it is budget-gated.** The full table is in
+1. **The accuracy gate stands at 39/128, and every remaining failure is a
+   gap in this repository's own conventions — not a model error.** Three runs
+   ship as evidence: 0/128 baseline (the transport could not deliver a
+   record), 0/128 hardened (128 records arrived under the wrong identity
+   vocabulary), 39/128 final (right identity, under-specified attribute
+   tail). Document 01 scores 32/32; `ordinary_income_bracket` 32/32,
+   `standard_deduction` 5/5. **1,562 fields were compared and 255 differ** —
+   and *none* of the 85 differing records carries a wrong value. Every one is
+   an expected `attrs` key the conventions never name (`rate_unit`,
+   `effective_date`, `imposes_state_sales_tax` on its positive case,
+   `jurisdiction_name`, `superseded_effective`, `employer_match`,
+   `threshold`, `unlimited`, `floor_amount`). The remaining 4 are document
+   05's `Over $X` rows, where the conventions cover the upper-end open forms
+   and not the one lower-bound form whose printed number is exclusive — and
+   the bracket-overlap constraint caught that unaided, with no access to the
+   oracle. The escalation route to an enforcing endpoint is budget-gated and
+   remains **blocked, not waived**, but no escalation trigger fires: the
+   model followed the conventions it was given. The full table is in
    [`docs/dev-log.md`](docs/dev-log.md) and
    [ADR 014 §6](docs/decisions/014-semantic-layer-model-selection.md). Read
    its shape before its headline: `diff` and `extra` are both **0**, so no

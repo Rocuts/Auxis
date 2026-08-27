@@ -233,7 +233,15 @@ RESPONSE_SCHEMA: dict[str, Any] = {
                     "verdict": {"type": "string", "enum": ["confirmed", "disputed"]},
                     "reason": {"anyOf": [{"type": "string"}, {"type": "null"}]},
                 },
-                "required": ["record_index", "verdict", "reason"],
+                # "reason" is deliberately NOT required: absent, null and
+                # blank already mean the same thing to ``_reason_text``, so
+                # requiring it asked the model for something the parser
+                # derives — the one required-but-derivable key this contract
+                # had, and the exact shape the mapper's minimization removed.
+                # record_index and verdict stay: neither is derivable, and
+                # defaulting a verdict would be silent assent, which the port
+                # forbids.
+                "required": ["record_index", "verdict"],
                 "additionalProperties": False,
             },
         }
@@ -314,7 +322,55 @@ values and its citations.
 #: dispute is a disagreement about the document, never a prompt divergence
 #: about the target schema. What stays independent is each role's reading of
 #: the document.
-VERIFIER_SYSTEM_PROMPT = _VERIFIER_ROLE + CANONICAL_CONVENTIONS
+#: The verifier's own envelope, named in prose.
+#:
+#: Document 05 lost verification three times consecutively — through both
+#: bounded retries — to "verification response JSON lacks the verdicts
+#: envelope". Three consecutive failures is not the per-call coin flip the
+#: mapper's prose-after-JSON was; it is the signature of a systematic
+#: prompt/contract mismatch, which is exactly what this was.
+#:
+#: The token "verdicts" appeared NOWHERE in this role's prompt — not in
+#: ``_VERIFIER_ROLE``, not in the user instruction. Every leaf was named
+#: ("record_index", "reason", "confirmed", "disputed") and the container was
+#: not. Meanwhile the shared conventions ended by instructing the model to
+#: put commentary in "issues", a key this schema forbids. Through a gateway
+#: that does not enforce ``output_config``, the prompt is the only channel
+#: carrying the envelope — so the model was told the wrong key and never the
+#: right one.
+#:
+#: This is the mapper's minimization at the altitude that transfers: stop
+#: letting a non-semantic detail the pipeline already holds cost the whole
+#: document. For the mapper that detail was ``source_page`` (18 of document
+#: 05's 19 records); here it is the envelope's name, hard-coded in
+#: ``RESPONSE_SCHEMA`` and never spoken. Nothing is adapted at the parse
+#: layer and nothing is guessed: a body that still misses the envelope is
+#: still a hard failure (ADR 014 §8c).
+VERIFIER_OUTPUT_DISCIPLINE = """\
+## Output discipline
+
+Return the JSON object and nothing else: no prose before it, no commentary
+after it, no explanation of your reasoning. Numbers are JSON numbers, never
+quoted strings.
+
+The object has EXACTLY ONE key, spelled "verdicts", whose value is the array
+of per-record verdicts:
+
+  {"verdicts": [
+     {"record_index": 0, "verdict": "confirmed", "reason": null},
+     {"record_index": 1, "verdict": "disputed",
+      "reason": "cell p1_t0 r2,c1 reads 4.45, not the 4.54 the record claims"}
+  ]}
+
+Not "results", not "verifications", not "issues", and never a bare array at
+the top level: there is no "issues" key in YOUR contract, whatever the
+conventions above say about the mapper's. "verdict" is exactly one of the
+two lowercase tokens "confirmed" or "disputed" — no other spelling, casing,
+or wording is read as a confirmation. "reason" may be omitted or null on a
+confirmed verdict; on a disputed verdict it is required prose.
+"""
+
+VERIFIER_SYSTEM_PROMPT = _VERIFIER_ROLE + CANONICAL_CONVENTIONS + VERIFIER_OUTPUT_DISCIPLINE
 
 _USER_INSTRUCTION = (
     "Verify the mapped records below against the extracted document. Emit "
@@ -385,6 +441,26 @@ def _reconcile(existing: RecordVerdict, proposed: RecordVerdict, notes: list[str
     )
 
 
+def _describe_envelope(payload: object) -> str:
+    """The top-level SHAPE of a non-conforming body — keys and types only.
+
+    Deliberately value-free: this string reaches an exception message, a
+    review-queue reason and a log line, so it must never carry document
+    content (anti-goal #10's discipline, applied to data rather than to
+    secrets). An object reports its key names; anything else reports only
+    its type.
+    """
+    if isinstance(payload, dict):
+        keys = sorted(str(key) for key in payload)
+        shown = ", ".join(keys[:8]) or "no keys"
+        if len(keys) > 8:
+            shown += f", +{len(keys) - 8} more"
+        return f"an object with keys [{shown}]"
+    if isinstance(payload, list):
+        return f"a bare array of {len(payload)} items"
+    return f"a bare {type(payload).__name__}"
+
+
 def parse_verification_payload(
     text: str, *, record_count: int
 ) -> tuple[list[RecordVerdict], list[str]]:
@@ -401,7 +477,16 @@ def parse_verification_payload(
     except json.JSONDecodeError as exc:
         raise VerifierError(f"verification response is not valid JSON: {exc}") from exc
     if not isinstance(payload, dict) or not isinstance(payload.get("verdicts"), list):
-        raise VerifierError("verification response JSON lacks the verdicts envelope")
+        # Name the SHAPE that arrived, never its contents. Document 05 lost
+        # verification to this check three times and left no record of what
+        # the model actually sent, so the remedy had to be inferred; the
+        # next occurrence is a measurement instead. Keys and type names only
+        # — no cell values, no prose, nothing that could carry document data
+        # into a log line.
+        raise VerifierError(
+            "verification response JSON lacks the verdicts envelope "
+            f"(top level was {_describe_envelope(payload)})"
+        )
 
     assigned: dict[int, RecordVerdict] = {}
     notes: list[str] = []

@@ -340,6 +340,75 @@ Two gates now stand in front of an unattended close:
    bracket bound derived by one). Grid coordinates are excluded as addresses
    rather than claims. Fail-closed: anything further away goes to a human.
 
+### 8a. The target-contract boundary, and its second application
+
+§8's ruling — **encoding vocabularies documented in the target schema are
+adoptable; per-record extracted values are not; `src/` never opens the oracle
+at runtime** — resolved the four string fields. The fixture-05 fan-out then
+produced a case testing the same line from the numeric side, and the operator
+ruled it the same way.
+
+Document 05 prints its top bands as `Over $533,400`, `Over $600,050`,
+`Over $300,000`, `Over $566,700`. Document 01 prints its top brackets as
+`$643,251 and over`. `CANONICAL_CONVENTIONS` defined the second form and not
+the first, and closed with *"transcribe, never re-derive"* — so the mapper
+emitted `lower_bound 566700` for `Over $566,700`, which under an
+**inclusive**-bounds schema claims the band contains 566,700, a figure the
+band below already claims as its `upper_bound`.
+
+**The rule adopted.** An exclusive lower-bound phrase (`Over $X`,
+`More than $X`, `Above $X`, `In excess of $X`) stores as `lower_bound = X + 1`
+in whole currency; the inclusive forms (`$X and over`, `$X or more`,
+`at least $X`) store as `lower_bound = X`.
+
+**Why this is inside the boundary, not outside it.** The figure is not in
+dispute: `566,700` is printed on the page and is transcribed unchanged. What
+the rule fixes is the schema's **encoding of an exclusive phrase into an
+inclusive slot** — the same class of act as encoding an open top as
+`upper_bound null`, which these conventions have always declared. `+ 1` is
+not extractable from the page any more than `US-FED` is; it follows from the
+target schema's stated inclusive-bounds convention. So `"transcribe, never
+re-derive"` is narrowed in writing to what it always meant — **it binds
+figures** — and bound *semantics* join the open-top forms as the enumerated
+exception. No oracle value was copied, and none was needed: the constraint
+that exposed the defect is in the DDL, not in the ground truth.
+
+**What this cost, and what caught it.** Four records, all four rejected by
+the `EXCLUDE USING gist` constraint at ingest, all four queued open. Every
+semantic check upstream had passed them — mapper confidence 0.94, the verifier
+unavailable on that document, and the adjudicator endorsing the
+head_of_household record at **0.95 with `citations_valid: true` and a
+mechanically supported citation**, because `Over $566,700` really does contain
+the figure 566700. The citation check validates *figures against cells*; it
+cannot see a wrong *derivation* from a right figure. Full evidence in
+[docs/audit/evidence/05_over_x_bound_semantics.md](../audit/evidence/05_over_x_bound_semantics.md).
+
+**And a latent hole it exposed.** That endorsed record was **absent from the
+fact table** — the constraint had refused it — yet its `verifier_unavailable`
+FLAG row cleared threshold, citations, and mechanical support. It stayed open
+only because gate 1 above default-denies verifier-born rules. Had the flag
+been `confidence_floor` — auto-resolvable, and a rule this same document
+produced — the item would have auto-closed as "verified-correct" over data the
+database had rejected. Eligibility keyed on the queue row's **rule name**; it
+now keys on the record's **presence in the fact table**, which is the property
+that was always meant (gate 3, §8b).
+
+### 8b. Auto-resolve eligibility keys on presence, not on rule name
+
+`_may_auto_resolve` asks the repository whether the record the queue row
+carries is actually in the fact table, and default-denies when it is not, when
+the row carries no record at all (a mapping issue), or when presence cannot be
+determined. The rule-name filter of gate 1 is *retained on top* of it: the two
+gates are independent, and a verifier-born item stays human-only whether or not
+its record persisted.
+
+This closes the class rather than the instance. A REJECT and a FLAG can land on
+the same record — triage runs every rule over every record — so no enumeration
+of *reasons* can be sound. Presence is the property that actually licenses an
+unattended close: closing a row whose record is in the table loses nothing,
+because the row's own record is still there to be re-examined; closing a row
+whose record is absent destroys the only live signal of the loss (anti-goal #8).
+
 ## Consequences
 
 - The model choice is now falsifiable: a rule, two thresholds, and two tables.

@@ -2083,3 +2083,110 @@ A guard that refuses correct work is not conservative, it is broken — it just
 fails in the direction that looks responsible.
 
 `make check`: 629 passed, 1 skipped.
+
+## 2026-08-26 — The final gate: 39/128, and every remaining failure is one spec gap
+
+Third gate run, conventions corrected. **39/128** — up from 0/128 twice — and
+the failure mode changed for the third time, which is the useful part.
+
+### Accuracy
+
+```
+document                                         exp  ok  diff  miss  extra  disagree
+01_federal_income_tax_rate_schedules_TY2026.pdf   32  32     0     0      0         0
+02_standard_deduction_schedule_TY2026.pdf          8   7     1     0      0         0
+03_state_local_sales_tax_rates_2026.pdf           51   0    51     0      0         0
+04_employment_tax_rates_and_thresholds_2026.pdf   18   0    18     0      0         0
+05_capital_gains_preferential_rates_TY2025.pdf    19   0    15     4      4         0
+TOTAL                                            128  39    85     4      4         0
+
+field-level accuracy: 39/128
+fields compared: 1562, differing: 255
+```
+
+**Document 01 is 32/32.** So is `ordinary_income_bracket` (32/32),
+`standard_deduction` (5/5) and `additional_standard_deduction` (2/2). The
+natural keys now match — `miss` and `extra` are 4, not 128 — so the harness
+compared fields for the first time: **1,562 fields compared, 255 differing.**
+Six sevenths of every field this pipeline produces is correct.
+
+### Every remaining failure, named
+
+**85 `diff` records: one cause, entirely.** Not one is a wrong *value*. Every
+single difference is an expected `attrs` key that is **absent**, because
+`CANONICAL_CONVENTIONS` never names it:
+
+| Expected attr | Records | Derivable from |
+|---|---|---|
+| `effective_date: 2026-01-01` | 51 | the document's stated year |
+| `rate_unit: percent` | 51 | *"All rates are expressed as percentages"* |
+| `imposes_state_sales_tax: True` | 46 | the dash convention's **positive** case |
+| `jurisdiction_name: Alabama`, … | 51 | printed in column 0 |
+| `superseded_effective: 2026-01-01` | 15 | *"before January 1, 2026"* |
+| `employer_match: False` | 5 | *"imposed on the employee only"* |
+| `threshold: 200000 / 250000 / 125000` | 9 | printed cells |
+| `unlimited: False` | 2 | the `No limit` convention |
+| `floor_amount: 1400`, `earned_income_addition: 450` | 1 | printed prose |
+
+Note `imposes_state_sales_tax`: the conventions specify emitting `false` for
+the five dashed jurisdictions and say nothing about the other 46, so the
+positive case was never emitted. The rule was written for the exception and
+forgot the norm.
+
+One is a *format* rather than a name: `dependent_deduction_rule.rule` is
+expected as the formula `max(1400, earned_income + 450), capped at basic
+standard deduction`, where the conventions say to store the sentence verbatim.
+
+**4 `miss` + 4 `extra`: the `Over $X` gap**, diagnosed in the fan-out before
+the gate ran. The conventions enumerate only *upper*-end open forms (`and
+over`, `or more`, `No limit`) and then say **"transcribe, never re-derive"**.
+`Over $566,700` as a *lower* bound is the one form where the printed number is
+exclusive and must be incremented, and no rule covers it — so all four of
+document 05's 20% rows came out one too low.
+
+**The pipeline caught that itself, with no oracle.** A 20% band starting at
+566700 shares an endpoint with the 15% band ending at 566700, and triage
+rejected all four as `bracket_overlap`. The bracket-integrity model detecting
+a semantic error unaided is the strongest single result in this project.
+
+### Conformance
+
+```
+role      calls  items  schema_fail  malformed  residue  adapted  transport  http_att  retryable  call_ok  item_ok
+mapper    6      128    0            0          3        0        1          9         4          100.0%   100.0%
+verifier  9      78     6            0          0        0        0          9         0          33.3%    100.0%
+  records reaching triage: 78 independently verified, 50 flagged verifier-unavailable.
+```
+
+The mapper is clean: **128 items, zero malformed, zero adaptations**, three
+fence-framed bodies stripped and reported. The verifier is not:
+`alibaba/qwen-3-235b` failed six of nine calls with a body lacking the verdicts
+envelope — not throttling, `transport 0` — so two documents' records carry
+`verifier_unavailable` rather than a second opinion. Containment did its job;
+the cross-family choice of ADR 012 is buying independence at a real
+conformance cost, and that trade now has a number: **33.3%**.
+
+### Cost
+
+Fifteen calls, **$0.0349**. Three gate runs plus two full fan-outs have cost
+under $0.30 of the $5 monthly allowance.
+
+### What the three tables say together
+
+| | Baseline | Hardened | Final |
+|---|---|---|---|
+| Records delivered | 0 | 128 | 128 |
+| mapper `item_ok` | 27.1% | 100% | 100% |
+| Natural keys matching | 0 | 0 | **124** |
+| Fields compared | 0 | 0 | **1,562** |
+| **Field-level accuracy** | **0/128** | **0/128** | **39/128** |
+
+Each run moved the failure one layer outward: the transport could not deliver
+records; then records arrived under the wrong identity vocabulary; now they
+arrive with the right identity and an under-specified attribute tail. **At no
+point was a mapped value wrong** — the single value error in the whole
+exercise was document 05's `566751`, which the next run did not reproduce.
+
+Gate 2b remains **OPEN** at 39/128. The remaining work is a canonical
+extra-attribute vocabulary and one bracket rule — both spec, both in this
+repository's own conventions, neither a model failure.

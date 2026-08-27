@@ -236,7 +236,30 @@ value. You produce a proposal; someone else applies it.
 
 """
 
-ADJUDICATOR_SYSTEM_PROMPT = _ADJUDICATOR_ROLE + CANONICAL_CONVENTIONS
+#: This role's envelope, for the same reason the verifier now states its
+#: own: while output discipline lived inside the shared conventions, this
+#: prompt ended by telling the adjudicator to put commentary in "issues" —
+#: a key of the MAPPER's schema, which this schema forbids under
+#: ``additionalProperties: False``. The adjudicator has not failed on it (it
+#: names its three keys in prose above, which the verifier never did), but a
+#: standing instruction to emit a forbidden key is the same latent defect
+#: (ADR 014 §8c).
+ADJUDICATOR_OUTPUT_DISCIPLINE = """\
+## Output discipline
+
+Return the JSON object and nothing else: no prose before it, no commentary
+after it, no explanation of your reasoning. Numbers are JSON numbers, never
+quoted strings.
+
+The object has exactly three keys: "resolution", "citations" and
+"confidence", as described at the top of this prompt. There is no "issues"
+key and no "records" key in YOUR contract, whatever the conventions above
+say about the mapper's; emitting one fails the contract outright.
+"""
+
+ADJUDICATOR_SYSTEM_PROMPT = (
+    _ADJUDICATOR_ROLE + CANONICAL_CONVENTIONS + ADJUDICATOR_OUTPUT_DISCIPLINE
+)
 
 _DOCUMENT_HEADER = "## Extracted document\n"
 
