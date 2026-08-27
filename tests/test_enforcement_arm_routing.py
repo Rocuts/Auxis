@@ -1,9 +1,17 @@
-"""The three-arm routing topology, pinned so a naive escalation cannot ship.
+"""Per-role routing, pinned so a two-endpoint topology cannot ship broken.
 
-ADR 014 §8i. The enforcement arm puts the mapper and adjudicator on the DIRECT
-Anthropic route (where ``output_config`` is enforced server-side) and leaves the
-verifier on the AI Gateway running a different model family — ADR 012's
-conformity mitigation, which is the whole reason the verifier exists.
+ADR 014 §8i, scoped by §8j. **The arm actually running today needs none of
+this**: the operator overrode the venue, so mapper, verifier and adjudicator
+all speak to the AI Gateway on one credential (``TestGatewayArmAsShipped``
+below pins that). What the rest of this file pins is the *mechanism a
+direct-Anthropic or Bedrock arm would use* — kept as armor because the hazard
+it demonstrates is real for any topology that splits roles across two
+endpoints, and because proving it costs milliseconds.
+
+In that split topology the mapper and adjudicator sit on the DIRECT Anthropic
+route while the verifier stays on the AI Gateway running a different model
+family — ADR 012's conformity mitigation, which is the whole reason the
+verifier exists.
 
 Every role's config resolves through the same fallback chain::
 
@@ -68,7 +76,75 @@ def _enforcement_arm_env() -> dict[str, str]:
     }
 
 
+def _gateway_arm_env() -> dict[str, str]:
+    """The topology as shipped (ADR 014 §8j): one endpoint, one credential."""
+    return {
+        "SCHEMA_MAPPER_API_KEY": "vck_placeholder",
+        "SCHEMA_MAPPER_BASE_URL": GATEWAY,
+        "SCHEMA_MAPPER_MODEL": "anthropic/claude-haiku-4.5",
+        "SCHEMA_MAPPER_USD_PER_MTOK_IN": "1",
+        "SCHEMA_MAPPER_USD_PER_MTOK_OUT": "5",
+        "RECORD_VERIFIER_MODEL": GATEWAY_MODEL,
+        "RECORD_VERIFIER_USD_PER_MTOK_IN": "0.22",
+        "RECORD_VERIFIER_USD_PER_MTOK_OUT": "0.88",
+    }
+
+
+class TestGatewayArmAsShipped:
+    """The escalated arm the operator actually funded — no split, no second key."""
+
+    def test_all_three_roles_share_one_endpoint(self) -> None:
+        env = _gateway_arm_env()
+        routes = {
+            MapperConfig.from_env(env).base_url,
+            VerifierConfig.from_env(env).base_url,
+            AdjudicatorConfig.from_env(env).base_url,
+        }
+        assert routes == {GATEWAY}, "one venue; §8i's cross-endpoint hazard cannot arise"
+
+    def test_all_three_roles_share_one_credential(self) -> None:
+        env = _gateway_arm_env()
+        keys = {
+            MapperConfig.from_env(env).api_key,
+            VerifierConfig.from_env(env).api_key,
+            AdjudicatorConfig.from_env(env).api_key,
+        }
+        assert len(keys) == 1, "no secret rotation is the point of the override"
+
+    def test_cross_family_mitigation_survives_the_venue_override(self) -> None:
+        """The verifier must still be a different family from the mapper."""
+        env = _gateway_arm_env()
+        mapper = MapperConfig.from_env(env)
+        verifier = VerifierConfig.from_env(env)
+        assert mapper.model.split("/")[0] == "anthropic"
+        assert verifier.model.split("/")[0] == "alibaba"
+
+    def test_namespaced_haiku_still_resolves_anthropic_cache_ratios(self) -> None:
+        """The gateway id carries a provider namespace; the ratios must follow
+        the provider, not the venue."""
+        config = MapperConfig.from_env(_gateway_arm_env())
+        assert config.cache_read_factor == Decimal("0.1")
+        assert config.cache_write_factor == Decimal("1.25")
+
+    def test_adjudicator_inherits_the_escalated_model_and_its_prices(self) -> None:
+        env = _gateway_arm_env()
+        mapper = MapperConfig.from_env(env)
+        adjudicator = AdjudicatorConfig.from_env(env)
+        assert adjudicator.model == mapper.model == "anthropic/claude-haiku-4.5"
+        assert adjudicator.usd_per_mtok_in == mapper.usd_per_mtok_in == Decimal("1")
+        assert adjudicator.usd_per_mtok_out == mapper.usd_per_mtok_out == Decimal("5")
+
+    def test_verifier_keeps_its_own_prices_because_it_runs_another_model(self) -> None:
+        """A role pointed elsewhere must never be billed at the mapper's rate."""
+        config = VerifierConfig.from_env(_gateway_arm_env())
+        assert config.usd_per_mtok_in == Decimal("0.22")
+        assert config.usd_per_mtok_out == Decimal("0.88")
+        assert config.cache_read_factor == Decimal("1"), "qwen publishes no cache discount"
+
+
 class TestEnforcementArmTopology:
+    """The DIRECT-route arm's wiring: proven, pinned, and not in use today."""
+
     def test_mapper_is_on_the_direct_route(self) -> None:
         config = MapperConfig.from_env(_enforcement_arm_env())
         assert config.base_url is None, "unset base_url is how 'direct' is expressed"

@@ -1005,6 +1005,109 @@ config and hope, the sequence is pre-registered:
 - No further runs either way, on either arm.
 
 
+### 8j. Venue overridden by the operator — the escalated arm runs on the gateway
+
+**Status:** operator decision, 2026-08-27, overriding §5 and the wiring of §8i.
+The escalated arm runs `anthropic/claude-haiku-4.5` **through the AI Gateway**,
+on purchased credits, **knowingly accepting the documented permanent end of the
+recurring free allowance.**
+
+#### What §5 argued, and what the operator traded
+
+§5 ruled escalation must go direct, never through the gateway, on three
+grounds. Two of them are now spent or answered:
+
+| §5's argument | Status under this override |
+|---|---|
+| "A gateway purchase is irreversible in the wrong direction" — the first purchase permanently ends the recurring $5/30-day allowance | **Accepted as the price.** The operator is buying the credits with this consequence in front of them. It is a decision, not an oversight, and recording it that way is the point of having written §5 down. |
+| "The price is the same" — the gateway applies no markup | **Confirmed live**, not assumed: §8i read `anthropic/claude-haiku-4.5` from the catalogue at `$1.00` / `$5.00` per Mtok with cache read `0.1×` and write `1.25×` — Anthropic's own published ratios. Price parity means venue costs nothing on this axis. |
+| "The direct API enforces structured outputs, which retires this entire failure class" | **This is the live question, and the override converts it from an assumption into a test.** See below. |
+
+What the override buys, stated plainly because it is the operator's reasoning
+and not a rationalisation added afterwards: **single-vendor billing and zero
+secret rotation.** One credential, one endpoint, one invoice, and no `sk-ant`
+key to mint, store, scope, rotate, or leak. Against the allowance, that is a
+real trade rather than a free one.
+
+#### The enforcement property moves from assumed to empirically tested
+
+§5's third argument was never measured. It was inferred from the fact that the
+gateway forwards `output_config` without enforcing it **for non-Anthropic
+models** — which is exactly what the first six runs ran under, and exactly what
+made `required` a claim rather than a guarantee (§8d, §8e).
+
+But `anthropic/claude-haiku-4.5` is not a non-Anthropic model. Whether the
+gateway enforces `output_config` when the upstream provider *is* Anthropic is
+an open empirical question this project has never tested, and the override
+forces it to be tested rather than assumed in either direction.
+
+`scripts/probe_transport.py` does it, reusing the methodology that first
+exposed GLM's non-enforcement: a toy schema whose `required` list names a key
+the natural answer omits, and the question whose natural answer omits it. GLM
+returned `{"answer": "four"}` and dropped the required `confidence`.
+
+**The probe is deliberately asymmetric, and the script says so in its own
+output.** A missing required key **falsifies** enforcement conclusively. A
+compliant response does *not* prove enforcement — it is equally what a
+well-behaved model produces unprompted. So:
+
+> **The arm's label follows the evidence.** If the probe falsifies enforcement,
+> the arm is reported as *"frontier-family arm on identical unenforced
+> transport"* — which is still a clean single-variable experiment against the
+> flash arm, just a different variable (model family, not transport
+> guarantee). If the probe is consistent with enforcement, the README states
+> that and states its limit, rather than upgrading "consistent with" into
+> "demonstrated".
+
+Naming both outcomes before the probe runs is what stops the result being
+narrated to fit whichever label sounds better afterwards.
+
+#### Wiring — the two-key dance is cancelled
+
+One endpoint and one credential, so §8i's cross-endpoint hazard cannot arise:
+
+| Variable | State |
+|---|---|
+| `SCHEMA_MAPPER_API_KEY` | unchanged — the gateway key |
+| `SCHEMA_MAPPER_BASE_URL` | unchanged — the gateway |
+| `SCHEMA_MAPPER_MODEL` | **changed**, the only edit: `anthropic/claude-haiku-4.5` |
+| `SCHEMA_MAPPER_USD_PER_MTOK_IN` / `_OUT` | **changed** to `1` / `5`, the catalogue's rates for that id |
+| `RECORD_VERIFIER_*` | unchanged — `alibaba/qwen-3-235b`, its own prices; **cross-family mitigation survives** (ADR 012) |
+| `ADJUDICATOR_*` | unset — inherits the mapper, which is the intent |
+| `RECORD_VERIFIER_API_KEY` / `_BASE_URL` | **not needed**, and deliberately not set |
+
+Cache multipliers resolve from the id with no extra environment: the
+`anthropic/` namespace selects Anthropic's `0.1×` / `1.25×`, while the
+verifier's `alibaba/` id publishes no cache price and therefore bills cached
+tokens at the full input rate rather than borrowing another vendor's discount.
+
+**The per-role routing capability and `tests/test_enforcement_arm_routing.py`
+remain as shipped armor**, now documented for what they are: the mechanism a
+**direct-Anthropic or Bedrock arm would use**, proven and pinned, unused by
+this arm. The hazard that test demonstrates — a verifier silently inheriting
+the mapper's endpoint and posting `alibaba/qwen-3-235b` to `api.anthropic.com`
+— is real for any two-endpoint topology, and the armor costs nothing to keep.
+
+#### Ledger note
+
+**Post-purchase there is no free allowance.** Every role's tokens bill
+purchased credits, including the verifier's, which previously rode the free
+tier. Per-run cost accounting is unchanged in mechanism — the adapters read
+usage off each response — but the baseline it is measured against is now
+"credits spent" rather than "allowance consumed", and the cost table should be
+read that way.
+
+#### Pre-registration, restated for this venue
+
+Unchanged from §8i except the endpoint: exclusive conditions, isolation
+sentinel armed, **zero edits in flight, ONE run, whatever lands ships.**
+128/128 makes this configuration the production default with the flash arm
+recorded beside it and its measured variance; short of it ships truthfully
+with every failing record named. **Any miss that is a wrong VALUE rather than
+an absent key would be the first in seven runs and gets its own named
+analysis.** No further runs on either arm.
+
+
 ## Consequences
 
 - The model choice is now falsifiable: a rule, two thresholds, and two tables.
