@@ -9,6 +9,7 @@ entry, never dropped.
 
 from __future__ import annotations
 
+import json
 from collections.abc import Mapping, Sequence
 from decimal import Decimal
 from typing import Any
@@ -484,6 +485,21 @@ class TestAdjudicatorPass:
 # ---------------------------------------------------------------------------
 
 
+def _natural_key(record: CanonicalRecord) -> tuple[Any, ...]:
+    """The ``records_natural_key`` columns, in the constraint's order."""
+    return (
+        record.jurisdiction,
+        str(record.record_type),
+        record.attribute_key,
+        record.tax_year,
+        None if record.filing_status is None else str(record.filing_status),
+        record.taxpayer_class,
+        str(record.lifecycle_status),
+        record.lower_bound,
+        record.upper_bound,
+    )
+
+
 class _MemoryRepository:
     """RecordRepository fake, faithful to the port for the adjudication path:
     resolve/propose raise ValueError on a not-open item, exactly like the
@@ -495,6 +511,13 @@ class _MemoryRepository:
         self.proposals: dict[UUID, dict[str, Any]] = {}
         self.resolutions: dict[UUID, tuple[dict[str, Any], str]] = {}
         self.fail_resolves: bool = False
+        #: The fact table, keyed like ``records_natural_key``. ``ingest``
+        #: fills it, so ``record_present`` answers from what was actually
+        #: accepted rather than from what was offered.
+        self.stored: set[tuple[Any, ...]] = set()
+        #: Natural keys ``ingest`` must refuse, standing in for the
+        #: exclusion constraint and the cross-document natural key.
+        self.refuse: set[tuple[Any, ...]] = set()
 
     def register_document(
         self,
@@ -510,9 +533,21 @@ class _MemoryRepository:
         return DocumentHandle(id=self.document_id, created=True)
 
     def ingest(self, document_id: UUID, records: Sequence[CanonicalRecord]) -> IngestOutcome:
+        persisted = 0
+        refused = 0
+        for record in records:
+            key = _natural_key(record)
+            if key in self.refuse:
+                refused += 1
+                continue
+            self.stored.add(key)
+            persisted += 1
         return IngestOutcome(
-            persisted=len(records), cross_document_conflicts=0, overlap_rejections=0
+            persisted=persisted, cross_document_conflicts=0, overlap_rejections=refused
         )
+
+    def record_present(self, document_id: UUID, record: CanonicalRecord) -> bool:
+        return _natural_key(record) in self.stored
 
     def queue_review(self, document_id: UUID, entries: Sequence[Mapping[str, Any]]) -> int:
         for entry in entries:
@@ -635,13 +670,16 @@ class TestAdjudicatorContainment:
         dispositions = _run_with(
             repository, _ConfidentAdjudicator(), self._mapping_with_reject_and_flags()
         )
-        # Every FLAG-born item auto-resolved; the REJECT-born item stayed
-        # open with the proposal stored — its open row is the lost record's
-        # only trace, whatever the adjudicator's confidence.
+        # TWO items stay open, not one, and the second is the whole point:
+        # index 2 collects the bracket_overlap REJECT *and* a bracket_gap
+        # FLAG, so it queues one row of each while the record itself reaches
+        # no table. Eligibility keyed on the reason prefix auto-closed that
+        # FLAG row — this assertion used to encode exactly that defect.
+        # Keyed on presence, both of index 2's rows stay with a human.
         assert sorted(dispositions) == [
             "auto_resolved",
             "auto_resolved",
-            "auto_resolved",
+            "proposal_stored",
             "proposal_stored",
         ]
         overlap_item = next(i for i in repository.items if i.reason.startswith("bracket_overlap"))
@@ -650,6 +688,110 @@ class TestAdjudicatorContainment:
         floor_item = next(i for i in repository.items if i.reason.startswith("confidence_floor"))
         assert repository.status[floor_item.id] == "resolved"
         assert repository.resolutions[floor_item.id][1] == "adjudicator:test-model"
+
+    def test_confidence_floor_row_of_a_rejected_record_never_auto_resolves(self) -> None:
+        """The exact reachable path the reason-prefix gate could not see.
+
+        One record collects BOTH findings: ``confidence_floor`` (a FLAG, and
+        an auto-resolvable rule) and ``bracket_overlap`` (a REJECT). Triage
+        refuses the record, so nothing reaches the fact table — yet it
+        queues one row under each finding, and the confidence_floor row's
+        rule name is on the eligible list. Keyed on the rule name, that row
+        auto-closed a record the database never held; keyed on presence, it
+        cannot.
+
+        This is document 05's shape. There the FLAG happened to be
+        ``verifier_unavailable``, which gate 1 default-denies for unrelated
+        reasons — the adjudicator had already endorsed the absent record at
+        0.95 with valid, mechanically supported citations, so only the rule
+        name stood between it and an unattended close (ADR 014 §8a).
+        """
+        repository = _MemoryRepository()
+        mapping = MappingResult(
+            records=[
+                _record(0, 9000),
+                _record(500, 8000, confidence=Decimal("0.5")),
+            ],
+            issues=[],
+        )
+        dispositions = _run_with(repository, _ConfidentAdjudicator(), mapping)
+
+        floor_item = next(i for i in repository.items if i.reason.startswith("confidence_floor"))
+        overlap_item = next(i for i in repository.items if i.reason.startswith("bracket_overlap"))
+        # Both rows stand for the SAME record, and that record is absent.
+        # (If the two findings ever landed on different records this test
+        # would silently stop testing the path it names.)
+        for item in (floor_item, overlap_item):
+            assert item.raw_value is not None
+            assert json.loads(item.raw_value)["lower_bound"] == 500
+        assert repository.record_present(repository.document_id, _record(500, 8000)) is False
+        assert repository.status[floor_item.id] == "open"
+        assert repository.status[overlap_item.id] == "open"
+        # The adjudicator still did its work on both — the proposal is
+        # stored for the human, which is the point: nothing is dropped,
+        # nothing is closed (anti-goal #8).
+        assert floor_item.id in repository.proposals
+        assert overlap_item.id in repository.proposals
+        assert "auto_resolved" not in dispositions
+
+    def test_flag_only_record_refused_at_ingest_never_auto_resolves(self) -> None:
+        """The second reachable path: triage said yes, the DATABASE said no.
+
+        ``triage.persistable`` is a proposal, not an outcome. A FLAG-only
+        record still meets the exclusion constraint and the natural key at
+        ingest and can be refused there — which is what happened to document
+        05's four "Over $X" brackets. Its FLAG row then describes a record
+        the fact table does not hold, and no inspection of the row's reason
+        could ever reveal that.
+        """
+        repository = _MemoryRepository()
+        record = _record(0, 9000, confidence=Decimal("0.5"))
+        repository.refuse.add(_natural_key(record))  # the constraint refuses it
+        dispositions = _run_with(
+            repository, _ConfidentAdjudicator(), MappingResult(records=[record], issues=[])
+        )
+
+        (floor_item,) = repository.items
+        assert floor_item.reason.startswith("confidence_floor")
+        assert repository.record_present(repository.document_id, record) is False
+        assert dispositions == ["proposal_stored"]
+        assert repository.status[floor_item.id] == "open"
+
+    def test_present_record_still_auto_resolves(self) -> None:
+        """The gate must not be a blanket refusal: the SAME finding on a
+        record the fact table accepted still closes. A guard that refuses
+        correct work is not conservative, it is broken."""
+        repository = _MemoryRepository()
+        record = _record(0, 9000, confidence=Decimal("0.5"))
+        dispositions = _run_with(
+            repository, _ConfidentAdjudicator(), MappingResult(records=[record], issues=[])
+        )
+        (floor_item,) = repository.items
+        assert repository.record_present(repository.document_id, record) is True
+        assert dispositions == ["auto_resolved"]
+        assert repository.status[floor_item.id] == "resolved"
+
+    def test_mapping_issue_row_carries_no_record_and_is_denied(self) -> None:
+        """A ``"mapping: ..."`` row's raw_value is the offending CELL, not a
+        record. There is nothing to look up, so there is nothing to close —
+        default-deny rather than an exception."""
+        from tax_tables.pipeline import adjudicate_open_items
+
+        repository = _MemoryRepository()
+        handle = repository.register_document(sha256="cd" * 32, filename="x.pdf", byte_size=1)
+        repository.queue_review(
+            handle.id,
+            [{"reason": "mapping: unreadable cell", "source_page": 1, "raw_value": "12,3-4"}],
+        )
+        outcomes = adjudicate_open_items(
+            repository,
+            _ConfidentAdjudicator(),
+            handle.id,
+            _stamped_scan_extracted(),
+            Decimal("0.9"),
+        )
+        assert [o.disposition for o in outcomes] == ["proposal_stored"]
+        assert repository.status[repository.items[0].id] == "open"
 
     def test_unknown_reason_is_denied_by_default(self) -> None:
         repository = _MemoryRepository()
@@ -681,8 +823,8 @@ class TestAdjudicatorContainment:
         # discard a result whose records are already committed).
         assert sorted(dispositions) == [
             "auto_resolved",
-            "auto_resolved",
             "error",
+            "proposal_stored",
             "proposal_stored",
         ]
         floor_item = next(i for i in repository.items if i.reason.startswith("confidence_floor"))
@@ -694,9 +836,10 @@ class TestAdjudicatorContainment:
         dispositions = _run_with(
             repository, _ConfidentAdjudicator(), self._mapping_with_reject_and_flags()
         )
-        # The three eligible items' resolves race and are reported as
-        # errors; the REJECT item's proposal write still happens.
-        assert sorted(dispositions) == ["error", "error", "error", "proposal_stored"]
+        # Only the two PRESENT records' items reach a resolve and race;
+        # both of index 2's rows (absent record) take the proposal path,
+        # which does not fail.
+        assert sorted(dispositions) == ["error", "error", "proposal_stored", "proposal_stored"]
 
     def test_second_pass_never_re_pays_for_proposed_items(self) -> None:
         """Re-ingesting a document re-adjudicates only items with no stored

@@ -85,6 +85,29 @@ INSERT INTO review_queue (document_id, source_page, table_id, raw_value, reason)
 VALUES (%(document_id)s, %(source_page)s, %(table_id)s, %(raw_value)s, %(reason)s)
 """
 
+#: Presence of one record under one document, on the records_natural_key
+#: columns. IS NOT DISTINCT FROM mirrors the constraint's NULLS NOT
+#: DISTINCT: plain "=" would make every NULL discriminator un-findable, so a
+#: scalar record would read as absent and its queue row would never close.
+#: The bracket is rebuilt exactly as _INSERT_RECORD builds it, inclusive on
+#: both ends, so an open top (upper NULL) matches an open top.
+_SELECT_RECORD_PRESENT = """
+SELECT 1 FROM records
+WHERE document_id = %(document_id)s
+  AND jurisdiction = %(jurisdiction)s
+  AND record_type = %(record_type)s
+  AND attribute_key IS NOT DISTINCT FROM %(attribute_key)s
+  AND tax_year IS NOT DISTINCT FROM %(tax_year)s
+  AND filing_status IS NOT DISTINCT FROM %(filing_status)s
+  AND taxpayer_class IS NOT DISTINCT FROM %(taxpayer_class)s
+  AND lifecycle_status = %(lifecycle_status)s
+  AND bracket IS NOT DISTINCT FROM
+      CASE WHEN %(lower_bound)s::bigint IS NULL THEN NULL
+           ELSE int8range(%(lower_bound)s::bigint, %(upper_bound)s::bigint, '[]')
+      END
+LIMIT 1
+"""
+
 _INSERT_REVIEW_ENTRY = """
 INSERT INTO review_queue
     (document_id, source_page, table_id, row_index, col_index, raw_value, reason)
@@ -189,6 +212,14 @@ class PostgresRecordRepository:
             cross_document_conflicts=conflicts,
             overlap_rejections=overlaps,
         )
+
+    def record_present(self, document_id: UUID, record: CanonicalRecord) -> bool:
+        """Whether this record reached the fact table under this document."""
+        with self._conn.transaction():
+            row = self._conn.execute(
+                _SELECT_RECORD_PRESENT, _record_params(document_id, record)
+            ).fetchone()
+        return row is not None
 
     def queue_review(self, document_id: UUID, entries: Sequence[Mapping[str, Any]]) -> int:
         """Insert pipeline-produced review entries (mapping issues, triage

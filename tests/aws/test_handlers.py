@@ -290,12 +290,30 @@ class TestAdjudicateQueue:
                     cost=MappingCost(engine="bedrock-test", api_calls=1),
                 )
 
+        from tests.mapping.test_pipeline import _record
+
+        # Two records, only ONE of which reaches the fact table — the queue
+        # rows must carry the records they stand for, exactly as
+        # review_queue_entry writes them, or eligibility has nothing to look
+        # up. The absent one is what proves the AWS path inherits the
+        # presence gate rather than re-deriving it from the reason prefix.
+        present = _record(0, 9000, confidence=Decimal("0.5"))
+        absent = _record(500, 8000)
         with repository:
+            repository.ingest(document_id, [present])
             repository.queue_review(
                 document_id,
                 [
-                    {"reason": "confidence_floor: 0.5 below 0.7", "source_page": 1},
-                    {"reason": "bracket_overlap: [500,8000] overlaps", "source_page": 1},
+                    {
+                        "reason": "confidence_floor: 0.5 below 0.7",
+                        "source_page": 1,
+                        "raw_value": present.model_dump_json(),
+                    },
+                    {
+                        "reason": "bracket_overlap: [500,8000] overlaps",
+                        "source_page": 1,
+                        "raw_value": absent.model_dump_json(),
+                    },
                 ],
             )
             result = handlers.adjudicate_queue(

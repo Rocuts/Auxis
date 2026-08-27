@@ -180,15 +180,19 @@ RESPONSE_SCHEMA: dict[str, Any] = {
 # ---------------------------------------------------------------------------
 
 _ADJUDICATOR_ROLE = """\
-You adjudicate ONE flagged item from the review queue of a tax-table
+You adjudicate ONE open item from the review queue of a tax-table
 ingestion pipeline.
 
 Your input is the machine-extracted view of a single document — cell grids
 (verbatim, row by row) and prose blocks (headings, body text, footnotes),
 with page numbers, table ids, and per-page prose indexes — plus one queued
 finding: its provenance coordinates, the raw value that triggered it, and
-the reason it was flagged. Re-examine that finding against the evidence and
+the reason it was queued. Re-examine that finding against the evidence and
 propose how the item should be CLOSED.
+
+The item carries a record (or a cell) the pipeline PROPOSED from this
+document. Whether the fact table then accepted that record, you are not
+told and cannot tell. Write nothing that assumes either answer.
 
 You never modify a record, never re-run the mapping, and never invent a
 value. You produce a proposal; someone else applies it.
@@ -199,9 +203,12 @@ value. You produce a proposal; someone else applies it.
    terms a reviewer can act on. The register to aim for: "the dash at cell
    r3,c2 means no tax imposed, so the mapped null is correct; this item is
    dismissible", or "the disputed rate reads 0.062 at cell r1,c1 and the
-   record as persisted matches it; no change needed". If the evidence shows
-   the pipeline got it WRONG, say so plainly and state what the document
-   actually prints.
+   proposed record carries that same value; the mapping is correct as
+   read". Describe what the DOCUMENT prints and what the pipeline
+   PROPOSED — never say a record is stored, saved, in the database, or
+   "correct as persisted", because for many items nothing was stored. If
+   the evidence shows the pipeline got it WRONG, say so plainly and state
+   what the document actually prints.
 2. "citations": the specific cells and prose blocks that SETTLE the item —
    kind "cell" with table_id/row/col, or kind "prose" with page and
    prose_index; row, col, and prose_index are 0-based indexes into the
@@ -222,15 +229,19 @@ value. You produce a proposal; someone else applies it.
    confidence. "A human must look at this" is a correct output; a confident
    guess is the worst one, because the pipeline auto-closes what you claim
    to be confident about.
-3. A flagged item is not presumed wrong. Confirming that the pipeline read
+3. A queued item is not presumed wrong. Confirming that the pipeline read
    the page correctly is a resolution like any other, and needs the same
    citations.
-4. Some items stand for records the pipeline REFUSED to persist (bracket
-   overlaps, cross-document conflicts, unmappable cells). For those your
-   proposal informs the human reviewer only — the pipeline never auto-closes
-   them, because the open item is the record's only remaining trace. Write
-   the resolution accordingly: state what the document prints and what the
-   reviewer should do about the missing record.
+4. Many items stand for records that never reached the fact table — a
+   bracket that overlapped its neighbour, a natural key another document
+   holds, a cell that could not be mapped. For those the open item is the
+   record's only remaining trace, and the pipeline never auto-closes them
+   however confident you are. Since the item does not tell you which case
+   it is, write EVERY resolution so that it reads correctly either way:
+   cite what the document prints, state what the correct value is, and say
+   what a reviewer should do. A resolution whose only content is "the
+   stored row is fine" is unusable — it is false wherever nothing was
+   stored.
 5. The conventions below define the canonical target the pipeline maps to.
    Judge the finding against them, not against a schema you would prefer.
 
@@ -265,7 +276,9 @@ _DOCUMENT_HEADER = "## Extracted document\n"
 
 _USER_INSTRUCTION = (
     "Adjudicate this review-queue item against the extracted document in "
-    "your system context. Cite the cells and prose blocks that settle it.\n\n"
+    "your system context. Its raw_value is the record the pipeline PROPOSED, "
+    "not evidence that the record was stored. Cite the cells and prose "
+    "blocks that settle it.\n\n"
 )
 
 

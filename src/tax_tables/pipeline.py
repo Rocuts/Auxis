@@ -21,12 +21,14 @@ The semantic-layer amendment (ADR 012) adds two bounded roles:
   verifier never corrects anything, and a mapper/verifier disagreement is
   never settled by the models talking.
 - The adjudicator runs once per open queue item, after persistence. At or
-  above ``auto_resolve_threshold`` (with valid citations) the item resolves
-  with its audit trail — but only when the item's record actually persisted
-  (a FLAG finding): a queue row born from a triage REJECT, an ingest-side
-  refusal, or a mapping issue is the only live signal that data is absent
-  from the fact table, and the adjudicator cannot restore a record, so such
-  items only ever receive a stored proposal. A failed adjudication — the
+  above ``auto_resolve_threshold`` (with valid, mechanically supported
+  citations) the item resolves with its audit trail — but only when the
+  record the item carries is actually IN the fact table, asked of the fact
+  table per item rather than inferred from the item's reason. A queue row
+  standing for data the database refused — a triage REJECT, an ingest-side
+  refusal, a mapping issue — is the only live signal of that absence, and
+  the adjudicator cannot restore a record, so such items only ever receive
+  a stored proposal. A failed adjudication — the
   model call, or the write racing a human — leaves its item open and is
   reported, never raised past the pass. Without a repository (dry run)
   there is no queue, so the adjudicator is not consulted.
@@ -40,6 +42,9 @@ from decimal import Decimal
 from typing import Literal, Protocol
 from uuid import UUID
 
+from pydantic import ValidationError
+
+from tax_tables.domain.records import CanonicalRecord
 from tax_tables.extraction.model import ExtractedDocument, ExtractionMethod
 from tax_tables.observability import conformance
 from tax_tables.ports.adjudicator import (
@@ -76,10 +81,12 @@ class DocumentExtractor(Protocol):
 class AdjudicationOutcome:
     """What the adjudicator pass did with one queued item.
 
-    ``auto_resolved``: threshold met, citations valid, and the item's record
-    persisted — resolved with its audit trail. ``proposal_stored``: below
-    threshold, citations invalid, or the item stands for absent data — the
-    proposal awaits a human, item still open. ``error``: the adjudication
+    ``auto_resolved``: threshold met, citations valid, the resolution's
+    figures mechanically supported by those citations, and the item's record
+    confirmed present in the fact table — resolved with its audit trail.
+    ``proposal_stored``: any one of those unmet, including an item whose
+    record the database never accepted — the proposal awaits a human, item
+    still open. ``error``: the adjudication
     call failed, or the write found the item no longer open (a human or a
     concurrent run got there first); this pass left the item untouched.
     """
@@ -169,21 +176,55 @@ def unverified_findings(records: Sequence[object], reason: str) -> list[Finding]
     ]
 
 
-def _may_auto_resolve(item: ReviewItem) -> bool:
-    """Only an item whose record actually persisted may auto-close.
+def _may_auto_resolve(item: ReviewItem, repository: RecordRepository) -> bool:
+    """Only an item whose record is IN THE FACT TABLE may auto-close.
 
-    FLAG findings queue under ``"<rule>: <detail>"`` with the record in the
-    fact table as ``needs_review`` — closing such an item loses nothing.
-    Every other reason (the ``bracket_overlap`` REJECT in either spelling,
-    ``cross_document_natural_key_conflict``, ``"mapping: ..."`` issues, or
-    anything a future writer invents) stands for data ABSENT from the fact
-    table, and the open row is the only live signal of that absence. The
-    adjudicator cannot restore a record, so those items never auto-resolve;
-    the proposal is stored for the human instead. Default-deny: an
-    unrecognized reason is treated as absent data.
+    Two independent gates, both of which must pass.
+
+    **Presence.** Closing a queue row whose record is in the table loses
+    nothing: the record is still there to be re-examined. Closing a row
+    whose record is ABSENT destroys the only live signal of the loss, and
+    the adjudicator cannot restore a record (anti-goal #8). So the question
+    is asked of the fact table itself, per item, via
+    ``RecordRepository.record_present``.
+
+    It used to be inferred from the reason prefix — FLAG rules eligible,
+    everything else denied — and that proxy was false in two reachable
+    ways, both of which the fixture-05 run exhibited:
+
+    1. **A record can collect a REJECT and a FLAG at once.** Triage runs
+       every rule over every record, so a bracket-overlap REJECT and a
+       ``confidence_floor`` FLAG on one record queue one row each. Triage
+       persisted nothing, yet the FLAG row passed the old gate. No
+       enumeration of *reasons* can be sound, because the reasons are
+       per-finding and persistence is per-record.
+    2. **Triage's ``persistable`` is a proposal, not an outcome.** A
+       FLAG-only record still meets the exclusion constraint and the
+       natural key at ``ingest``, and can be refused there — which is
+       precisely what happened to document 05's four "Over $X" brackets.
+       Their FLAG rows described a record the database had rejected.
+
+    **Rule name.** ADR 014 §8's gate 1 is retained on top: verifier-born
+    items stay human-only whether or not their record persisted, because a
+    third model agreeing with the second is correlation, not corroboration.
+
+    Default-deny throughout: an unrecognized reason, a row carrying no
+    record at all (a ``"mapping: ..."`` issue, whose ``raw_value`` is a cell
+    string), or a ``raw_value`` that will not parse are all treated as
+    absent data.
     """
     rule, sep, _ = item.reason.partition(": ")
-    return bool(sep) and rule in AUTO_RESOLVABLE_RULES
+    if not sep or rule not in AUTO_RESOLVABLE_RULES:
+        return False
+    if item.raw_value is None:
+        return False
+    try:
+        record = CanonicalRecord.model_validate_json(item.raw_value)
+    except ValidationError:
+        # A mapping issue's raw_value is the offending CELL, not a record.
+        # Nothing to look up, so nothing to close.
+        return False
+    return repository.record_present(item.document_id, record)
 
 
 def adjudicate_open_items(
@@ -219,7 +260,7 @@ def adjudicate_open_items(
             if (
                 adjudication.citations_valid
                 and adjudication.confidence >= threshold
-                and _may_auto_resolve(item)
+                and _may_auto_resolve(item, repository)
                 # citations_valid proves the cited cells EXIST; this proves
                 # they carry the figures the resolution asserts. Fail-closed:
                 # a resolution the evidence does not mechanically support goes

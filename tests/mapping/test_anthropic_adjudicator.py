@@ -351,7 +351,13 @@ class TestRequestShape:
         # document, the document block across every item of one document.
         assert system[0]["cache_control"] == {"type": "ephemeral"}
         assert system[1]["cache_control"] == {"type": "ephemeral"}
-        assert "adjudicate ONE flagged item" in system[0]["text"]
+        assert "adjudicate ONE open item" in system[0]["text"]
+        # This role's envelope is named in its own prose, and the mapper's
+        # "issues" key is explicitly disowned: while output discipline lived
+        # inside the shared conventions, every role inherited an instruction
+        # to emit a key its own schema forbids.
+        assert '"resolution", "citations" and' in system[0]["text"]
+        assert 'There is no "issues"' in system[0]["text"]
         assert "## Extracted document" in system[1]["text"]
         assert "p1_t0" in system[1]["text"]
         assert FOOTNOTE in system[1]["text"]

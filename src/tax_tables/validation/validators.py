@@ -75,14 +75,18 @@ RULE_VERIFIER_DISPUTE = "verifier_dispute"
 #: independent confirmation that never happened.
 RULE_VERIFIER_UNAVAILABLE = "verifier_unavailable"
 
-#: Rules whose findings are always FLAG severity: the record they indict IS
-#: in the fact table, marked needs_review. Only review-queue items born from
-#: these rules are eligible for adjudicator auto-resolution — every other
-#: queue entry (the bracket_overlap REJECT, ingest-side refusals, mapping
-#: issues) stands for data ABSENT from the fact table, and its open row is
-#: the only live signal of that absence. The adjudicator cannot restore a
-#: record, so auto-closing such an item would silence the loss (anti-goal
-#: #8; found by the adversarial review of the ADR 012 diff).
+#: Rules whose findings are always FLAG severity: triage sends the record
+#: they indict ON to the fact table, marked needs_review, rather than
+#: refusing it.
+#:
+#: Note what that does NOT establish. "Triage did not refuse it" is not "the
+#: database accepted it": ingest can still refuse a FLAG-only record on the
+#: exclusion constraint or the natural key, and a record carrying BOTH a
+#: REJECT and a FLAG queues a row under each while persisting nothing. So
+#: membership here is not evidence of presence, and auto-resolve eligibility
+#: does not rest on it — ``pipeline._may_auto_resolve`` asks the fact table
+#: itself (anti-goal #8; the proxy's two failure modes were found on
+#: document 05, ADR 014 §8a).
 FLAG_RULES = frozenset(
     {
         RULE_BRACKET_GAP,
@@ -97,9 +101,11 @@ FLAG_RULES = frozenset(
 )
 
 
-#: Rules whose review-queue items an adjudicator may auto-close. Strictly
-#: narrower than FLAG_RULES: a FLAG says the record IS in the fact table, but
-#: it does not follow that a model may close the item unattended.
+#: Rules whose review-queue items an adjudicator may auto-close, given that
+#: the record is also confirmed present in the fact table. Strictly narrower
+#: than FLAG_RULES: presence licenses a close only where the FINDING is also
+#: one a model may settle unattended, and the two verifier-born rules are
+#: not, however certainly the record persisted.
 #:
 #: The two verifier-born rules are excluded deliberately, and the exclusion was
 #: earned. On document 01 the verifier raised a dispute whose asserted "actual"
