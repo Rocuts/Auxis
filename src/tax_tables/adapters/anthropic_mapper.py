@@ -394,13 +394,23 @@ CANONICAL_CONVENTIONS = """\
   currency sign are still amounts.
 - currency: the ISO 4217 code of the document's denomination. A United
   States tax document denominates in USD even where signs are omitted.
-- jurisdiction: "US" for United States federal documents; for sub-national
-  rows use the jurisdiction's name exactly as printed (e.g. "Alabama").
+- jurisdiction: an ENCODING, never the printed string. United States
+  federal documents use "US-FED". A sub-national row uses "US-" plus that
+  state's ISO 3166-2 subdivision code, regardless of how the row is
+  spelled on the page: "Alabama" -> "US-AL", "Georgia" -> "US-GA",
+  "Louisiana" -> "US-LA", "Utah" -> "US-UT", "Iowa" -> "US-IA",
+  "District of Columbia" -> "US-DC". Never emit a bare "US" and never emit
+  a state's name.
 - filing_status: map the printed label to one of single,
   married_filing_jointly, married_filing_separately, head_of_household,
   qualifying_surviving_spouse. A schedule that applies to a non-individual
-  taxpayer class (e.g. estates and trusts) uses filing_status null and
-  taxpayer_class set to the lowercase snake_case of the printed class name.
+  taxpayer class uses filing_status null and taxpayer_class set instead.
+- taxpayer_class: ALWAYS set, never left null. It is a closed vocabulary,
+  not a slug of the printed label: "individual" for any schedule applying
+  to individual taxpayers (that is, every record carrying a filing_status),
+  and "estate_or_trust" — singular — for an estates-and-trusts schedule
+  however the page spells it ("Estates and Trusts" is still
+  "estate_or_trust").
 - lifecycle_status: "superseded" ONLY when the document itself states it
   has been superseded or replaced; otherwise "active". Every record of a
   superseded document is superseded.
@@ -456,26 +466,30 @@ document prints):
 
 ## Fixed attribute_key vocabulary
 
-attribute_key is NEVER free-form. Where a record_type takes one, use exactly
-one of the keys listed below — they are the snake_case slugs of the labels
-these documents print, fixed so that the same row yields the same key on
-every run. (A free-form slug drifted between runs of the same document:
+attribute_key is NEVER free-form and NEVER re-derived from the printed
+label. Where a record_type takes one, use exactly one of the keys listed
+below. (A free-form slug drifted between runs of the same document:
 "per_qualifying_condition_rule" one run, "age_and_blindness_rule" the next,
 which breaks natural-key matching and idempotency alike.)
 
 - additional_standard_deduction (condition):
-    unmarried_single_or_head_of_household, married_per_qualifying_spouse
+    unmarried, married_per_qualifying_spouse
 - employment_tax_rate (component):
     social_security_oasdi, medicare_hi, total, futa_effective_rate
 - special_gain_rate (category):
     unrecaptured_section_1250_gain,
     collectibles_and_certain_small_business_stock, short_term_capital_gain
 - surtax_threshold (surtax):
-    additional_medicare_tax, net_investment_income_tax
+    additional_medicare, net_investment_income
 - wage_base (item):
-    social_security_wage_base, medicare_wage_base, futa_wage_base_federal
+    social_security_wage_base, medicare_wage_base, futa_wage_base
 - withholding_allowance (payroll_period):
     weekly, biweekly, semimonthly, monthly, quarterly, annually
+
+These are the canonical target vocabulary, NOT slugs to re-derive from the
+page: several are shorter than the printed label ("Additional Medicare Tax"
+-> additional_medicare, "FUTA wage base (federal)" -> futa_wage_base). Copy
+them exactly.
 
 Every other record_type uses attribute_key null. If a document presents a
 labelled row whose slug is not on this list, still emit the record with the

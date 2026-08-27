@@ -47,13 +47,14 @@ from tax_tables.ports.adjudicator import (
     Adjudication,
     Adjudicator,
     ReviewItem,
+    resolution_is_supported,
 )
 from tax_tables.ports.mapper import MappingCost, MappingIssue, MappingResult, SchemaMapper
 from tax_tables.ports.repository import IngestOutcome, RecordRepository
 from tax_tables.ports.verifier import RecordVerifier, VerificationError, VerificationResult
 from tax_tables.validation.validators import (
+    AUTO_RESOLVABLE_RULES,
     DEFAULT_CONFIDENCE_FLOOR,
-    FLAG_RULES,
     RULE_VERIFIER_DISPUTE,
     RULE_VERIFIER_UNAVAILABLE,
     Finding,
@@ -182,7 +183,7 @@ def _may_auto_resolve(item: ReviewItem) -> bool:
     unrecognized reason is treated as absent data.
     """
     rule, sep, _ = item.reason.partition(": ")
-    return bool(sep) and rule in FLAG_RULES
+    return bool(sep) and rule in AUTO_RESOLVABLE_RULES
 
 
 def adjudicate_open_items(
@@ -219,6 +220,13 @@ def adjudicate_open_items(
                 adjudication.citations_valid
                 and adjudication.confidence >= threshold
                 and _may_auto_resolve(item)
+                # citations_valid proves the cited cells EXIST; this proves
+                # they carry the figures the resolution asserts. Fail-closed:
+                # a resolution the evidence does not mechanically support goes
+                # to a human, however confident the model was.
+                and resolution_is_supported(
+                    adjudication.resolution, adjudication.citations, extracted
+                )
             ):
                 repository.resolve_review(
                     item.id,

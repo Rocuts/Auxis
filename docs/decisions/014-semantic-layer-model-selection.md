@@ -294,23 +294,51 @@ escalation trigger — which is the correct reading, because escalating the mode
 would not move a single one of these records: the model followed the
 conventions it was given, and the conventions are wrong about four spellings.
 
-**The remaining fork, unresolved and not taken.** Correcting the conventions
-means knowing the target's spellings, and the only place they appear is the
-oracle. CLAUDE.md invites reading `ground_truth.json` "to understand the target
-… field conventions"; anti-goal #1 forbids any module under `src/` embedding
-values from it. Whether a naming convention is target-schema knowledge or an
-oracle value is a question this project stops and asks. Recorded for the
-operator.
+**The fork, RESOLVED by operator ruling — and the boundary that resolves it.**
 
-**A blind spot this run exposed.** Document 01 produced zero contract failures
-and two genuine semantic defects — a false-positive verifier dispute, and an
-adjudicator that auto-resolved at 0.98 while repeating the disputer's false
-premise about a record whose real value it had been given. Every response
-involved was perfectly conformant. **The conformance ledger is structurally
-blind to substantive wrongness**; it measures whether the model can emit the
-contract, never whether what it emitted is true. A cheap deterministic guard
-would have caught both — flag any dispute whose asserted "actual" value equals
-the value the record already holds — and is not implemented here.
+> **Encoding vocabularies documented in the target schema are adoptable.
+> Per-record extracted values are not. `src/` never opens the oracle at
+> runtime.**
+
+The line between them is an *extractability test*: **`US-FED` prints in no
+PDF.** It cannot be extracted, only agreed; it is an encoding of a fact, not
+the fact. Alabama's `4.000` rate, by contrast, is printed on the page and is
+the answer the harness exists to check — deriving it from the oracle would be
+answer-copying, and remains forbidden.
+
+The precedent was already in the repository and had simply not been named: the
+`RecordType` and `FilingStatus` enums are target vocabularies, not extracted
+strings, and migration 0005 added `qualifying_surviving_spouse` for exactly
+this reason. Adopting `US-FED`, `individual`, `estate_or_trust` and four
+`attribute_key` slugs is the same act.
+
+`CANONICAL_CONVENTIONS` is corrected accordingly, and the conventions now say
+plainly that `jurisdiction` is an encoding — `US-FED`, or `US-` plus the ISO
+3166-2 subdivision code — rather than the printed string.
+
+**A blind spot this run exposed, and the two gates that answer it.** Document
+01 produced zero contract failures and two genuine semantic defects — a
+false-positive verifier dispute, and an adjudicator that auto-resolved at 0.98
+while repeating the disputer's false premise about a record whose real value it
+had been given. Every response involved was perfectly conformant. **The
+conformance ledger is structurally blind to substantive wrongness**; it
+measures whether the model can emit the contract, never whether what it emitted
+is true. That is the harness's job, and only the harness's.
+
+Two gates now stand in front of an unattended close:
+
+1. **Dispute-born items join REJECT-born in default-deny** —
+   `AUTO_RESOLVABLE_RULES` is strictly narrower than `FLAG_RULES`, excluding
+   `verifier_dispute` and `verifier_unavailable`. A dispute is a *second*
+   opinion that something is wrong; a *third* model agreeing with it is
+   correlation, not corroboration — the same conformity risk ADR 012 names.
+2. **An auto-resolution must be mechanically supported by its own citations.**
+   `citations_valid` proves only that the cited cells exist;
+   `resolution_is_supported` asks whether they carry the figures the resolution
+   states. Every asserted number must appear in cited evidence or be reachable
+   by one of the two transforms this schema documents (percent to fraction; a
+   bracket bound derived by one). Grid coordinates are excluded as addresses
+   rather than claims. Fail-closed: anything further away goes to a human.
 
 ## Consequences
 

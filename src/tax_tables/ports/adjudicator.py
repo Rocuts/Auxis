@@ -15,7 +15,9 @@ dangling must never auto-resolve, whatever its confidence claims.
 
 from __future__ import annotations
 
-from decimal import Decimal
+import re
+from collections.abc import Mapping, Sequence
+from decimal import Decimal, InvalidOperation
 from typing import Any, Protocol
 from uuid import UUID
 
@@ -27,6 +29,101 @@ from tax_tables.ports.mapper import MappingCost
 #: Below this confidence (or with invalid citations at any confidence) an
 #: adjudication is stored as a proposal and the item stays human.
 DEFAULT_AUTO_RESOLVE_THRESHOLD = Decimal("0.9")
+
+
+#: A number standing on its own, not digits embedded in an identifier. The
+#: lookarounds matter: without them "p1_t0" and "row 3" contribute figures 1,
+#: 0 and 3 that no cell will ever carry, and every resolution citing a table
+#: coordinate would be refused auto-resolution for asserting them.
+_NUMBER = re.compile(r"(?<![A-Za-z0-9_.])-?\d[\d,]*(?:\.\d+)?(?![A-Za-z0-9_])")
+
+
+#: Grid coordinates a resolution names while pointing AT its evidence. They
+#: are addresses, not claims about tax values, and counting them would refuse
+#: any resolution that says where it looked.
+_COORDINATE = re.compile(r"\b(?:rows?|cols?|columns?|pages?|prose_index|index)\s*#?\s*\d+", re.I)
+
+
+def _figures(text: str) -> set[Decimal]:
+    """Every number in ``text``, comma-stripped so "566,700" and "566700"
+    compare equal."""
+    figures: set[Decimal] = set()
+    for match in _NUMBER.findall(text):
+        try:
+            figures.add(Decimal(match.replace(",", "")))
+        except InvalidOperation:  # pragma: no cover - the regex admits none
+            continue
+    return figures
+
+
+#: The only transforms a resolution may apply to its evidence, and both are
+#: written in the mapper's own canonical conventions rather than invented here:
+#: a rate printed "22%" maps to 0.22, and a bracket that starts where the one
+#: below it ended is derived by one ("Over $566,700" -> lower_bound 566701).
+def _reachable(asserted: Decimal, evidence: set[Decimal]) -> bool:
+    if asserted in evidence:
+        return True
+    for value in evidence:
+        if asserted == value / 100 or asserted == value * 100:
+            return True
+        if asserted == value + 1 or asserted == value - 1:
+            return True
+    return False
+
+
+def cited_evidence(citations: Sequence[Any], extracted: ExtractedDocument) -> str:
+    """The text of every cell and prose block a resolution cites."""
+    tables = {table.table_id: table for table in extracted.tables}
+    prose_by_page = {page.page_number: page.prose for page in extracted.pages}
+    chunks: list[str] = []
+    for ref in citations:
+        if not isinstance(ref, Mapping):
+            continue
+        if ref.get("kind") == "cell":
+            table_id = ref.get("table_id")
+            row, col = ref.get("row"), ref.get("col")
+            if not isinstance(table_id, str):
+                continue
+            table = tables.get(table_id)
+            if table is None or not isinstance(row, int) or not isinstance(col, int):
+                continue
+            if 0 <= row < len(table.rows) and 0 <= col < len(table.rows[row]):
+                cell = table.rows[row][col]
+                if cell.text:
+                    chunks.append(cell.text)
+        elif ref.get("kind") == "prose":
+            page_number = ref.get("page")
+            if not isinstance(page_number, int):
+                continue
+            blocks = prose_by_page.get(page_number, [])
+            index = ref.get("prose_index")
+            if isinstance(index, int) and 0 <= index < len(blocks):
+                chunks.append(blocks[index].text)
+    return "\n".join(chunks)
+
+
+def resolution_is_supported(
+    resolution: str, citations: Sequence[Any], extracted: ExtractedDocument
+) -> bool:
+    """Do the cited cells mechanically carry every figure the resolution states?
+
+    ``citations_valid`` only proves the cited cells EXIST. This asks the next
+    question: does the evidence actually say what the resolution claims it
+    says. Every number asserted in the prose must appear in some cited cell or
+    prose block, or the item does not auto-close.
+
+    Fail-closed, and bounded: a figure counts as supported only if it appears
+    in the evidence outright or is reachable by one of the two transforms this
+    schema documents — percent to fraction, and a bracket bound derived by one.
+    Anything further from the evidence than that goes to a human, however
+    confident the model was. A resolution stating no figures at all is not
+    blocked by this rule; it is judged by the others.
+    """
+    asserted = _figures(_COORDINATE.sub(" ", resolution))
+    if not asserted:
+        return True
+    evidence = _figures(cited_evidence(citations, extracted))
+    return all(_reachable(figure, evidence) for figure in asserted)
 
 
 class AdjudicationError(RuntimeError):

@@ -1997,3 +1997,89 @@ the $5 monthly allowance.
 
 **Gate 2b remains OPEN.** Both tables — baseline and hardened — ship in the
 README as model-selection evidence.
+
+## 2026-08-26 — Three dispositions: the vocabulary fork resolved, one arbitration, two gates
+
+### 1. The fork, resolved — and the test that draws the line
+
+Operator ruling: **encoding vocabularies documented in the target schema are
+adoptable; per-record extracted values are not; `src/` never opens the oracle
+at runtime.**
+
+The line is an **extractability test**, and it is sharper than the argument I
+was having with myself. **`US-FED` prints in no PDF.** It cannot be extracted,
+only agreed — it is an encoding of a fact, not the fact. Alabama's `4.000` is
+printed on the page, is the answer the harness exists to check, and taking it
+from anywhere but the page would be answer-copying.
+
+The precedent was already in this repository, unnamed: `RecordType` and
+`FilingStatus` are target vocabularies rather than extracted strings, and
+migration 0005 added `qualifying_surviving_spouse` for exactly this reason.
+`CANONICAL_CONVENTIONS` is corrected in kind — `jurisdiction` is now stated as
+an encoding (`US-FED`, or `US-` plus the ISO 3166-2 subdivision code) rather
+than "the jurisdiction's name exactly as printed"; `taxpayer_class` is a closed
+two-value vocabulary always set, never null; and four `attribute_key` slugs
+adopt the target's abbreviations (`additional_medicare`,
+`net_investment_income`, `unmarried`, `futa_wage_base`).
+
+Worth recording that yesterday's vocabulary missed those four *because* the
+oracle was refused when it was built. That was the right call under the rule as
+it then stood, and it is the reason eleven records did not match.
+
+### 2. Document 05's `566701` — arbitrated against the page, and the model lost
+
+The gate produced `566751` where the oracle expects `566701`. Four sources,
+in order of authority:
+
+| Source | Says |
+|---|---|
+| **The printed page** (rendered at 4×, cropped) | `Over $566,700` |
+| Tesseract extraction | `'Over $566,700'`, confidence **0.96** |
+| The oracle | `566701` — the printed bound plus one |
+| **The gate run's mapper** | **`566751`** |
+
+![Document 05, head-of-household column](audit/evidence/05_head_of_household_bracket.png)
+
+The crop is committed as evidence. The page is unambiguous, the extractor read
+it correctly, and the oracle agrees with both. **There is no fixture defect and
+nothing to correct on the oracle side: the mapper mis-transcribed a printed
+number.** It is the first genuine semantic error found anywhere in this corpus
+across ten adversarial passes — and it is nondeterministic, since the fan-out
+run of the same document produced `566701` correctly.
+
+That single record is the honest counterweight to "the semantics were always
+right". They were, 127 times out of 128, on that run.
+
+### 3. Two gates in front of an unattended close
+
+The document-01 incident is the specification. Both gates are in
+[ADR 014 §8](decisions/014-semantic-layer-model-selection.md):
+
+**Default-deny widened.** `AUTO_RESOLVABLE_RULES` is now strictly narrower
+than `FLAG_RULES`, excluding `verifier_dispute` and `verifier_unavailable`. A
+dispute is a *second* opinion that something is wrong; a *third* model agreeing
+with it is correlation, not corroboration — the conformity risk ADR 012 names,
+arriving in the one place it can close a record unattended.
+
+**Citations must carry the figures.** `citations_valid` proves only that cited
+cells exist. `resolution_is_supported` asks whether they say what the
+resolution claims: every number asserted must appear in cited evidence or be
+reachable by one of the two transforms this schema documents — percent to
+fraction, and a bracket bound derived by one. Fail-closed.
+
+Two things went wrong writing it, both caught by the existing tests rather than
+by me, and both worth recording because they are the same mistake twice:
+
+- The first version demanded every asserted figure appear *verbatim* in a cited
+  cell. That refused a correct resolution reasoning from a printed
+  `10 percent` to a mapped `0.10` — the schema's own rate convention. Bounding
+  the check to the documented transforms fixed it.
+- The number regex matched digits inside identifiers, so `p1` contributed the
+  figure `1` and any resolution naming a table coordinate asserted numbers no
+  cell would ever carry. Lookarounds plus a coordinate-phrase strip fixed it:
+  **`row 1 col 1` is an address, not a claim about a tax value.**
+
+A guard that refuses correct work is not conservative, it is broken — it just
+fails in the direction that looks responsible.
+
+`make check`: 629 passed, 1 skipped.

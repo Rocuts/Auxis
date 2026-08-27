@@ -97,6 +97,23 @@ FLAG_RULES = frozenset(
 )
 
 
+#: Rules whose review-queue items an adjudicator may auto-close. Strictly
+#: narrower than FLAG_RULES: a FLAG says the record IS in the fact table, but
+#: it does not follow that a model may close the item unattended.
+#:
+#: The two verifier-born rules are excluded deliberately, and the exclusion was
+#: earned. On document 01 the verifier raised a dispute whose asserted "actual"
+#: value was simply wrong — it claimed a record held 257300 when the record
+#: held 257250 — and the adjudicator then auto-resolved at 0.98 confidence
+#: while repeating that false premise, in a rationale that also said the record
+#: was "correct as persisted". It had the true value in front of it: the queue
+#: entry carries the full record. So a dispute-born item is now default-deny
+#: like a REJECT-born one: it stands for a SECOND opinion that something is
+#: wrong, and a THIRD model agreeing with the second is not evidence, it is
+#: correlation (the conformity risk ADR 012 names). A human closes those.
+AUTO_RESOLVABLE_RULES = frozenset(FLAG_RULES - {RULE_VERIFIER_DISPUTE, RULE_VERIFIER_UNAVAILABLE})
+
+
 class Severity(StrEnum):
     """REJECT: the database would refuse this row. FLAG: keep it, review it."""
 
