@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import time
 from collections.abc import Mapping
 from dataclasses import dataclass, field
@@ -39,8 +40,14 @@ from typing import Any
 import anthropic
 from pydantic import ValidationError
 
-from tax_tables.adapters.envelope import loads_fence_tolerant
+from tax_tables.adapters.envelope import adapt_extra_attrs, adapt_numeric, loads_fence_tolerant
 from tax_tables.adapters.pricing import ANTHROPIC_CACHE_FACTORS, cache_factors_for
+from tax_tables.adapters.retry import (
+    DEFAULT_CONTRACT_RETRIES,
+    DEFAULT_CONTRACT_RETRY_SECONDS,
+    DEFAULT_TRANSPORT_RETRY_SECONDS,
+    with_bounded_retries,
+)
 from tax_tables.domain.records import (
     ATTRIBUTE_KEY_FIELD,
     CanonicalRecord,
@@ -91,6 +98,12 @@ class MapperConfig:
     #: correctly on the first run, with no extra environment.
     cache_read_factor: Decimal = ANTHROPIC_CACHE_FACTORS.read
     cache_write_factor: Decimal = ANTHROPIC_CACHE_FACTORS.write
+    #: Bounded retries on a contract failure (see ``adapters.retry``). Every
+    #: attempt is counted, so retries lower the measured rate rather than
+    #: hiding behind it.
+    contract_retries: int = DEFAULT_CONTRACT_RETRIES
+    contract_retry_seconds: float = DEFAULT_CONTRACT_RETRY_SECONDS
+    transport_retry_seconds: float = DEFAULT_TRANSPORT_RETRY_SECONDS
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> MapperConfig:
@@ -120,6 +133,16 @@ class MapperConfig:
             ),
             cache_write_factor=Decimal(
                 source.get("SCHEMA_MAPPER_CACHE_WRITE_FACTOR") or str(factors.write)
+            ),
+            contract_retries=int(
+                source.get("SCHEMA_MAPPER_CONTRACT_RETRIES") or DEFAULT_CONTRACT_RETRIES
+            ),
+            contract_retry_seconds=float(
+                source.get("SCHEMA_MAPPER_CONTRACT_RETRY_SECONDS") or DEFAULT_CONTRACT_RETRY_SECONDS
+            ),
+            transport_retry_seconds=float(
+                source.get("SCHEMA_MAPPER_TRANSPORT_RETRY_SECONDS")
+                or DEFAULT_TRANSPORT_RETRY_SECONDS
             ),
         )
 
@@ -222,7 +245,10 @@ _ATTR_SCHEMA: dict[str, Any] = {
 _RECORD_SCHEMA: dict[str, Any] = {
     "type": "object",
     "properties": {
-        "source_page": {"type": "integer"},
+        # source_page is NOT here: the pipeline knows which page a table_id
+        # sits on and injects it. Asking the model for something the server
+        # already holds only creates a way for the run to fail (baseline run:
+        # this single key cost 18 of document 05's 19 records).
         "table_id": {"type": "string"},
         "record_type": {"type": "string", "enum": [member.value for member in RecordType]},
         "jurisdiction": {"type": "string"},
@@ -246,19 +272,22 @@ _RECORD_SCHEMA: dict[str, Any] = {
         "confidence": {"type": "number"},
         "source_table_label": {"type": "string"},
         "extra_attrs": {"type": "array", "items": _ATTR_SCHEMA},
+        "convention_derived": {"type": "array", "items": {"type": "string"}},
         "provenance": {"type": "array", "items": PROVENANCE_SCHEMA},
     },
+    # The true semantic core: what only a reader of THIS document can supply.
+    # Everything omitted below is either derived server-side (table_id, and
+    # source_page which is not asked for at all) or safely absent-as-null
+    # (effective_from/to, extra_attrs, convention_derived). Shrunk from 20
+    # keys after the baseline run, where required-but-derivable fields were
+    # the single largest cause of record loss.
     "required": [
-        "source_page",
-        "table_id",
         "record_type",
         "jurisdiction",
         "attribute_key",
         "filing_status",
         "taxpayer_class",
         "tax_year",
-        "effective_from",
-        "effective_to",
         "lifecycle_status",
         "lower_bound",
         "upper_bound",
@@ -267,7 +296,6 @@ _RECORD_SCHEMA: dict[str, Any] = {
         "currency",
         "confidence",
         "source_table_label",
-        "extra_attrs",
         "provenance",
     ],
     "additionalProperties": False,
@@ -426,19 +454,70 @@ document prints):
 - withholding_allowance: attribute_key = the payroll period slug (weekly,
   biweekly, ...); amount = the allowance.
 
-## Two tax years in one row
+## Fixed attribute_key vocabulary
+
+attribute_key is NEVER free-form. Where a record_type takes one, use exactly
+one of the keys listed below — they are the snake_case slugs of the labels
+these documents print, fixed so that the same row yields the same key on
+every run. (A free-form slug drifted between runs of the same document:
+"per_qualifying_condition_rule" one run, "age_and_blindness_rule" the next,
+which breaks natural-key matching and idempotency alike.)
+
+- additional_standard_deduction (condition):
+    unmarried_single_or_head_of_household, married_per_qualifying_spouse
+- employment_tax_rate (component):
+    social_security_oasdi, medicare_hi, total, futa_effective_rate
+- special_gain_rate (category):
+    unrecaptured_section_1250_gain,
+    collectibles_and_certain_small_business_stock, short_term_capital_gain
+- surtax_threshold (surtax):
+    additional_medicare_tax, net_investment_income_tax
+- wage_base (item):
+    social_security_wage_base, medicare_wage_base, futa_wage_base_federal
+- withholding_allowance (payroll_period):
+    weekly, biweekly, semimonthly, monthly, quarterly, annually
+
+Every other record_type uses attribute_key null. If a document presents a
+labelled row whose slug is not on this list, still emit the record with the
+slug you derive AND raise an issue naming it: an unlisted label is a gap in
+this vocabulary, and it must be visible rather than silently absorbed.
+
+## Two tax years in one row — settled, do not deviate
 
 Some tables print the current year next to the prior year for comparison.
-The current tax year (per rule 5) is the record's tax_year; a prior-year
-comparison value rides on the SAME record as an extra attr named
-"prior_year_amount" (amount-shaped values), "prior_year_rate" (rate
-fractions), or "prior_year_<header>_pct" (percentage columns). Do not emit
-separate records for the comparison year, and never drop that column.
+**One record per item, never one per (item, year).** The current tax year
+(per rule 5) is the record's tax_year; the prior-year value rides on the SAME
+record as an extra attr named "prior_year_amount" (amount-shaped values),
+"prior_year_rate" (rate fractions), or "prior_year_<header>_pct" (percentage
+columns), and a "change"/difference column rides as "change". Do not emit
+separate records for the comparison year, and never drop that column: both
+years must survive, in one record.
+
+## Do not emit the same fact twice
+
+A rate or threshold stated in prose that QUALIFIES the rows of a table
+belongs on those rows' records (with prose provenance alongside the cell
+citations). Do not additionally emit a standalone record for it. One printed
+fact is one record; a second record for the same fact is a duplicate that a
+reviewer has to reconcile.
+
+## Convention-derived fields
+
+A few fields come from these conventions rather than from anything the
+document prints — most often "jurisdiction" on a federal document that names
+no jurisdiction, and "currency" where no sign or code appears. When you
+assert such a field with no textual anchor anywhere in the document, list its
+name in "convention_derived" (e.g. ["jurisdiction"]). Never manufacture a
+provenance citation for it: a convention is a legitimate source, but it must
+not be dressed as a citation to a cell that does not say it.
 
 ## Table identity
 
 - table_id: copy the extraction table_id verbatim ("p1_t0"). A record read
-  purely from prose uses "p<page>_prose<index>" of its primary block.
+  purely from prose uses "p<page>_prose<index>" of its primary block. If you
+  omit it, it is taken from your own provenance citations; do not omit
+  provenance.
+- source_page is not yours to supply: the pipeline derives it from table_id.
 - source_table_label: the designator the DOCUMENT prints for the table or
   section the record came from, lowercased with non-alphanumeric runs
   collapsed to "_": "Table 1" -> "table_1", "Section 3." -> "section_3",
@@ -451,8 +530,18 @@ Extra attrs carry everything type-specific the document states that has no
 typed slot: *_pct columns, payer-side rate columns, prior-year values,
 prose rules, boolean facts (e.g. whether a state imposes a tax). Keys are
 lowercase snake_case derived from the printed labels. Do not add
-commentary attrs; "provenance" and "source_table_label" are supplied in
-their own fields, not in extra_attrs.
+commentary attrs; "provenance", "source_table_label" and
+"convention_derived" are supplied in their own fields, not in extra_attrs.
+
+extra_attrs is an ARRAY of {"key": ..., "value": ...} objects, not an
+object. An empty set of extra attrs is [] or omitted.
+
+## Output discipline
+
+Return the JSON object and nothing else: no prose before it, no commentary
+after it, no explanation of your reasoning. Anything you would want to say
+about a value belongs in "issues", which is part of the object. Numbers are
+JSON numbers, never quoted strings.
 """
 
 SYSTEM_PROMPT = _MAPPER_ROLE + CANONICAL_CONVENTIONS
@@ -473,6 +562,7 @@ def _as_int(value: object, field: str) -> int | None:
         return None
     if isinstance(value, bool):
         raise ValueError(f"{field} is a boolean, expected an integer")
+    value = adapt_numeric(value, role=conformance.MAPPER)
     if isinstance(value, int):
         return value
     if isinstance(value, Decimal):
@@ -487,6 +577,10 @@ def _as_decimal(value: object, field: str) -> Decimal | None:
         return None
     if isinstance(value, bool):
         raise ValueError(f"{field} is a boolean, expected a number")
+    # Closed-list adaptation: a quoted number becomes a Decimal and is
+    # counted. A non-numeric string falls through unchanged and is rejected
+    # below, because "Ordinary rates" in a rate slot is a semantic error.
+    value = adapt_numeric(value, role=conformance.MAPPER)
     if isinstance(value, Decimal | int):
         return Decimal(value)
     raise ValueError(f"{field} has unexpected type {type(value).__name__}")
@@ -545,6 +639,45 @@ def _extraction_floor(table_id: str, extracted: ExtractedDocument) -> Decimal:
     return Decimal(1)
 
 
+def _table_id_from_provenance(refs: list[Any]) -> str | None:
+    """The table or prose block this record was read from, taken from its own
+    citations.
+
+    The model names the source inside every provenance entry; asking it to
+    repeat that at the top level was a second chance to omit it, and on the
+    baseline run it omitted it on all 32 records of document 01. Cell refs win
+    over prose refs: a record citing both was read from the table.
+    """
+    for ref in refs:
+        if isinstance(ref, Mapping) and ref.get("kind") == "cell":
+            table_id = ref.get("table_id")
+            if isinstance(table_id, str) and table_id:
+                return table_id
+    for ref in refs:
+        if isinstance(ref, Mapping) and ref.get("kind") == "prose":
+            page = ref.get("page")
+            index = ref.get("prose_index")
+            if isinstance(page, int) and isinstance(index, int):
+                return f"p{page}_prose{index}"
+    return None
+
+
+def _source_page_for(table_id: str, extracted: ExtractedDocument) -> int:
+    """The page a table_id sits on, from the extraction — never from the model.
+
+    Authoritative rather than asserted: the extractor assigned the id and
+    knows its page. The ``p<n>_`` prefix is a fallback for a prose id, and 1 a
+    final one, so this can degrade but never raise.
+    """
+    for table in extracted.tables:
+        if table.table_id == table_id:
+            return table.page_number
+    match = re.match(r"p(\d+)_", table_id)
+    if match is not None:
+        return int(match.group(1))
+    return 1
+
+
 def _build_record(raw: Mapping[str, Any], extracted: ExtractedDocument) -> CanonicalRecord:
     provenance = list(raw.get("provenance") or [])
     check_provenance(provenance, extracted)
@@ -553,10 +686,16 @@ def _build_record(raw: Mapping[str, Any], extracted: ExtractedDocument) -> Canon
     attribute_key = None if raw.get("attribute_key") is None else str(raw["attribute_key"])
 
     attrs: dict[str, Any] = {}
-    for pair in raw.get("extra_attrs") or []:
+    for pair in adapt_extra_attrs(raw.get("extra_attrs"), role=conformance.MAPPER):
         attrs[str(pair["key"])] = pair["value"]
     attrs["source_table_label"] = str(raw["source_table_label"])
     attrs["provenance"] = provenance
+    # Fields asserted from the conventions rather than from anything printed
+    # (most often `jurisdiction` on a document that names none). Declared, so
+    # a reader can tell an inference from a citation (ADR 015).
+    declared = raw.get("convention_derived")
+    if isinstance(declared, list) and declared:
+        attrs["convention_derived"] = sorted({str(name) for name in declared})
     # Mirror the sub-discriminator into the attrs tail under its per-type
     # field name, overriding any model-supplied spelling: identity and tail
     # must agree, and both derive from the same source cell.
@@ -564,7 +703,14 @@ def _build_record(raw: Mapping[str, Any], extracted: ExtractedDocument) -> Canon
     if mirror_name is not None and attribute_key is not None:
         attrs[mirror_name] = attribute_key
 
-    table_id = str(raw["table_id"])
+    supplied = raw.get("table_id")
+    table_id = (
+        str(supplied)
+        if isinstance(supplied, str) and supplied
+        else _table_id_from_provenance(provenance)
+    )
+    if table_id is None:
+        raise ValueError("record names no table_id and its provenance identifies no source")
     confidence = _as_decimal(raw["confidence"], "confidence")
     if confidence is None:
         raise ValueError("confidence is required")
@@ -572,7 +718,8 @@ def _build_record(raw: Mapping[str, Any], extracted: ExtractedDocument) -> Canon
 
     filing_status = raw.get("filing_status")
     return CanonicalRecord(
-        source_page=_as_int(raw["source_page"], "source_page") or 0,
+        # Injected server-side from the extraction, never asked of the model.
+        source_page=_source_page_for(table_id, extracted),
         table_id=table_id,
         record_type=record_type,
         jurisdiction=str(raw["jurisdiction"]),
@@ -686,13 +833,6 @@ def _sanitize_issue(raw: Any) -> MappingIssue:
 # ---------------------------------------------------------------------------
 
 
-def _clip_reason(exc: Exception, limit: int = 160) -> str:
-    """A failure reason short enough for a report line. The full message still
-    rides the exception the caller sees."""
-    text = " ".join(str(exc).split())
-    return text if len(text) <= limit else text[: limit - 1] + "…"
-
-
 class AnthropicSchemaMapper:
     """SchemaMapper over the Anthropic Messages API (or any endpoint that
     speaks it, such as the Vercel AI Gateway)."""
@@ -719,24 +859,14 @@ class AnthropicSchemaMapper:
         )
 
     def map_document(self, extracted: ExtractedDocument) -> MappingResult:
-        conformance.LEDGER.record_call(conformance.MAPPER)
-        try:
-            return self._map_document(extracted)
-        except MapperError as exc:
-            # Counted at the single boundary every contract failure passes
-            # through, so the rate can never drift from the raise sites.
-            conformance.LEDGER.record_schema_failure(conformance.MAPPER, _clip_reason(exc))
-            raise
-        except Exception as exc:
-            # No body ever arrived — a throttle that outlived the retry budget,
-            # a timeout, a dropped connection. Counted apart from the
-            # conformance rates: a call the model never answered says nothing
-            # about whether the model can emit the contract, and folding it in
-            # as a success flatters the number (found adversarially on
-            # document 04, where 18 throttled adjudications were reporting as
-            # 18 well-formed items).
-            conformance.LEDGER.record_transport_failure(conformance.MAPPER, type(exc).__name__)
-            raise
+        return with_bounded_retries(
+            lambda: self._map_document(extracted),
+            role=conformance.MAPPER,
+            contract_error=MapperError,
+            retries=self._config.contract_retries,
+            contract_backoff=self._config.contract_retry_seconds,
+            transport_backoff=self._config.transport_retry_seconds,
+        )
 
     def _map_document(self, extracted: ExtractedDocument) -> MappingResult:
         started = time.perf_counter()

@@ -20,11 +20,12 @@ line rather than implying code that does not exist.
 | 012 | [Runtime multi-agent semantic layer: mapper + verifier + adjudicator](012-runtime-multi-agent-semantic-layer.md) | 2 | accepted, implemented |
 | 013 | [Tracing without the X-Ray SDK, directly or transitively](013-tracing-without-the-xray-sdk.md) | 5 | accepted, enforced by test |
 | 014 | [Semantic-layer model selection, and its pre-registered escalation rule](014-semantic-layer-model-selection.md) | 2b | accepted, rule pre-registered |
+| 015 | [Convention-derived discriminators are declared, never dressed as cited](015-convention-derived-discriminators.md) | 2b | accepted, implemented |
 | — | [Orchestration alignment with Anthropic's published criteria](adr-orchestration-alignment.md) | all | reference |
 
 ## The rejections are the load-bearing ones
 
-Three of the thirteen are rejections, and each records **the threshold at which
+Three of the fourteen are rejections, and each records **the threshold at which
 it would flip** rather than only the reason it was made:
 
 - **Aurora DSQL** would become correct the day it gains range types and

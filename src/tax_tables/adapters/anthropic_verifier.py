@@ -40,11 +40,22 @@ import anthropic
 from tax_tables.adapters.anthropic_mapper import CANONICAL_CONVENTIONS, serialize_document
 from tax_tables.adapters.envelope import loads_fence_tolerant
 from tax_tables.adapters.pricing import ANTHROPIC_CACHE_FACTORS, cache_factors_for
+from tax_tables.adapters.retry import (
+    DEFAULT_CONTRACT_RETRIES,
+    DEFAULT_CONTRACT_RETRY_SECONDS,
+    DEFAULT_TRANSPORT_RETRY_SECONDS,
+    with_bounded_retries,
+)
 from tax_tables.domain.records import CanonicalRecord
 from tax_tables.extraction.model import ExtractedDocument
 from tax_tables.observability import conformance
 from tax_tables.ports.mapper import MappingCost, MappingResult
-from tax_tables.ports.verifier import RecordVerdict, Verdict, VerificationResult
+from tax_tables.ports.verifier import (
+    RecordVerdict,
+    Verdict,
+    VerificationError,
+    VerificationResult,
+)
 
 _DEFAULT_MODEL = "claude-opus-5"
 #: Claude Opus 5 list prices, USD per million tokens; override via env for a
@@ -64,7 +75,7 @@ class VerifierConfigError(RuntimeError):
     """The environment does not describe a usable verification endpoint."""
 
 
-class VerifierError(RuntimeError):
+class VerifierError(VerificationError):
     """The verification call failed in a way that must abort verification for
     this document — a truncated or refused response, or a body that is not
     the contracted JSON. Never swallowed into a partial result: a half-judged
@@ -87,6 +98,12 @@ class VerifierConfig:
     #: A role pointed at another family prices its own cache tokens.
     cache_read_factor: Decimal = ANTHROPIC_CACHE_FACTORS.read
     cache_write_factor: Decimal = ANTHROPIC_CACHE_FACTORS.write
+    #: Bounded retries on a contract failure (see ``adapters.retry``). Every
+    #: attempt is counted, so retries lower the measured rate rather than
+    #: hiding behind it.
+    contract_retries: int = DEFAULT_CONTRACT_RETRIES
+    contract_retry_seconds: float = DEFAULT_CONTRACT_RETRY_SECONDS
+    transport_retry_seconds: float = DEFAULT_TRANSPORT_RETRY_SECONDS
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> VerifierConfig:
@@ -153,6 +170,17 @@ class VerifierConfig:
                 source.get("RECORD_VERIFIER_CACHE_WRITE_FACTOR")
                 or (source.get("SCHEMA_MAPPER_CACHE_WRITE_FACTOR") if same_engine else None)
                 or str(factors.write)
+            ),
+            contract_retries=int(
+                source.get("RECORD_VERIFIER_CONTRACT_RETRIES") or DEFAULT_CONTRACT_RETRIES
+            ),
+            contract_retry_seconds=float(
+                source.get("RECORD_VERIFIER_CONTRACT_RETRY_SECONDS")
+                or DEFAULT_CONTRACT_RETRY_SECONDS
+            ),
+            transport_retry_seconds=float(
+                source.get("RECORD_VERIFIER_TRANSPORT_RETRY_SECONDS")
+                or DEFAULT_TRANSPORT_RETRY_SECONDS
             ),
         )
 
@@ -420,12 +448,6 @@ def parse_verification_payload(
 # ---------------------------------------------------------------------------
 
 
-def _clip_reason(exc: Exception, limit: int = 160) -> str:
-    """A failure reason short enough for a report line."""
-    text = " ".join(str(exc).split())
-    return text if len(text) <= limit else text[: limit - 1] + "…"
-
-
 class AnthropicRecordVerifier:
     """RecordVerifier over the Anthropic Messages API (or any endpoint that
     speaks it, such as the Vercel AI Gateway)."""
@@ -451,25 +473,17 @@ class AnthropicRecordVerifier:
 
     def verify(self, extracted: ExtractedDocument, mapping: MappingResult) -> VerificationResult:
         if not mapping.records:
-            # Recorded before the call counter: a document that mapped nothing
+            # Recorded before any call counter: a document that mapped nothing
             # makes no verification call, so it must not enter the denominator.
             return VerificationResult(verdicts=[], cost=None)
-        conformance.LEDGER.record_call(conformance.VERIFIER)
-        try:
-            return self._verify(extracted, mapping)
-        except VerifierError as exc:
-            conformance.LEDGER.record_schema_failure(conformance.VERIFIER, _clip_reason(exc))
-            raise
-        except Exception as exc:
-            # No body ever arrived — a throttle that outlived the retry budget,
-            # a timeout, a dropped connection. Counted apart from the
-            # conformance rates: a call the model never answered says nothing
-            # about whether the model can emit the contract, and folding it in
-            # as a success flatters the number (found adversarially on
-            # document 04, where 18 throttled adjudications were reporting as
-            # 18 well-formed items).
-            conformance.LEDGER.record_transport_failure(conformance.VERIFIER, type(exc).__name__)
-            raise
+        return with_bounded_retries(
+            lambda: self._verify(extracted, mapping),
+            role=conformance.VERIFIER,
+            contract_error=VerifierError,
+            retries=self._config.contract_retries,
+            contract_backoff=self._config.contract_retry_seconds,
+            transport_backoff=self._config.transport_retry_seconds,
+        )
 
     def _verify(self, extracted: ExtractedDocument, mapping: MappingResult) -> VerificationResult:
         records = mapping.records

@@ -75,6 +75,13 @@ ROLES = (MAPPER, VERIFIER, ADJUDICATOR)
 RESIDUE_LEADING = "leading"
 RESIDUE_TRAILING = "trailing"
 
+#: The closed list of shape deviations the envelope adapter repairs. Nothing
+#: outside this tuple is ever adapted; an unlisted deviation stays a hard
+#: contract failure. Each is counted so the accommodation is a published rate
+#: rather than an invisible kindness.
+ADAPT_ATTRS_OBJECT = "extra_attrs object -> pairs"
+ADAPT_NUMERIC_STRING = "stringified numeric -> Decimal"
+
 #: Statuses the Anthropic SDK treats as retryable. A response carrying one of
 #: these was, by construction, either retried or the final attempt of an
 #: exhausted retry budget.
@@ -97,6 +104,13 @@ class RoleCounters:
     residue_leading: int = 0
     residue_trailing: int = 0
     transport_failures: int = 0
+    adapted_attrs_object: int = 0
+    adapted_numeric_string: int = 0
+
+    @property
+    def adaptations(self) -> int:
+        """Closed-list shape repairs applied to this role's output."""
+        return self.adapted_attrs_object + self.adapted_numeric_string
 
     @property
     def responses(self) -> int:
@@ -139,6 +153,9 @@ class ConformanceLedger:
     _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
     _counters: dict[str, RoleCounters] = field(default_factory=dict)
     _reasons: dict[str, list[str]] = field(default_factory=dict)
+    _verified_records: int = 0
+    _unverified_records: int = 0
+    _document_records: dict[str, int] = field(default_factory=dict)
 
     def _bump(self, role: str, **deltas: int) -> None:
         with self._lock:
@@ -173,6 +190,38 @@ class ConformanceLedger:
         self._bump(role, malformed_items=1)
         self._note(role, reason)
 
+    def record_adaptation(self, role: str, kind: str) -> None:
+        """One closed-list shape repair. Deliberately not folded into the
+        conformance rates: the model did not emit the contract, and a repair
+        that quietly counted as compliance would be the silent kind ADR 014
+        refuses."""
+        if kind == ADAPT_ATTRS_OBJECT:
+            self._bump(role, adapted_attrs_object=1)
+        elif kind == ADAPT_NUMERIC_STRING:
+            self._bump(role, adapted_numeric_string=1)
+        else:  # pragma: no cover - the list is closed by construction
+            raise ValueError(f"{kind!r} is not on the closed adaptation list")
+
+    def record_document_records(self, document: str, count: int) -> None:
+        """How many records one document actually yielded.
+
+        The accuracy table counts what the ORACLE expects; this counts what the
+        pipeline produced. Printing both is what turns a proposal delta — the
+        baseline run proposed 130 records against 128 expected — into something
+        explained rather than carried silently from run to run.
+        """
+        with self._lock:
+            self._document_records[document] = count
+
+    def record_verification_outcome(self, *, verified: int, unverified: int) -> None:
+        """How many records reaching triage carried an independent second
+        opinion, and how many were flagged because the verifier could not
+        give one. Reported apart from the accuracy table's own columns, which
+        cannot distinguish "agreed" from "never asked"."""
+        with self._lock:
+            self._verified_records += verified
+            self._unverified_records += unverified
+
     def record_transport_failure(self, role: str, reason: str) -> None:
         """A call that never produced a body. Only the exception class is
         recorded: an SDK error message is the server's text, and this line is
@@ -195,10 +244,21 @@ class ConformanceLedger:
         retryable = status in _RETRYABLE_STATUSES or status >= 500
         self._bump(role, http_attempts=1, retries=1 if retryable else 0)
 
+    def document_records(self) -> dict[str, int]:
+        with self._lock:
+            return dict(self._document_records)
+
+    def verification_split(self) -> tuple[int, int]:
+        with self._lock:
+            return self._verified_records, self._unverified_records
+
     def reset(self) -> None:
         with self._lock:
             self._counters.clear()
             self._reasons.clear()
+            self._verified_records = 0
+            self._unverified_records = 0
+            self._document_records.clear()
 
     # -- reading -----------------------------------------------------------
 
@@ -246,6 +306,7 @@ _HEADER = (
     "schema_fail",
     "malformed",
     "residue",
+    "adapted",
     "transport",
     "http_att",
     "retryable",
@@ -282,6 +343,7 @@ def format_conformance_report(ledger: ConformanceLedger = LEDGER) -> str:
                 str(counters.schema_failures),
                 str(counters.malformed_items),
                 str(counters.residue_responses),
+                str(counters.adaptations),
                 str(counters.transport_failures),
                 str(counters.http_attempts),
                 str(counters.retries),
@@ -322,8 +384,34 @@ def format_conformance_report(ledger: ConformanceLedger = LEDGER) -> str:
         "  boundary (ADR 014): reported, never an escalation trigger - the contract "
         "was met, the presentation was not."
     )
+    lines.append(
+        "  adapted = closed-list shape repairs (extra_attrs object -> pairs, stringified "
+        "numeric -> Decimal);"
+    )
+    lines.append(
+        "  like residue these are repairs, NOT compliance - they are reported so the "
+        "accommodation is visible."
+    )
+    produced = ledger.document_records()
+    if produced:
+        total = sum(produced.values())
+        lines.append(f"  records produced by document (pipeline side, {total} total):")
+        for document in sorted(produced):
+            lines.append(f"    {document}: {produced[document]}")
+    verified, unverified = ledger.verification_split()
+    if verified or unverified:
+        lines.append(
+            f"  records reaching triage: {verified} independently verified, "
+            f"{unverified} flagged verifier-unavailable (never asserted as verified)."
+        )
     for role in present:
         counters = snapshot[role]
+        if counters.adaptations:
+            lines.append(
+                f"  {role}: adaptations by kind - extra_attrs object "
+                f"{counters.adapted_attrs_object}, stringified numeric "
+                f"{counters.adapted_numeric_string}"
+            )
         if counters.residue_responses:
             lines.append(
                 f"  {role}: fence framing by position - "

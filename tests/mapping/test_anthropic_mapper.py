@@ -464,6 +464,10 @@ def _message(
 
 def _config() -> MapperConfig:
     return MapperConfig(
+        # One call per test: the retry policy has its own coverage in
+        # tests/observability/test_retry.py, and sleeping here would only
+        # slow the suite.
+        contract_retries=0,
         api_key="sk-test",
         model="claude-opus-5",
         base_url=None,

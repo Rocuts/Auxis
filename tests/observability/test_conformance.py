@@ -217,7 +217,12 @@ def _message(text: str, *, stop_reason: str = "end_turn") -> Any:
 
 
 def _mapper_config() -> MapperConfig:
-    return MapperConfig(api_key="k", model="zai/glm-5.3-flash", usd_per_mtok_in=Decimal("0.075"))
+    return MapperConfig(
+        api_key="k",
+        model="zai/glm-5.3-flash",
+        usd_per_mtok_in=Decimal("0.075"),
+        contract_retries=0,
+    )
 
 
 class TestMapperFeedsTheLedger:

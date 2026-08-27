@@ -1791,3 +1791,98 @@ Per the pre-registered rule, escalation is now due, and per ADR 014 §5 it goes
 permanently end the recurring allowance. That purchase is an operator action at
 `console.anthropic.com`. **Gate 2b remains OPEN.** This table ships in the
 README as the first half of the model-selection evidence.
+
+## 2026-08-26 — The hardening pass: eight changes at the contract boundary, none at the semantics
+
+The 0/128 table is now the **pre-hardening baseline**, recorded verbatim in
+ADR 014 §6 and in the README's limitations. Escalation to an enforcing endpoint
+is **blocked by budget, not waived** — the trigger fired, the remedy is
+identified, and it is unavailable. Those are different statements and only the
+second is true here. So the pre-registered hardening pass becomes the primary
+remediation: **one pass, one gate re-run.**
+
+Its premise is the baseline's own finding. Five adversarial passes refuted zero
+mapped values; on document 03, repairing envelope faults alone yielded 51/51
+valid records with no semantic correction. **So none of the eight changes below
+touches what the model decides a cell means.** Every one is at the contract
+boundary.
+
+**1. Schema minimization — 20 required keys down to 15.** `source_page` is no
+longer asked for at all: the extractor assigned the table id and knows its
+page, so the pipeline injects it. `table_id` falls back to the record's own
+provenance citations, which the model supplied correctly even when it omitted
+the top-level field. `effective_from`/`effective_to`/`extra_attrs` become
+optional because absent and null mean the same thing for them. What remains
+required is the true semantic core: what only a reader of *this document* can
+supply. The baseline lost 18 of document 05's 19 records to one derivable key.
+
+**2. A fixed `attribute_key` vocabulary**, enumerated per record type from the
+labels these documents print. The same footnote rule was slugged
+`per_qualifying_condition_rule` on one run and `age_and_blindness_rule` on the
+next — drift that breaks natural-key matching and idempotency together. The
+list is derived from extraction output only, never from the oracle; a label not
+on it still produces a record *and* an issue naming it, so a gap in the
+vocabulary is visible rather than absorbed.
+
+**3. A bounded envelope adapter, closed list, both roles.** Object-shaped
+`extra_attrs` becomes pairs; a quoted number becomes a `Decimal`; fence framing
+is stripped per ADR 014 §4. **Nothing else.** Prose after the JSON, a second
+value, a truncated value, a non-numeric string in a numeric slot — all stay
+hard failures, and the rejection cases are tested first and outnumber the
+acceptances. `"Ordinary rates"` in a rate slot must still fail: it is a
+semantic error, and a repair that swallowed it would be the silent kind.
+
+Both adaptations are **counted and printed beside the rates, never inside
+them**. A repair is not compliance. A hardened run that absorbed the model's
+deviations invisibly would be flattering the model, which is the failure mode
+the whole conformance ledger exists to prevent.
+
+**4. Two bounded retries per document per role**, justified by measurement
+rather than hope: the prose-after-JSON failure hit 3 of 4 bodies on document 01
+and 2 of 5 gate calls — a per-call coin flip, not an inability. **Every attempt
+is counted**, so retrying *depresses* the measured conformance rate rather than
+hiding behind it: two attempts to emit one schema reads as 50%, which is the
+truth about the model. Backoffs are split because the physics differ — 3 s for
+a contract failure, settled the moment the body lands; 300 s for a transport
+failure, sized to the measured free-tier 429 window, which did not clear in
+75 s but did in about five minutes.
+
+**5. Verifier failure containment.** Document 04 produced the baseline's only
+fully conformant mapper response — 19 records, zero issues — and lost all 19
+when the verifier returned a body with no verdicts envelope. Both obvious
+repairs are wrong: raising discards sound records, and persisting them clean
+asserts a confirmation that never happened. So the records now persist flagged
+under a new `verifier_unavailable` FLAG rule with the reason queued, and the
+report states verified and flagged-unverified counts distinctly. `disputes: 0`
+must never read the same as "independently confirmed". The error type moved to
+the **port** (`ports/verifier.VerificationError`) so the pipeline can catch it
+without importing an adapter — the hexagon stays intact.
+
+**6. The prior-year shape settled**, pre-registered: **one record per item,
+never one per (item, year)**, with the prior year riding as an attribute and a
+change column as `change`. Both years survive, in one record. The conventions
+now also forbid re-emitting a prose-stated rate that already qualifies table
+rows — the likely source of document 04's +2 over-emission. And the conformance
+report prints **per-document record counts**, so a proposal delta (130 proposed
+against 128 expected on the baseline) is explained rather than carried.
+
+**7. Convention-derived discriminators are declared** ([ADR 015](decisions/015-convention-derived-discriminators.md)).
+Document 01 names no jurisdiction anywhere in its text, yet all 32 records
+asserted `jurisdiction: "US"` while citing prose that establishes no such
+thing. The inference is correct; the citation was not. Such fields now go in a
+`convention_derived` list on the record and are never given a provenance
+citation they cannot support. A small lie with a large shape: the whole value
+of the provenance contract is that a citation means something.
+
+**8. The database contamination made unrepresentable.** The baseline's
+persistence data was spoiled by my own `make check` dropping the schema under a
+live fan-out, because both used one DSN. Now the suite has its own database
+(`tax_test`, created by `make db-up`, used by CI), `reset_database` refuses the
+pipeline DSN outright, and a `.fanout-active` sentinel — `make fanout-lock` —
+makes it refuse anything while a run holds the database. Both guards fail
+**loudly**: a guard that quietly skipped the reset would trade destroyed data
+for a mysteriously stateful suite.
+
+`make check`: 616 passed, 1 skipped. Note the README's limitations list was
+renumbered by the two new entries, so `#N` references in dev-log entries above
+this line point at the numbering of their own date.

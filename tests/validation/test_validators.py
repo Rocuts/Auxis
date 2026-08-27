@@ -32,6 +32,7 @@ from tax_tables.validation.validators import (
     RULE_OPEN_TOP,
     RULE_RATE_PLAUSIBILITY,
     RULE_VERIFIER_DISPUTE,
+    RULE_VERIFIER_UNAVAILABLE,
     Finding,
     Severity,
     TriageResult,
@@ -463,6 +464,7 @@ class TestFlagRules:
             RULE_CONFIDENCE_FLOOR,
             RULE_DERIVED_SUM,
             RULE_VERIFIER_DISPUTE,
+            RULE_VERIFIER_UNAVAILABLE,
         } == FLAG_RULES
         assert RULE_BRACKET_OVERLAP not in FLAG_RULES
 

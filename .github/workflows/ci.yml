@@ -13,16 +13,16 @@ jobs:
         env:
           POSTGRES_USER: tax
           POSTGRES_PASSWORD: tax
-          POSTGRES_DB: tax
+          POSTGRES_DB: tax_test
         ports:
           - 5433:5432
         options: >-
-          --health-cmd "pg_isready -U tax -d tax"
+          --health-cmd "pg_isready -U tax -d tax_test"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
     env:
-      TEST_DATABASE_URL: postgresql://tax:tax@localhost:5433/tax
+      TEST_DATABASE_URL: postgresql://tax:tax@localhost:5433/tax_test
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6

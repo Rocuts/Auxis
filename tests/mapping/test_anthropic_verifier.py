@@ -508,6 +508,7 @@ def _message(
 
 def _config() -> VerifierConfig:
     return VerifierConfig(
+        contract_retries=0,
         api_key="sk-test",
         model="claude-opus-5",
         base_url=None,

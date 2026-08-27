@@ -176,7 +176,7 @@ change — the ports design paying out again.
 tier — stays a **mechanism** fallback: it would prove the escalation path runs.
 It is a March 2024 model and may never be the source of a reported result.
 
-### 6. Outcome of the pre-registered run
+### 6. Outcome of the pre-registered run — the PRE-HARDENING BASELINE
 
 Run 2026-08-26 on the reachable pair. Full tables in the dev-log entry of the
 same date.
@@ -205,7 +205,60 @@ Two things the rule did not anticipate and which the record should carry:
    a semantic catastrophe if the categories had not been fixed beforehand. That
    is the whole return on pre-registering.
 
-Escalation is due, by the §5 route, and is an operator action.
+**Escalation is BLOCKED BY OPERATOR CONSTRAINT, not waived.** The §5 route
+requires funding at `console.anthropic.com`; that budget does not currently
+exist. The trigger fired, the remedy is identified, and it is unavailable — a
+distinction worth keeping precise, because "we chose not to escalate" and "we
+could not" are different statements about this project and only the second is
+true.
+
+**§6's both-roles gap is confirmed.** The rule as pre-registered named only
+`SCHEMA_MAPPER_MODEL`. Document 04 showed that insufficient: it produced 19
+cleanly conformant records — the run's only such response — and lost them to
+the verifier's own contract failure. Any escalation must move both roles.
+
+### 7. The hardening pass — the primary remediation
+
+With the escalation route budget-gated, the pre-registered hardening pass
+becomes the primary remedy rather than a fallback: **one pass, one gate
+re-run.** Its premise is the baseline's own finding — the semantics were
+already right, so the work is entirely at the contract boundary.
+
+1. **Schema minimization.** Every field the pipeline already knows leaves the
+   model's required surface. `source_page` is no longer asked for at all (it is
+   injected from the extraction, which assigned the table id and knows its
+   page); `table_id` falls back to the record's own provenance citations.
+   Required keys shrink from 20 to 15 — the true semantic core, being what
+   only a reader of this document can supply.
+2. **A fixed `attribute_key` vocabulary** per record type, enumerated from the
+   labels these documents print. A free-form slug drifted between runs of the
+   same document, which breaks natural-key matching and idempotency alike.
+3. **A bounded envelope adapter, closed list, both roles.** Object-shaped
+   `extra_attrs` becomes pairs; a quoted number becomes a Decimal; fence
+   framing is stripped per §4. **Nothing else.** Prose after the JSON, a second
+   value, a missing semantic field, a non-numeric string in a numeric slot —
+   all remain hard contract failures, and the rejection cases are tested first.
+4. **Two bounded retries** per document per role, justified by the measured
+   per-call failure rate rather than by hope, and **counted per attempt** so
+   retrying depresses the conformance rate rather than hiding behind it.
+5. **Verifier failure containment.** A verifier that cannot answer after its
+   retries no longer costs the document: its records persist flagged under
+   `verifier_unavailable`, and the report states verified and
+   flagged-unverified counts distinctly. Silence is still never assent.
+6. **The prior-year shape settled** — one record per item, prior year as an
+   attribute — and per-document record counts printed, so a proposal delta is
+   explained rather than carried.
+7. **Convention-derived discriminators declared** ([ADR 015](015-convention-derived-discriminators.md)).
+8. **Database isolation**, so the contamination that spoiled the baseline's
+   persistence data is unrepresentable rather than merely regretted.
+
+The adaptations in (3) are counted and printed exactly as residue is, and for
+the same reason: **a repair is not compliance.** The conformance table reports
+them beside the rates, never inside them, so a hardened run cannot flatter the
+model by absorbing its deviations invisibly.
+
+If the hardened gate lands short of 128/128 it ships truthfully with every
+failing record named, and the budget conversation reopens with data.
 
 ## Consequences
 

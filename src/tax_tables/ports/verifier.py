@@ -77,6 +77,18 @@ class VerificationResult(BaseModel):
         return self
 
 
+class VerificationError(RuntimeError):
+    """A verification call failed in a way that yields no usable verdict set —
+    truncated, refused, or not the contracted JSON. Raised by adapters.
+
+    Declared on the PORT, not in an adapter, because the pipeline has to catch
+    it: a verifier that cannot answer must flag this document's records rather
+    than lose them or silently bless them (``pipeline.unverified_findings``).
+    A domain module importing an adapter to name its exception would be the
+    hexagon leaking.
+    """
+
+
 class RecordVerifier(Protocol):
     def verify(self, extracted: ExtractedDocument, mapping: MappingResult) -> VerificationResult:
         """Judge every record of ``mapping`` against ``extracted``."""

@@ -34,7 +34,8 @@ from __future__ import annotations
 
 import json
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
+from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from tax_tables.observability import conformance
@@ -98,3 +99,64 @@ def loads_fence_tolerant(
             raise strict_error from None
         conformance.LEDGER.record_envelope_residue(role, positions)
         return value
+
+
+# ---------------------------------------------------------------------------
+# The closed shape list
+# ---------------------------------------------------------------------------
+#
+# Two deviations beyond fence framing were measured on the baseline run, both
+# structural rather than semantic, and both are repaired here — and NOWHERE
+# else, so the list stays auditable in one place:
+#
+#   1. ``extra_attrs`` arriving as a JSON object instead of the declared array
+#      of ``{key, value}`` pairs. Measured on documents 02, 03 and 04.
+#   2. A number arriving as a quoted string ("0.99", "6.595"). Measured on
+#      ``confidence`` (every document) and ``rate`` (47 of 51 records on
+#      document 03).
+#
+# Both are lossless rewrites of the SAME values into the declared shape: no
+# value is invented, dropped, rounded, or chosen between. Anything else — a
+# missing required field the pipeline cannot derive, a value of the wrong
+# semantic type, prose after the JSON — remains a hard contract failure.
+
+
+def adapt_extra_attrs(value: Any, *, role: str) -> list[Any]:
+    """Normalize ``extra_attrs`` to the declared list of ``{key, value}``.
+
+    An object ``{"a": 1}`` becomes ``[{"key": "a", "value": 1}]``: the same
+    pairs, in the declared container. A value that is neither a list nor a
+    mapping is returned as an empty list's worth of nothing — the caller's
+    existing ``or []`` handling — because inventing pairs is not repair.
+    """
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return value
+    if isinstance(value, Mapping):
+        conformance.LEDGER.record_adaptation(role, conformance.ADAPT_ATTRS_OBJECT)
+        return [{"key": key, "value": item} for key, item in value.items()]
+    return []
+
+
+def adapt_numeric(value: Any, *, role: str) -> Any:
+    """Turn a quoted number into a ``Decimal``; leave everything else alone.
+
+    Deliberately strict about what counts as a quoted number: the string must
+    parse as a decimal in full. ``"6.595"`` converts; ``"No limit"``,
+    ``"Ordinary rates"`` and ``""`` do not, and fall through unchanged to the
+    caller's type check, which rejects them — a non-numeric string in a
+    numeric slot is a semantic error and must stay one.
+    """
+    if not isinstance(value, str):
+        return value
+    try:
+        converted = Decimal(value.strip())
+    except (InvalidOperation, ValueError):
+        return value
+    if not converted.is_finite():
+        # "NaN" and "Infinity" parse as Decimals and are not numbers a tax
+        # value may take.
+        return value
+    conformance.LEDGER.record_adaptation(role, conformance.ADAPT_NUMERIC_STRING)
+    return converted

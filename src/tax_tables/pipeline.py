@@ -34,12 +34,14 @@ The semantic-layer amendment (ADR 012) adds two bounded roles:
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Literal, Protocol
 from uuid import UUID
 
 from tax_tables.extraction.model import ExtractedDocument, ExtractionMethod
+from tax_tables.observability import conformance
 from tax_tables.ports.adjudicator import (
     DEFAULT_AUTO_RESOLVE_THRESHOLD,
     Adjudication,
@@ -48,11 +50,12 @@ from tax_tables.ports.adjudicator import (
 )
 from tax_tables.ports.mapper import MappingCost, MappingIssue, MappingResult, SchemaMapper
 from tax_tables.ports.repository import IngestOutcome, RecordRepository
-from tax_tables.ports.verifier import RecordVerifier, VerificationResult
+from tax_tables.ports.verifier import RecordVerifier, VerificationError, VerificationResult
 from tax_tables.validation.validators import (
     DEFAULT_CONFIDENCE_FLOOR,
     FLAG_RULES,
     RULE_VERIFIER_DISPUTE,
+    RULE_VERIFIER_UNAVAILABLE,
     Finding,
     Severity,
     TriageResult,
@@ -135,6 +138,33 @@ def dispute_findings(verification: VerificationResult) -> list[Finding]:
             record_index=verdict.record_index,
         )
         for verdict in verification.disputed
+    ]
+
+
+def unverified_findings(records: Sequence[object], reason: str) -> list[Finding]:
+    """Every mapper-validated record of a document the verifier could not
+    judge, flagged rather than trusted.
+
+    The baseline run made the cost of the alternatives concrete. Document 04
+    produced the run's only fully conformant mapper response — 19 records,
+    zero mapping issues — and then the verifier returned a body with no
+    verdicts envelope. Raising discarded all 19; persisting them clean would
+    have asserted an independent confirmation that never happened. Neither is
+    acceptable, so the records persist as ``needs_review`` under their own
+    rule, and the review queue carries the reason.
+
+    Silence is still never assent (ADR 012): "the verifier was unavailable" is
+    a different claim from "the verifier agreed", and the two must never print
+    the same.
+    """
+    return [
+        Finding(
+            rule=RULE_VERIFIER_UNAVAILABLE,
+            severity=Severity.FLAG,
+            detail=reason,
+            record_index=index,
+        )
+        for index in range(len(records))
     ]
 
 
@@ -232,12 +262,28 @@ def run_document(
 ) -> PipelineResult:
     extracted = router.extract(pdf_bytes, filename=filename)
     mapping = mapper.map_document(extracted)
+    conformance.LEDGER.record_document_records(filename, len(mapping.records))
 
     verification: VerificationResult | None = None
     disputes: list[Finding] = []
     if verifier is not None:
-        verification = verifier.verify(extracted, mapping)
-        disputes = dispute_findings(verification)
+        try:
+            verification = verifier.verify(extracted, mapping)
+        except VerificationError as exc:
+            # Contained, not fatal, and not silent: the verifier's own
+            # contract failure (after its bounded retries) flags this
+            # document's records instead of losing them or blessing them.
+            reason = "verifier unavailable: " + " ".join(str(exc).split())[:160]
+            verification = VerificationResult(verdicts=[], notes=[reason], cost=None)
+            disputes = unverified_findings(mapping.records, reason)
+            conformance.LEDGER.record_verification_outcome(
+                verified=0, unverified=len(mapping.records)
+            )
+        else:
+            disputes = dispute_findings(verification)
+            conformance.LEDGER.record_verification_outcome(
+                verified=len(mapping.records), unverified=0
+            )
 
     triaged = triage(mapping.records, confidence_floor=confidence_floor, extra_findings=disputes)
 

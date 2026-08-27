@@ -66,6 +66,14 @@ RULE_DERIVED_SUM = "derived_sum"
 #: triage as extra findings under this name (ADR 012), so a disputed record
 #: rides the same FLAG machinery — persisted as needs_review, reason queued.
 RULE_VERIFIER_DISPUTE = "verifier_dispute"
+#: Also not a rule of this module. When the verifier cannot return a usable
+#: verdict set for a whole document — its own contract failure, after its
+#: retries — every mapper-validated record of that document is flagged under
+#: this name rather than persisted as though verified. Silence is never
+#: assent (ADR 012), and the alternative behaviours are both worse: losing
+#: the document discards sound records, and persisting it clean asserts an
+#: independent confirmation that never happened.
+RULE_VERIFIER_UNAVAILABLE = "verifier_unavailable"
 
 #: Rules whose findings are always FLAG severity: the record they indict IS
 #: in the fact table, marked needs_review. Only review-queue items born from
@@ -84,6 +92,7 @@ FLAG_RULES = frozenset(
         RULE_CONFIDENCE_FLOOR,
         RULE_DERIVED_SUM,
         RULE_VERIFIER_DISPUTE,
+        RULE_VERIFIER_UNAVAILABLE,
     }
 )
 

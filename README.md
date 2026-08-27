@@ -658,10 +658,29 @@ Consolidated, and deliberately specific. If something is unproven, it says so.
 
 ### Gates still open
 
-1. **The accuracy gate is credential-blocked.** No end-to-end accuracy number
-   has been measured. Every accuracy and per-document cost figure in this
-   README is a `TBD` slot, not an estimate presented as a result.
-2. **The vision-OCR adapter has never run against a real model.** It is
+1. **The accuracy gate has been run and failed: 0/128 on the baseline model,
+   and escalating it is budget-gated.** The full table is in
+   [`docs/dev-log.md`](docs/dev-log.md) and
+   [ADR 014 §6](docs/decisions/014-semantic-layer-model-selection.md). Read
+   its shape before its headline: `diff` and `extra` are both **0**, so no
+   record arrived carrying a wrong value — the records never reached the
+   comparison at all. Five independent adversarial passes, each denied the
+   test oracle, refuted **zero** mapped values, and on document 03 repairing
+   envelope faults alone yields 51/51 valid records with no semantic
+   correction. The chosen model maps these documents correctly and cannot
+   reliably emit the response contract through a gateway that does not enforce
+   structured outputs. The pre-registered remedy is escalation to an enforcing
+   endpoint; it requires funding that does not exist, so it is **blocked, not
+   waived**, and the hardening pass described in ADR 014 §7 is the primary
+   remediation instead.
+2. **Some discriminators are asserted from convention, not read from the
+   page.** Document 01 names no jurisdiction anywhere in its text, so
+   `jurisdiction: "US"` (and `currency: "USD"` where no sign appears) comes
+   from the canonical conventions. Such fields are now declared in a
+   `convention_derived` list on the record rather than given a provenance
+   citation they cannot support — see
+   [ADR 015](docs/decisions/015-convention-derived-discriminators.md).
+3. **The vision-OCR adapter has never run against a real model.** It is
    built, and its 26 tests cover every fidelity and fail-closed rule against
    recorded response shapes — but on the platform each job fails at the
    mapper's credential check *before* extraction is reached, so no page has
@@ -672,9 +691,9 @@ Consolidated, and deliberately specific. If something is unproven, it says so.
 
 ### The AWS stack
 
-3. **It synthesizes and validates but was never deployed.** No template here
+4. **It synthesizes and validates but was never deployed.** No template here
    has met a real control plane.
-4. **The Lambda deploy artifact is incomplete by design.** The functions ship
+5. **The Lambda deploy artifact is incomplete by design.** The functions ship
    the real `src/` tree and the handlers are real, unit-tested code — but the
    runtime dependency layer (psycopg, pydantic, anthropic, boto3, mangum,
    aws-lambda-powertools) is a
@@ -682,11 +701,11 @@ Consolidated, and deliberately specific. If something is unproven, it says so.
    `app_ingest` database role the Lambdas IAM-auth into is created by a
    deploy-time migration, not by the stack, and `API_KEY` / `CRON_SECRET` are
    deploy-time provisioning.
-5. **Step Functions inter-step payloads are not offloaded.** Each document's
+6. **Step Functions inter-step payloads are not offloaded.** Each document's
    extracted grid and mapped records ride the 256 KB per-state payload quota.
    The Map Run's *aggregate* output is exported to S3; the inter-step payload
    is not. Document 03 is the one that approaches the limit.
-6. **The documented 10 MB upload cap is a per-target number, and only one
+7. **The documented 10 MB upload cap is a per-target number, and only one
    target's real ceiling is known.** The application-level cap
    (`MAX_UPLOAD_BYTES`, default 10 MB) is enforced before a byte reaches the
    pipeline, but each platform imposes its own body limit underneath it, and
@@ -703,13 +722,13 @@ Consolidated, and deliberately specific. If something is unproven, it says so.
    fires first, and on neither does the caller receive the app's own message.
    Uploads above a platform ceiling would need a presigned-upload ingest
    path, which is designed-for but not built.
-7. **The VPC endpoint policies are account-scoped, not action-scoped.** All
+8. **The VPC endpoint policies are account-scoped, not action-scoped.** All
    seven endpoints require `aws:PrincipalAccount` to be this account, which
    closes the cross-account exfiltration path an unrestricted S3 gateway
    endpoint otherwise opens. They deliberately do not enumerate actions: an
    over-tight endpoint policy is a deploy-time failure this project cannot
    test.
-8. **Two runtime AWS calls have no endpoint, deliberately.** The VPC has no
+9. **Two runtime AWS calls have no endpoint, deliberately.** The VPC has no
    NAT and no internet path, so every runtime AWS API call must traverse a VPC
    endpoint. All 33 enumerated calls resolve to one of the seven endpoints (S3
    gateway; interface: Secrets Manager, Textract, Bedrock runtime, CloudWatch
@@ -722,7 +741,7 @@ Consolidated, and deliberately specific. If something is unproven, it says so.
    | `bedrock:GetInferenceProfile` / profile-routed invocation | no endpoint, not granted | The stack pins foundation-model IDs. Adopting cross-region inference profiles would require both the IAM grant on the profile ARN and routing this VPC cannot express today. |
    | `cloudwatch:PutMetricData` | no endpoint | No code emits custom metrics. Enabling them requires the `monitoring` interface endpoint first. Note this does **not** affect the failure alarms above: those read `AWS/States` metrics the service publishes itself. |
 
-9. **One accepted IAM over-grant, stated rather than hidden.** The Lambda
+10. **One accepted IAM over-grant, stated rather than hidden.** The Lambda
    execution roles carry `AWSLambdaBasicExecutionRole` and
    `AWSLambdaVPCAccessExecutionRole`, both of which grant on `Resource "*"`.
    The ENI half genuinely cannot be narrowed (the `ec2:Describe*` calls
@@ -738,7 +757,7 @@ Consolidated, and deliberately specific. If something is unproven, it says so.
 
 ### The service
 
-10. **The review queue is readable over HTTP but not writable, on purpose.**
+11. **The review queue is readable over HTTP but not writable, on purpose.**
     `GET /reviews` and `GET /reviews/{id}` expose every queued item with its
     provenance and its full adjudication audit trail — including the
     below-threshold *proposals* the adjudicator stores on items that stay
@@ -751,18 +770,18 @@ Consolidated, and deliberately specific. If something is unproven, it says so.
     closed item without its `resolved_by` / `resolved_at` unrepresentable
     whichever route closed it. The omission is asserted by a contract test,
     not merely intended.
-11. **`GET` endpoints are unauthenticated by design**, being read-only tax
+12. **`GET` endpoints are unauthenticated by design**, being read-only tax
     data. The write path enforces `X-API-Key` with a constant-time compare,
     and per-IP rate limiting is an edge rule (WAF on AWS; a Vercel Firewall
     rule when Phase 3.5 lands), not application code.
-12. **The Textract fixture is hand-constructed.** No AWS credentials ever
+13. **The Textract fixture is hand-constructed.** No AWS credentials ever
     existed, so `fixtures/textract/05_response.json` was built from the
     documented `BLOCK` / `CELL` / `RELATIONSHIPS` shape and is labelled as
     such in the JSON itself, in its generator, and in the tests. Its content
     was transcribed from the real scanned fixture via the local OCR; the
     oracle was never opened. Deviations are recorded in the generator
     docstring.
-13. **Bedrock structured-output acceptance is unverified.** The Bedrock
+14. **Bedrock structured-output acceptance is unverified.** The Bedrock
     adapters are real and fixture-tested, but whether a live Bedrock runtime
     accepts the exact structured-output request shape is a deploy-time
     verification item. The parsers fail closed, so the failure would be loud.

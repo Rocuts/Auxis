@@ -1,4 +1,5 @@
-.PHONY: check lint typecheck test fmt db-up db-down accuracy api openapi diagrams
+.PHONY: check lint typecheck test fmt db-up db-down accuracy api openapi diagrams \
+	fanout-lock fanout-unlock
 
 check: lint typecheck test
 
@@ -36,6 +37,13 @@ synth-check: synth
 
 db-up:
 	docker compose up -d --wait db
+	# The unit-test database is separate from the pipeline database, so a
+	# `make check` can never drop a live pipeline run's data. See
+	# tests/conftest.py — this separation exists because it happened.
+	@docker compose exec -T db psql -U tax -d postgres -tc \
+		"SELECT 1 FROM pg_database WHERE datname='tax_test'" | grep -q 1 || \
+		docker compose exec -T db psql -U tax -d postgres -c \
+		"CREATE DATABASE tax_test OWNER tax"
 
 db-down:
 	docker compose down -v
@@ -53,3 +61,12 @@ openapi:
 # Node (mermaid-cli pulls a headless Chromium on first run).
 diagrams:
 	uv run python scripts/check_diagrams.py README.md
+
+# Hold the pipeline database for a long-running run. While the sentinel
+# exists, tests/conftest.py refuses to drop any schema, so a concurrent
+# `make check` fails loudly instead of destroying the run's data.
+fanout-lock:
+	@touch .fanout-active && echo "pipeline database held (.fanout-active)"
+
+fanout-unlock:
+	@rm -f .fanout-active && echo "pipeline database released"

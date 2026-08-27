@@ -255,6 +255,7 @@ def _glm_config(**overrides: Any) -> VerifierConfig:
         "usd_per_mtok_out": Decimal("0.25"),
         "cache_read_factor": cache_factors_for(GLM).read,
         "cache_write_factor": cache_factors_for(GLM).write,
+        "contract_retries": 0,
     }
     fields.update(overrides)
     return VerifierConfig(**fields)
