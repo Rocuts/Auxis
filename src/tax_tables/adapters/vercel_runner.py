@@ -32,9 +32,21 @@ cron backstop exists: a kick that never leaves cost nothing, and the job is
 still ``queued``.
 
 If the kick fails, is dropped, or never fires at all, the job row is still
-`queued` and the next cron sweep picks it up. That is the same contract the
-Step Functions runner honours on AWS: a lost notification delays work, it
-never loses it.
+`queued` and the next cron sweep picks it up.
+
+**That covers a lost *kick*. It did not cover a killed *worker*, and the
+difference cost a production run.** A kick that never leaves is harmless
+because the row stays `queued`. A worker the platform kills at `maxDuration`
+is not harmless: it has already set the row to `running`, and nothing is
+left alive to write a terminal state. A sweep that selected only `queued`
+could not see it. On 2026-08-27 all five seeded documents were stranded
+exactly that way, and because a `running` job reads as live, the sha256
+natural key then refused to re-ingest any of them.
+
+With the visibility timeout in `service.jobs.sweep_pending`, the original
+claim now holds for both failures: a lost notification *and* a killed worker
+delay work, they do not lose it. The AWS target gets the same property from
+Step Functions' own task timeouts rather than from this code.
 
 Stdlib `urllib` on purpose: one fire-and-forget POST does not justify adding
 an HTTP client to the runtime bundle (`anthropic` ships `httpx2`, not

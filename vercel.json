@@ -3,13 +3,13 @@
   "framework": "fastapi",
   "functions": {
     "app/main.py": {
-      "maxDuration": 300,
+      "maxDuration": 1800,
       "excludeFiles": "{fixtures/**,tests/**,docs/**,infra/**,scripts/**,.github/**,.venv/**,Documents/**,.claude/**,.pytest_cache/**,.mypy_cache/**,.ruff_cache/**,**/__pycache__/**,**/test_*.py,.env,.env.*}"
     }
   },
   "crons": [
     {
-      "path": "/internal/sweep?limit=5",
+      "path": "/internal/sweep?limit=3",
       "schedule": "* * * * *"
     }
   ]

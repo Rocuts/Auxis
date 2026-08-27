@@ -2,10 +2,17 @@
 
 ``POST /documents`` calls :func:`enqueue_ingest` and returns 202 — the
 request never blocks on extraction. Processing happens elsewhere:
-:func:`sweep_pending` claims ``queued`` jobs with ``FOR UPDATE SKIP
-LOCKED`` (safe under concurrent sweepers) and runs each through
-:func:`process_job`, which is where the pipeline's adapters are built from
-the environment.
+:func:`sweep_pending` claims jobs with ``FOR UPDATE SKIP LOCKED`` (safe
+under concurrent sweepers) and runs each through :func:`process_job`, which
+is where the pipeline's adapters are built from the environment.
+
+A job is claimable when it is ``queued`` **or** when it is ``running`` and
+its lease has expired — a visibility timeout. The second half is not
+theoretical: on request-scoped compute the platform kills a worker at
+``maxDuration`` and nothing rewrites the row, so a queued-only sweep is
+blind to precisely the jobs it exists to rescue. See
+:data:`DEFAULT_LEASE_SECONDS` for the invariant that keeps a live worker's
+job from being stolen.
 
 Failure honesty (the contract the 202 owes its callers): a job accepted
 without usable mapping credentials is NOT an HTTP error — the upload is
@@ -23,7 +30,10 @@ Enqueue idempotency, on top of the document-level sha256 no-op:
 - a document whose latest job succeeded is NOT re-processed (re-uploading
   the same PDF is a no-op end to end); the succeeded job is returned;
 - a document whose latest job failed gets a fresh job — re-uploading after
-  an outage is the retry path.
+  an outage is the retry path. This is why the lease matters end to end: a
+  stranded ``running`` job reads as live, so until the sweep can move it to
+  a terminal state, the sha256 natural key hands back the stranded job and
+  the document cannot be re-ingested at all.
 """
 
 from __future__ import annotations
@@ -238,30 +248,104 @@ def process_job(
         )
 
 
+#: How long a claimed job is leased to the worker that claimed it.
+#:
+#: **INVARIANT: this must be >= the platform's function ``maxDuration``.** A
+#: worker cannot outlive ``maxDuration``, so any ``running`` job older than
+#: that has certainly lost its worker. A *shorter* lease is the dangerous
+#: direction: the sweep would reclaim a job whose worker is still alive, two
+#: workers would map the same document, and the run would be paid for twice.
+#: ``vercel.json`` sets ``maxDuration`` to 1800 s; this is that plus a minute.
+DEFAULT_LEASE_SECONDS = 1860
+
+#: How many times a job may be attempted before it is abandoned as failed.
+#: Without a ceiling, a document that reliably kills its worker is reclaimed
+#: forever and every reclaim spends model credit.
+DEFAULT_MAX_ATTEMPTS = 3
+
+
+def _int_setting(source: Mapping[str, str], name: str, default: int) -> int:
+    raw = source.get(name)
+    if not raw:
+        return default
+    try:
+        value = int(raw)
+    except ValueError:
+        return default
+    return value if value > 0 else default
+
+
+def _abandon(dsn: str, job_id: UUID, attempts: int) -> None:
+    """Terminal state for a job that has burned its attempts. It is marked,
+    never deleted: the row is the only evidence the work was lost."""
+    with psycopg.connect(dsn, connect_timeout=30) as conn, conn.transaction():
+        conn.execute(
+            """
+            UPDATE jobs
+            SET status = 'failed', finished_at = now(), error = %s
+            WHERE id = %s
+            """,
+            (
+                Jsonb(
+                    {
+                        "type": "lease_expired_max_attempts",
+                        "error_class": "LeaseExpired",
+                        "message": (
+                            f"job lost its worker and reached {attempts} attempts; "
+                            "abandoned rather than reclaimed again"
+                        ),
+                    }
+                ),
+                job_id,
+            ),
+        )
+
+
 def sweep_pending(
     dsn: str,
     *,
     env: Mapping[str, str] | None = None,
     limit: int = 10,
 ) -> list[UUID]:
-    """Claim up to ``limit`` queued jobs and process each. The cron-sweep
+    """Claim up to ``limit`` claimable jobs and process each. The cron-sweep
     JobRunner on Vercel and the docker-compose worker loop both call this;
     ``FOR UPDATE SKIP LOCKED`` keeps concurrent sweepers off each other's
-    jobs."""
+    jobs.
+
+    **Claimable is not the same as queued.** A job whose worker the platform
+    killed stays ``running`` forever — nothing rewrites the row, because the
+    process that would have written it is gone. Selecting only ``queued``
+    made the cron backstop blind to exactly the failure it exists to cover;
+    five production jobs were stranded that way on 2026-08-27. So a
+    ``running`` job whose lease has expired is claimable too, which is the
+    visibility-timeout semantics Step Functions gives the AWS target for
+    free.
+    """
+    source = os.environ if env is None else env
+    lease_seconds = _int_setting(source, "JOB_LEASE_SECONDS", DEFAULT_LEASE_SECONDS)
+    max_attempts = _int_setting(source, "JOB_MAX_ATTEMPTS", DEFAULT_MAX_ATTEMPTS)
     with psycopg.connect(dsn, connect_timeout=30) as conn, conn.transaction():
         rows = conn.execute(
             """
-            SELECT id FROM jobs
+            SELECT id, attempt FROM jobs
             WHERE status = 'queued'
+               OR (
+                    status = 'running'
+                    AND started_at IS NOT NULL
+                    AND started_at < now() - make_interval(secs => %s)
+                  )
             ORDER BY created_at, id
             LIMIT %s
             FOR UPDATE SKIP LOCKED
             """,
-            (limit,),
+            (lease_seconds, limit),
         ).fetchall()
-        job_ids = [row[0] for row in rows]
+        claimable = [(row[0], row[1]) for row in rows]
     processed: list[UUID] = []
-    for job_id in job_ids:
-        process_job(dsn, job_id, env=env)
+    for job_id, attempt in claimable:
+        if attempt >= max_attempts:
+            _abandon(dsn, job_id, attempt)
+        else:
+            process_job(dsn, job_id, env=env)
         processed.append(job_id)
     return processed
