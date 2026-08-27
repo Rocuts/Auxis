@@ -135,11 +135,33 @@ Details in
 ## Quick start
 
 ```bash
-cp .env.example .env          # fill DATABASE_URL, API_KEY, CRON_SECRET
+cp .env.example .env
 docker compose up -d --wait db
 uv sync
+```
+
+Then edit `.env`. Three things, and the third is the one that is easy to
+miss:
+
+1. **`DATABASE_URL=postgresql://tax:tax@localhost:5433/tax`** — the
+   credentials and the 5433 port are what `docker-compose.yml` publishes. The
+   shipped value is a Neon-shaped placeholder; it will not reach the
+   container.
+2. **`API_KEY`** and **`CRON_SECRET`** — any non-empty values. They are yours;
+   the curls below just have to agree with them.
+3. **Uncomment the `AS SHIPPED` block** — `SCHEMA_MAPPER_API_KEY`,
+   `SCHEMA_MAPPER_BASE_URL`, `SCHEMA_MAPPER_MODEL`, and **both**
+   `SCHEMA_MAPPER_USD_PER_MTOK_*` prices — plus the three `RECORD_VERIFIER`
+   lines (`RECORD_VERIFIER_MODEL` and **both** its prices), and set your AI
+   Gateway key on `SCHEMA_MAPPER_API_KEY`. A model without its prices is
+   reported at the Opus defaults, which is why the prices travel with it.
+   Skip this and the API still runs; the pipeline fails at
+   `missing_credentials`.
+
+```bash
+export $(grep -E '^DATABASE_URL=' .env)   # migrate reads shell env, not .env
 uv run python -m tax_tables.migrate
-make api                      # http://localhost:8000/docs
+make api                                  # http://localhost:8000/docs
 ```
 
 **Ingesting a document locally takes one more call, and that is by design.**
@@ -158,6 +180,10 @@ curl -X POST "localhost:8000/internal/sweep?limit=1" \
 
 curl "localhost:8000/records?limit=5"
 ```
+
+**If `items` comes back empty, ask the job why:** `GET /jobs/{job_id}` with the
+id the upload returned. `error.type = "missing_credentials"` means the mapper
+key is unset — step 3 above.
 
 The sweep needs a funded model key (`SCHEMA_MAPPER_API_KEY`, or
 `ANTHROPIC_API_KEY` to go direct); without one the job reaches a terminal
