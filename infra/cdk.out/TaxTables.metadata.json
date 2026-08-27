@@ -681,7 +681,7 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        ".../var/folders/q7/vqkr6z_53zv5lwdxt31637dh0000gn/T/jsii-kernel-bTBuSb/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:272 in aws-cdk-lib...",
+        ".../var/folders/q7/vqkr6z_53zv5lwdxt31637dh0000gn/T/jsii-kernel-YvgOZG/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:272 in aws-cdk-lib...",
         "Array.forEach (:)",
         "...aws-cdk-lib..."
       ]
@@ -695,7 +695,7 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        ".../var/folders/q7/vqkr6z_53zv5lwdxt31637dh0000gn/T/jsii-kernel-bTBuSb/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:272 in aws-cdk-lib...",
+        ".../var/folders/q7/vqkr6z_53zv5lwdxt31637dh0000gn/T/jsii-kernel-YvgOZG/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:272 in aws-cdk-lib...",
         "Array.forEach (:)",
         "...aws-cdk-lib..."
       ]
@@ -709,7 +709,7 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        ".../var/folders/q7/vqkr6z_53zv5lwdxt31637dh0000gn/T/jsii-kernel-bTBuSb/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:272 in aws-cdk-lib...",
+        ".../var/folders/q7/vqkr6z_53zv5lwdxt31637dh0000gn/T/jsii-kernel-YvgOZG/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:272 in aws-cdk-lib...",
         "Array.forEach (:)",
         "...aws-cdk-lib..."
       ]
@@ -723,7 +723,7 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        ".../var/folders/q7/vqkr6z_53zv5lwdxt31637dh0000gn/T/jsii-kernel-bTBuSb/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:272 in aws-cdk-lib...",
+        ".../var/folders/q7/vqkr6z_53zv5lwdxt31637dh0000gn/T/jsii-kernel-YvgOZG/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:272 in aws-cdk-lib...",
         "Array.forEach (:)",
         "...aws-cdk-lib..."
       ]
@@ -737,7 +737,7 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        ".../var/folders/q7/vqkr6z_53zv5lwdxt31637dh0000gn/T/jsii-kernel-bTBuSb/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:272 in aws-cdk-lib...",
+        ".../var/folders/q7/vqkr6z_53zv5lwdxt31637dh0000gn/T/jsii-kernel-YvgOZG/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:272 in aws-cdk-lib...",
         "Array.forEach (:)",
         "...aws-cdk-lib..."
       ]
@@ -751,7 +751,7 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        ".../var/folders/q7/vqkr6z_53zv5lwdxt31637dh0000gn/T/jsii-kernel-bTBuSb/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:272 in aws-cdk-lib...",
+        ".../var/folders/q7/vqkr6z_53zv5lwdxt31637dh0000gn/T/jsii-kernel-YvgOZG/node_modules/aws-cdk-lib/aws-ec2/lib/vpc.js:1:272 in aws-cdk-lib...",
         "Array.forEach (:)",
         "...aws-cdk-lib..."
       ]

@@ -574,6 +574,250 @@ cross-family mitigation, vindicated empirically rather than argued.
 short of 128/128 it ships truthfully, with every failing record named as a
 known limitation, and the harness is never touched.
 
+### 8f. The bounded regression revert — SUPERSEDED BY §8g
+
+**Status:** ~~operator ruling, 2026-08-27~~ **SUPERSEDED the same day by
+§8g**, on evidence from the pre-run audit. Left standing rather than deleted,
+because the premise it got wrong is the point: this section argued for
+removing *one clause* on the grounds that doing so restored a measured
+configuration, and that was **false**. The reasoning below is preserved as
+written; §8g states what replaced it and why.
+
+> **The specific error, named.** §8f's "What was NOT reverted, deliberately"
+> defended keeping *"same granularity and typed slots as
+> ordinary_income_bracket"* on the grounds that it "earned document 04's
+> 9/18 → 18/18 and document 05's continued 19/19". **Document 04 contains no
+> `preferential_gain_bracket` records at all** — its 18 are `wage_base`,
+> `surtax_threshold`, `employment_tax_rate` and `withholding_allowance` — so
+> that bullet cannot have earned any of those nine, and document 05 was
+> already 19/19 at gate 4 without the language. The retained text had exactly
+> the property §8f condemned in the clause it removed. Credit where it is
+> due: a pre-run audit refuted this against the tree, before the run.
+
+**Original scope claim:** one clause deleted from `CANONICAL_CONVENTIONS`.
+Nothing else, in any file that reaches a model.
+
+The fifth gate scored **100/128** under the spec frozen at `1961126`. It
+repaired all nine of the fourth gate's failures and broke twenty-eight that
+had scored perfectly twice. All 28 are one field:
+`ordinary_income_bracket.taxpayer_class`, expected `individual`, got null.
+The cause is confirmed fix 3 of that run's pre-run audit, which added to the
+`preferential_gain_bracket` bullet — directly below the ordinary-income rule —
+
+> `but by filing status ONLY: taxpayer_class is null on this record type.`
+
+**The ruling: remove that sentence and nothing else.** Declared here as
+**SPEC FREEZE v2**, in force from the revert commit.
+
+#### Why this is not the sixth conventions pass in disguise
+
+The freeze exists for one reason: to stop the specification being tuned,
+run by run, against a scoring harness — at which point it stops being a
+specification and becomes a curve fit. That is a real hazard and this ADR
+has taken it seriously five times. It is worth stating the case against this
+revert before answering it, because from the outside the two look identical:
+*a run scored badly, we know which edit caused it, and we are editing it.*
+
+Four properties separate them, and all four have to hold:
+
+1. **No new information enters, from the oracle or anywhere else.** The
+   revert is a **deletion**. It adds no rule, no vocabulary, no value, no
+   hint. The convention it restores — `taxpayer_class` carried explicitly as
+   `individual` on ordinary-income records rather than left null — was
+   adopted under the **§8 target-contract boundary ruling**, on the
+   extractability test: `individual` is an *encoding* of a fact the page
+   states by publishing a filing-status schedule, in the same class as
+   `US-FED`, and it was agreed long before this regression existed.
+2. **It restores a configuration that was measured, not one that is hoped
+   for.** `ordinary_income_bracket` scored **32/32 in the third gate and
+   32/32 in the fourth**, with this clause absent from the prompt in both.
+   The revert returns that bullet's taxpayer_class semantics to the text that
+   produced those two results. This is not a prediction about what the model
+   will do; it is the removal of the single documented difference between a
+   configuration that scored 32/32 twice and one that scored 4/32 once.
+3. **It removes text this project wrote yesterday, not text the corpus
+   needed.** The clause is nine hours old and has appeared in exactly one
+   gate run. Reverting it does not reach back into any considered ruling.
+4. **The risk it guarded never materialised, and the guard was already
+   redundant.** This is the decisive one, and it is measured rather than
+   argued. Fix 3 existed to stop 12 `preferential_gain_bracket` records from
+   taking a `taxpayer_class`. But the field-level bullet, forty lines above
+   in the same prompt, already said so **by name**:
+
+   > `taxpayer_class` … is set on ORDINARY_INCOME_BRACKET RECORDS ONLY … on
+   > every other record_type — *including preferential_gain_bracket, which
+   > does carry a filing_status* — taxpayer_class is null.
+
+   That sentence is **byte-identical across gates 3, 4 and 5**, and
+   `preferential_gain_bracket` scored **12/12 in all three**. The protection
+   was in place, explicit, named and empirically demonstrated before fix 3
+   was written. Fix 3 restated a rule the prompt had already stated — and a
+   restatement is not free. It is a change in emphasis, and emphasis is what
+   a model generalises. The clause bought nothing measurable and cost 28
+   records.
+
+**The distinguishing test, stated so it can be applied again:** a change is
+tuning if it adds information the harness supplied. It is a regression revert
+if it removes information the project supplied between two measurements.
+This one is the second kind. The freeze exists to prevent tuning against the
+harness — not to enshrine a documented accident.
+
+#### What was NOT reverted, deliberately
+
+The rest of the reconciliation stands, including the parts of the same bullet
+that fix 3 travelled with: `preferential_gain_bracket` keeps *"same
+granularity and typed slots as ordinary_income_bracket"* and *"Carries
+superseded_effective when its document is superseded"*. Those earned document
+04's 9/18 → 18/18 and document 05's continued 19/19. A revert to the fourth
+gate's text wholesale would have traded twenty-eight records back for nine —
+which is the same mistake in the other direction.
+
+#### Pre-registration for the sixth run
+
+Written before the run, so the disposition cannot be chosen after seeing the
+number:
+
+- The sixth gate runs under **exclusive conditions**: nothing else on the
+  gateway, the isolation sentinel respected, and **zero edits to any file
+  while it is in flight**.
+- **Whatever it lands, it ships.** 128/128 closes gate 2b clean. Anything
+  short closes it *truthfully*, with every failing record named as a known
+  limitation, exactly as the fifth gate's 28 are named now.
+- **There is no seventh run, and no further spec text change of any kind** —
+  not a clause, not a word, not a reordering. If the sixth run reveals a new
+  defect, it is written up as a limitation and shipped as one.
+- The blast radius of this revert is **measured, not assumed**: the sixth
+  run's `preferential_gain_bracket` score is reported explicitly against the
+  12/12 baseline, because that is the risk fix 3 was guarding and the only
+  honest way to price the revert.
+
+
+### 8g. Both bullets to their best-measured text — the revert that supersedes §8f
+
+**Status:** operator ruling, 2026-08-27, on the pre-run audit's evidence.
+**SPEC FREEZE v2** is declared at the commit carrying this section.
+
+#### What changed, exactly
+
+Three deletions inside `CANONICAL_CONVENTIONS`, no additions anywhere:
+
+| Bullet | Gate-5 text (100/128) | Now |
+|---|---|---|
+| `ordinary_income_bracket` | …that column's bounds. **`No extra attrs.`** | …that column's bounds. |
+| `preferential_gain_bracket` | "same granularity and typed slots as ordinary_income_bracket — one record per (bracket row x filing-status column) — …, **but by filing status ONLY: taxpayer_class is null on this record type.** Carries superseded_effective…" | "same shape for preferential (e.g. capital gain) rate schedules." |
+
+**Both bullets are now byte-identical to their text at `4739d62`** — the gate
+that scored **119/128**, with `ordinary_income_bracket` **32/32** and
+`preferential_gain_bracket` **12/12**. That is a property this section can
+assert mechanically, and §8f could not.
+
+#### Why this is wider than §8f and *safer* than §8f
+
+§8f removed one clause and left two gate-5 additions in place. The audit
+established that both are load-bearing hazards:
+
+1. **The surviving inheritance pointer was an inverse leak.** Gate 5 did not
+   only add fix 3; it also strengthened the same bullet from a bare
+   cross-reference to *"same granularity and typed slots as
+   ordinary_income_bracket"*. `taxpayer_class` **is** one of those typed
+   slots. Deleting only fix 3 would have left that pointer unqualified —
+   pointing `preferential_gain_bracket` at the one record type that sets
+   `taxpayer_class`, with the sentence that scoped it gone. And because
+   `taxpayer_class` is a component of the accuracy natural key, a leak there
+   does not score as one wrong field: it scores as **miss + extra**, and the
+   record is lost whole. Worst case 12/12 → **0/12** — the gate-5 failure
+   running backwards.
+2. **The surviving in-bullet clause was an unexcluded confound.** Gate 5 also
+   appended *"No extra attrs."* to the `ordinary_income_bracket` bullet
+   itself, and rewrote the section preamble to frame every bullet as "which
+   typed slots it fills". Gate 5's causal story — an *adjacent* clause
+   generalised upward — was an inference, never an ablation. A terminal "No
+   extra attrs." on the only sentence describing that record type is a
+   competing explanation for the same 28 nulls, and it sits *inside* the
+   bullet rather than next to it. §8f would have left it in and called the
+   result a test of the adjacency hypothesis. **§8g excludes the confound by
+   construction instead of arguing about it.**
+
+#### Why all three deletions are information-free
+
+This is the test §8f introduced and the one that matters: *a change is tuning
+if it adds information the harness supplied; it is a regression revert if it
+removes information the project supplied between two measurements.* All three
+deletions pass, and two of them pass twice over — because **every rule
+deleted here is still stated, identically, in the closed attribute
+dictionary**, which the section's own preamble declares authoritative:
+
+> "the extra-attribute dictionary below is the authoritative list of attr
+> keys per record type, and where anything in this section appears to
+> disagree with it, the dictionary wins."
+
+| Deleted restatement | Dictionary entry, unchanged since gate 4 |
+|---|---|
+| "No extra attrs." | `- ordinary_income_bracket: no extra attrs. Everything it states has a typed slot.` |
+| "Carries superseded_effective when its document is superseded." | `- preferential_gain_bracket: superseded_effective.` |
+| "taxpayer_class is null on this record type" | field-list bullet: "on every other record_type — **including preferential_gain_bracket** — taxpayer_class is null" |
+
+Every one of those targets is byte-identical at gate 4 and at HEAD. **Nothing
+was removed except emphasis** — and emphasis is precisely what gate 5 proved a
+model generalises. Three restatements of rules the prompt already carried; the
+first cost 28 records, and the other two were never measured at all.
+
+#### Document 04's recovery is verified independent of both bullets
+
+The nine records gate 5 repaired are `wage_base` (0/3 → 3/3),
+`surtax_threshold` (4/9 → 9/9) and `employment_tax_rate` (3/4 → 4/4). Their
+bullets and the dictionary rules governing them are untouched by §8g,
+non-adjacent to both edited bullets, and opposite in instruction polarity.
+**Document 04 contains no `ordinary_income_bracket` and no
+`preferential_gain_bracket` records at all.** Nothing gate 5 earned is given
+back.
+
+#### Pre-registered predictions for the sixth run
+
+Written before the run so the result can be scored against them rather than
+explained after them — which is the discipline gate 5's arbitration lacked:
+
+| Record type | Gate 4 | Gate 5 | Predicted, gate 6 |
+|---|---|---|---|
+| `ordinary_income_bracket` | 32/32 | 4/32 | **32/32** |
+| `preferential_gain_bracket` | 12/12 | 12/12 | **12/12** |
+| `wage_base` | 0/3 | 3/3 | **3/3** |
+| `surtax_threshold` | 4/9 | 9/9 | **9/9** |
+| `employment_tax_rate` | 3/4 | 4/4 | **4/4** |
+| all other types | perfect | perfect | **unchanged** |
+| **TOTAL** | 119/128 | 100/128 | **128/128** |
+
+If the sixth run lands short, the *shape* of the shortfall is the finding:
+28 back on `ordinary_income_bracket` would mean the true cause was never
+either deleted clause; a loss on `preferential_gain_bracket` would mean the
+gate-4 bare cross-reference is weaker than three runs suggested.
+
+#### Known limitations this audit surfaced and this ADR does NOT fix
+
+Reported rather than repaired, because repairing them is out of the ruling's
+scope and the spec is frozen:
+
+- **`taxpayer_class` has no enforcement below the prompt.** No enum in the
+  mapper's JSON schema (`filing_status` has one), no coupling to
+  `record_type` in the domain model, no rule in `validation/`, no `CHECK` in
+  `migrations/0003_records.sql`. Worse than merely permissive: the column is
+  a member of both `records_natural_key` and the `no_overlapping_brackets`
+  exclusion constraint, so a wrong value **silently repartitions** the
+  integrity chain rather than colliding with anything. The database cannot
+  catch this class of error the way it catches bracket overlap.
+- **The independent verifier is structurally blind to a conventions defect.**
+  `CANONICAL_CONVENTIONS` is concatenated verbatim into the mapper's, the
+  verifier's *and* the adjudicator's system prompts. A defect in that shared
+  string is not an independent-derivation disagreement — both models read the
+  same law. Gate 5 measured it: **1 dispute against 28 broken records**,
+  where gate 4's verifier had named 5 of 9 real failures. ADR 012's context
+  isolation is real for *values* and absent for *conventions*.
+- **One latent site remains, unguarded.** The `tax_year` bullet states a
+  general principle and names exactly one of the four record types it
+  governs — the same shape as the defect that cost 28 records. Named here so
+  the next occurrence is a measurement rather than a surprise.
+
+
 ## Consequences
 
 - The model choice is now falsifiable: a rule, two thresholds, and two tables.

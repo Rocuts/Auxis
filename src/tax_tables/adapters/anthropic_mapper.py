@@ -465,12 +465,9 @@ from the printed label.
 - ordinary_income_bracket: one record per (bracket row x filing-status or
   taxpayer-class column) of an income-tax rate schedule. A wide matrix with
   one rate column and several filing-status columns yields one record per
-  filing status per row: same rate, that column's bounds. No extra attrs.
-- preferential_gain_bracket: same granularity and typed slots as
-  ordinary_income_bracket — one record per (bracket row x filing-status
-  column) — for preferential (e.g. capital gain) schedules, but by filing
-  status ONLY: taxpayer_class is null on this record type.
-  Carries superseded_effective when its document is superseded.
+  filing status per row: same rate, that column's bounds.
+- preferential_gain_bracket: same shape for preferential (e.g. capital
+  gain) rate schedules.
 - special_gain_rate: one record per special asset or gain category.
   attribute_key = the category slug. The printed maximum rate goes in the
   max_rate attr (dictionary); fill the typed "rate" slot with the same

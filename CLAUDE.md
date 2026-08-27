@@ -438,11 +438,27 @@ Postgres under fan-out — the reason RDS Proxy (AWS) and the pooled Neon endpoi
 - At a real design fork, stop and ask. Do not guess and build.
 - Prefer boring, correct code over clever code.
 - When a gate fails, report the failure. Never adjust the test.
-- **One interactive session per repository.** Two sessions on one working
-  tree have no protocol between them: on 2026-08-26 a second session's
-  `git add -A` swept another's five staged-but-uncommitted files into an
-  unrelated commit, and ran a gate against a spec that changed underneath
-  it. `.fanout-active` and the separate `tax_test` database guard a session
-  against its own background work; nothing guards two sessions against each
-  other, and a lock would be the wrong instrument. See the incident entry
+- **Session discipline — three rules, and they exist because the hazard
+  recurred within a day.** Two sessions on one working tree have no protocol
+  between them. On 2026-08-26 a second session's `git add -A` swept another's
+  five staged-but-uncommitted files into an unrelated commit; on 2026-08-27
+  the same collision ran in the opposite direction, one session committing
+  another's mid-edit tree as though it were finished work. Both are recorded
   in `docs/dev-log.md`.
+
+  1. **One interactive session per repository.**
+  2. **The previous session ENDS before the next one opens** — closed, not
+     "winding down". Both incidents happened inside an overlap window
+     everyone believed was already over.
+  3. **Every operator prompt names its target session.** A prompt that is not
+     addressed to me is evidence that another session is live, which is the
+     only one of these three rules a session can enforce from the inside.
+
+  Corollary, from incident #2: **a dirty working tree is a LIVE tree until a
+  human says otherwise.** "It looks like finished work someone forgot to
+  commit" is indistinguishable in `git status` from "mid-edit, two steps from
+  done". Do not commit changes you did not make; stop and ask.
+
+  `.fanout-active` and the separate `tax_test` database guard a session
+  against its own background work; nothing guards two sessions against each
+  other, and a lock would be the wrong instrument.

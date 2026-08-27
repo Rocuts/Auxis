@@ -2604,3 +2604,96 @@ is the obvious candidate for a sixth run, and it is not mine to take — it is a
 further spec pass, which the freeze forbids.
 
 Gate 2b remains **OPEN** at 100/128.
+
+---
+
+## 2026-08-27 — Incident #2: the same collision, the other direction
+
+Second occurrence of the failure mode recorded on 2026-08-26, with the roles
+reversed. Recording it because a rule that gets broken the day after it is
+written is evidence about the rule, not only about the day.
+
+### What happened
+
+Two interactive sessions were live on this tree again — the reconciliation
+session (**A**), and the owner session (**B**) that had been given the
+documentation alignment pass. The timeline is exact:
+
+| Time | Commit | Session | What |
+|---|---|---|---|
+| 23:31:50 | `4739d62` | A | the fourth gate, 119/128 |
+| 23:47:03 | `1a11939` | **B** | **committed A's in-flight working tree** |
+| 23:50:06 | `e73f222` | B | the documentation alignment pass |
+| 00:00:53 | `1961126` | A | the reconciliation, complete, SPEC FROZEN |
+| 00:05:16 | `a2af7fb` | A | CDK re-synth |
+| 00:25:47 | `681fc79` | A | the fifth gate, 100/128 |
+
+At 23:47 session B found a dirty tree — a modified mapper, verifier, README
+and ADR 014, plus two untracked tests — read it as *finished work left
+uncommitted*, and committed it so that its own README edits could be pushed
+without dragging along unexplained changes. It was not finished work. It was
+session A mid-edit, between its conventions sweep and the adversarial audit
+of that sweep. `1a11939` is therefore a **partial snapshot**: it carries the
+reconciliation without the five audit rulings that A added afterwards.
+
+Then, at 00:00, session A committed the complete version as `1961126` and
+went straight into the fifth gate run, still executing its original
+instructions. The stand-down reached it after the run had started.
+
+Incident #1 was A's `git add -A` absorbing B's staged files. This is B
+absorbing A's unstaged ones. **The direction reversed; the hazard did not.**
+
+### Containment held, and here is the proof rather than the claim
+
+- `1961126` is a strict superset of `1a11939` for both prompt files (mapper
+  `+34/-...`, verifier `+22/-...` on top of the snapshot) — every line of the
+  snapshot survives at the tip, and the five audit rulings land on top.
+- The two new test files are **byte-identical** between `1a11939` and `HEAD`;
+  `git diff` between them is empty.
+- Both commits are honestly labeled, and neither message claims work the
+  other did. `1a11939` describes a reconciliation, which is what it contains;
+  `1961126` describes the reconciliation *plus its audit*, which is what it
+  adds.
+- No history rewrite. Nothing was lost, and nothing is misattributed.
+
+The one real cost is legibility: two commits now describe the same piece of
+work, and reading either alone gives an incomplete picture of the spec that
+the fifth gate actually ran against. That is what this entry is for.
+
+### Why "it was left uncommitted" is not an excuse
+
+Session B applied a reasonable-sounding heuristic — *a dirty tree with a
+coherent story in it is finished work* — and the heuristic is simply wrong on
+a shared tree. A dirty tree is a **live** tree until a human says otherwise.
+There is no local evidence that distinguishes "finished and awaiting a
+commit" from "mid-edit, two steps from done", and the difference is invisible
+in `git status`. The correct action for session B was to stop and ask, and
+the reason it did not is that it did not know another session existed.
+
+### The rule, reinforced and extended
+
+The runbook already said **one interactive session per repository**. That was
+necessary and not sufficient, because it says nothing about the seam between
+two sessions or about how instructions are addressed. Extended, in
+`CLAUDE.md`:
+
+1. **One interactive session per repository.** Unchanged.
+2. **The previous session ENDS before the next one opens.** Not "winds down",
+   not "is finishing up" — closed. Both incidents happened inside an overlap
+   window that everyone involved believed was already over.
+3. **Every operator prompt names its target session.** Both incidents involved
+   a session acting on instructions that were live for it and stale for the
+   tree. An addressed prompt makes that detectable by the session itself:
+   a prompt not addressed to me is a signal that someone else is here.
+
+Rule 3 is the new one, and it is the only one of the three that a session can
+enforce from the inside. Rules 1 and 2 are operator discipline; rule 3 gives
+the agent a way to notice the discipline has slipped.
+
+### What this cost, in the end
+
+Nothing in the artifact — and one useful piece of evidence. The fifth gate
+ran under session A's original instructions rather than being re-scoped by
+the stand-down, which means the 100/128 result is a clean measurement of the
+frozen spec rather than of a spec someone was still arguing about. The
+containment worked. The coordination did not, twice.

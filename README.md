@@ -394,16 +394,68 @@ risk that never materialised. It generalised: the model nulled the field on
 every filing-status row. **A fix for a hypothetical 12-record risk cost 28 real
 ones.**
 
-That edit came out of an adversarial audit whose two other reviewers had named
-this exact field as their top finding, and whose arbitrator overruled them
-because the relevant text was unchanged since the passing run. The reasoning
-was locally sound and globally wrong: **unchanged text is only stable if its
-neighbourhood is unchanged too.** A prompt is read as a whole, and an adjacent
-emphatic sentence is a change to every rule near it.
+### A prompt is read as a whole — the most transferable thing this project produced
 
-It ships at 100/128 under a frozen spec rather than being tuned further — the
-best-measured configuration is the previous run's 119/128, and that is recorded
-rather than quietly replaced.
+This one is worth lifting out of the run report, because it generalises past
+tax tables and past this codebase.
+
+**The provenance, in order.** The reconciliation went under a three-lens
+adversarial audit *before* the paid run — contradiction, completeness,
+regression — plus an arbitrator that re-verified every quoted line against
+the tree. **Two of the three lenses independently named this exact field, on
+these exact 28 records, as their top finding.** The arbitrator refuted them,
+and its argument was a good one: the `taxpayer_class` rule they were worried
+about *had not changed since the run where document 01 scored 32/32*. Text
+that is byte-identical to text that passed cannot be the cause of a new
+failure. That is sound reasoning, and it was accepted.
+
+It was also wrong, for a reason the arbitration had no way to see from the
+text it was quoting: **the diff had changed the text's neighbourhood.** Two
+bullets away, a new emphatic clause — *"but by filing status ONLY:
+taxpayer_class is null on this record type"* — had been added to the
+`preferential_gain_bracket` rule, in a register none of the surrounding
+prose used. The model read the section as a whole and generalised the
+emphasis to the adjacent `ordinary_income_bracket` rule, nulling
+`taxpayer_class` on all 28 filing-status rows.
+
+> **Unchanged text is only stable while its neighbourhood is unchanged.**
+> A prompt is not a set of independent clauses that can be diffed one at a
+> time. It is a document, read whole, and an adjacent sentence in a stronger
+> register is a change to every rule near it — even when their bytes are
+> identical.
+
+**The sharpest detail is what the clause was defending.** It was added to
+protect 12 `preferential_gain_bracket` records from taking a
+`taxpayer_class` they should not have. But the field-level bullet, forty
+lines above, already said so **by name**:
+
+> `taxpayer_class` … is set on ORDINARY_INCOME_BRACKET RECORDS ONLY … on
+> every other record_type — **including preferential_gain_bracket, which does
+> carry a filing_status** — taxpayer_class is null.
+
+That sentence is byte-identical in the 39/128, 119/128 and 100/128 runs, and
+`preferential_gain_bracket` scored **12/12 in every one of them**. The
+protection was already in place, already explicit, already named, and already
+measured. The added clause bought nothing and cost 28 records — the
+restatement was not merely redundant, it was the defect. *A second statement
+of a rule you have already stated is not free; it is a change in emphasis, and
+emphasis is exactly what a model generalises.*
+
+**What we would do differently**, stated as a rule rather than a regret: an
+adversarial reviewer that clears a finding on "this text is unchanged" must be
+required to check what moved *next to* it. Stability is a property of a
+neighbourhood, not of a line.
+
+**Disposition — a bounded regression revert, then one final run.** 100/128 is
+the last *measured* result and it is recorded here rather than quietly
+replaced. It is not the shipped configuration: the three sentences gate 5
+added to two record-shape bullets have been deleted, returning both bullets to
+the text that scored 119/128, and a sixth run is pre-registered as final
+([ADR 014 §8g](docs/decisions/014-semantic-layer-model-selection.md)). All
+three deletions remove *restatements* of rules the closed attribute dictionary
+already carries verbatim — no rule was weakened, only emphasis removed. The
+sixth run's numbers replace this section whatever they are; there is no
+seventh.
 
 ### How it got here: five runs, and what each one measured
 
