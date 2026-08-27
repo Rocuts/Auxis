@@ -9,8 +9,28 @@ paths:
   /documents:
     post:
       summary: Upload a PDF for ingestion (asynchronous)
+      description: "The body is the **raw PDF bytes** — not multipart, not base64.\
+        \ Because there is no multipart part name, `x-filename` is the only way to\
+        \ name the document; without it the stored row reads `upload.pdf`.\n\nReturns\
+        \ **202** with a `job_id`; poll `GET /jobs/{job_id}`. Re-uploading identical\
+        \ bytes is a no-op — the SHA-256 of the body is the document's natural key,\
+        \ so the existing job comes back with `duplicate: true`.\n\n```bash\ncurl\
+        \ -X POST \"$BASE/documents\" \\\n  -H \"X-API-Key: $API_KEY\" \\\n  -H \"\
+        Content-Type: application/pdf\" \\\n  -H \"x-filename: 01_federal_income_tax_rate_schedules_TY2026.pdf\"\
+        \ \\\n  --data-binary @fixtures/01_federal_income_tax_rate_schedules_TY2026.pdf\n\
+        ```"
       operationId: upload_document_documents_post
       parameters:
+      - name: x-filename
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Name to store for this document; defaults to `upload.pdf`.
+          title: X-Filename
+        description: Name to store for this document; defaults to `upload.pdf`.
       - name: X-API-Key
         in: header
         required: false
@@ -27,11 +47,20 @@ paths:
               schema:
                 $ref: '#/components/schemas/IngestAccepted'
         '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+          description: Request failed validation.
+        '401':
+          description: Missing or wrong `X-API-Key`.
+        '413':
+          description: Body over the size limit, or page count over the cap.
+        '415':
+          description: 'Not a PDF: missing `%PDF` header, or unparsable.'
+      requestBody:
+        required: true
+        content:
+          application/pdf:
+            schema:
+              type: string
+              format: binary
     get:
       summary: Uploaded documents
       operationId: read_documents_documents_get
@@ -45,6 +74,8 @@ paths:
                 items:
                   $ref: '#/components/schemas/DocumentOut'
                 title: Response Read Documents Documents Get
+        '422':
+          description: Request failed validation.
   /jobs/{job_id}:
     get:
       summary: Job status and counts
@@ -65,11 +96,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/JobOut'
         '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+          description: Request failed validation.
+        '404':
+          description: No such id.
   /documents/{document_id}:
     get:
       summary: One document
@@ -90,11 +119,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/DocumentOut'
         '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+          description: Request failed validation.
+        '404':
+          description: No such id.
   /records:
     get:
       summary: Canonical records
@@ -189,11 +216,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/RecordsPage'
         '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+          description: Request failed validation.
   /records/resolve:
     get:
       summary: The bracket containing an amount (a data lookup, not tax advice)
@@ -243,6 +266,7 @@ paths:
         required: true
         schema:
           type: integer
+          maximum: 9223372036854775807
           minimum: 0
           title: Amount
       - name: tax_year
@@ -290,11 +314,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ResolveOut'
         '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+          description: Request failed validation.
   /reviews:
     get:
       summary: Review-queue items (read-only)
@@ -349,11 +369,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ReviewsPage'
         '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+          description: Request failed validation.
   /reviews/{review_id}:
     get:
       summary: One review item, with its adjudication audit trail
@@ -374,11 +390,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/ReviewOut'
         '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+          description: Request failed validation.
+        '404':
+          description: No such id.
   /internal/sweep:
     post:
       summary: Process queued jobs (cron / self-kick path)
@@ -391,11 +405,15 @@ paths:
 
         is not a choice, it is the platform''s contract, and the endpoint is
 
-        bearer-authenticated and safe to repeat (`FOR UPDATE SKIP LOCKED`
+        bearer-authenticated and safe to repeat: `FOR UPDATE SKIP LOCKED`
 
-        means a duplicate sweep claims different jobs, never the same ones
+        keeps two sweepers off the same row while they select, and the claim
 
-        twice). Vercel injects `Authorization: Bearer $CRON_SECRET`
+        itself refuses any job still inside its lease, so an overlapping
+
+        sweep picks up different work rather than re-running live work.
+
+        Vercel injects `Authorization: Bearer $CRON_SECRET`
 
         automatically when that variable is set, which is exactly the check
 
@@ -427,11 +445,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/SweepOut'
         '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+          description: Request failed validation.
+        '401':
+          description: Missing or wrong credential.
     get:
       summary: Process queued jobs (cron / self-kick path)
       description: 'Two callers, two methods, one handler.
@@ -443,11 +459,15 @@ paths:
 
         is not a choice, it is the platform''s contract, and the endpoint is
 
-        bearer-authenticated and safe to repeat (`FOR UPDATE SKIP LOCKED`
+        bearer-authenticated and safe to repeat: `FOR UPDATE SKIP LOCKED`
 
-        means a duplicate sweep claims different jobs, never the same ones
+        keeps two sweepers off the same row while they select, and the claim
 
-        twice). Vercel injects `Authorization: Bearer $CRON_SECRET`
+        itself refuses any job still inside its lease, so an overlapping
+
+        sweep picks up different work rather than re-running live work.
+
+        Vercel injects `Authorization: Bearer $CRON_SECRET`
 
         automatically when that variable is set, which is exactly the check
 
@@ -479,11 +499,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/SweepOut'
         '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+          description: Request failed validation.
+        '401':
+          description: Missing or wrong credential.
 components:
   schemas:
     DocumentOut:
@@ -538,15 +556,6 @@ components:
       - head_of_household
       - qualifying_surviving_spouse
       title: FilingStatus
-    HTTPValidationError:
-      properties:
-        detail:
-          items:
-            $ref: '#/components/schemas/ValidationError'
-          type: array
-          title: Detail
-      type: object
-      title: HTTPValidationError
     IngestAccepted:
       properties:
         document_id:
@@ -967,29 +976,3 @@ components:
       required:
       - processed
       title: SweepOut
-    ValidationError:
-      properties:
-        loc:
-          items:
-            anyOf:
-            - type: string
-            - type: integer
-          type: array
-          title: Location
-        msg:
-          type: string
-          title: Message
-        type:
-          type: string
-          title: Error Type
-        input:
-          title: Input
-        ctx:
-          type: object
-          title: Context
-      type: object
-      required:
-      - loc
-      - msg
-      - type
-      title: ValidationError

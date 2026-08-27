@@ -22,7 +22,12 @@ extraction — that is an API-design requirement, not an optimization, because
 a document with a scanned page and 51 records takes far longer than any
 reasonable HTTP timeout.
 
-Locally and on AWS this is easy: an in-process worker pool, or Step Functions.
+Locally and on AWS this is easy: a resident process, or Step Functions.
+(Annotated 2026-08-27: the *local* half of that sentence describes a design
+option, not this tree. What ships locally is `NullJobRunner` — enqueue only —
+and work starts on an explicit authenticated call to `/internal/sweep`. There
+is no worker pool in `src/`, so this sentence must not be read as evidence for
+anything about concurrent sweepers.)
 On Vercel there is no resident process to hand the work to
 ([ADR 008](008-vercel-as-the-live-target.md)).
 
@@ -105,12 +110,31 @@ naming the gate — marking, never deleting, because the rows are the evidence �
 and it has not been run either. Both wait on a promotion, which is a human
 action.
 
-## Why `FOR UPDATE SKIP LOCKED` is the whole design
+## Why `FOR UPDATE SKIP LOCKED` is half the design
+
+> **ANNOTATION 2026-08-27.** This section was titled *"…is the whole design"*
+> and that was wrong in a way adversarial review caught and production had
+> already paid for. **The lock guards the SELECT; a lease predicate guards the
+> CLAIM. Both are the design, and only the first was implemented.**
+>
+> `SKIP LOCKED` holds only for the life of the selecting transaction, and that
+> transaction commits the moment the SELECT returns — before any work starts.
+> A second sweeper arriving while the first was mid-pipeline therefore re-
+> claimed the same job, incremented `attempt`, and processed the document
+> concurrently. At the shipped settings — a 60 s cron over documents measured
+> at 346 s — that overlap was the steady state, not an edge case. The data
+> survived it (re-ingest is a document-scoped atomic replace), but the run was
+> billed twice and `attempt` burned twice as fast toward `JOB_MAX_ATTEMPTS`.
+>
+> `process_job`'s claim now repeats the sweep's own predicate: a job is
+> claimable when it is `queued`, or `running` past its lease. The paragraph
+> below is left standing rather than rewritten — it states the property the
+> project believed it had, and the gap between that and the shipped code is
+> the point.
 
 It is what makes concurrent sweepers safe without a broker. Two overlapping
 cron invocations — or a cron and a manual sweep — claim disjoint job sets
-rather than contending or double-processing. The same primitive is what lets
-the local docker-compose worker pool run several workers against one database.
+rather than contending or double-processing.
 
 Job-level idempotency is enforced by the database, not by the sweeper:
 

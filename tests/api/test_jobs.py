@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import pathlib
+from uuid import UUID
 
 import psycopg
 import pytest
@@ -282,3 +283,98 @@ class TestLeaseInvariant:
         """
         slowest_measured_seconds = 346
         assert self._configured_max_duration() >= slowest_measured_seconds * 2
+
+
+#: `process_job` reads its settings from the mapping it is handed, so a
+#: lease override must travel in `env` — `monkeypatch.setenv` is invisible to
+#: a call that passes `env=` explicitly.
+LEASE_ENV = {"JOB_LEASE_SECONDS": "300"}
+
+
+class TestClaimIsLeaseGuarded:
+    """The SELECT's lock and the CLAIM's predicate are two different guards,
+    and only one of them was present.
+
+    `sweep_pending` selects with `FOR UPDATE SKIP LOCKED`, but that
+    transaction commits when the SELECT returns — the row locks are released
+    before any work starts. The claim in `process_job` then accepted
+    `status IN ('queued','running')` unconditionally, so a second sweeper
+    arriving while the first was mid-pipeline would re-claim the same job,
+    bump `attempt`, and run the document a second time concurrently.
+
+    Not hypothetical at the shipped settings: `vercel.json` fires
+    `/internal/sweep?limit=3` every 60 s against documents measured at 346 s.
+    Overlap is the steady state, not the edge case.
+
+    The data survives it — re-ingest is a document-scoped atomic replace —
+    but the run is billed twice and `attempt` burns twice as fast toward
+    `JOB_MAX_ATTEMPTS`. Found by adversarial review, 2026-08-27.
+    """
+
+    def test_a_job_inside_its_lease_is_not_reclaimed(
+        self, client: TestClient, no_credentials: None, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The regression: sweeper two must find nothing to do."""
+        monkeypatch.setenv("JOB_LEASE_SECONDS", "300")
+        job_id = client.post(
+            "/documents", content=tiny_pdf(text="Racing sweepers"), headers=AUTH
+        ).json()["job_id"]
+
+        # Sweeper one claims it and is still working: `running`, recent
+        # `started_at`, well inside the lease.
+        with psycopg.connect(TEST_DSN) as conn, conn.transaction():
+            conn.execute(
+                """
+                UPDATE jobs SET status = 'running', attempt = 1,
+                                started_at = now(), finished_at = NULL
+                WHERE id = %s
+                """,
+                (job_id,),
+            )
+
+        # Sweeper two arrives. Before the fix this re-claimed the job and ran
+        # the whole pipeline a second time.
+        from tax_tables.service.jobs import process_job
+
+        assert process_job(TEST_DSN, UUID(job_id), env=LEASE_ENV) == "not_claimable"
+
+        after = client.get(f"/jobs/{job_id}").json()
+        assert after["status"] == "running"  # still sweeper one's
+        assert after["attempt"] == 1  # NOT bumped to 2
+
+    def test_an_expired_lease_is_still_claimable(
+        self, client: TestClient, no_credentials: None, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The other half: the predicate must not break recovery. A job whose
+        worker is gone is exactly what the lease exists to reclaim."""
+        monkeypatch.setenv("JOB_LEASE_SECONDS", "300")
+        job_id = client.post(
+            "/documents", content=tiny_pdf(text="Dead worker"), headers=AUTH
+        ).json()["job_id"]
+        with psycopg.connect(TEST_DSN) as conn, conn.transaction():
+            conn.execute(
+                """
+                UPDATE jobs SET status = 'running', attempt = 1,
+                                started_at = now() - make_interval(secs => 600),
+                                finished_at = NULL
+                WHERE id = %s
+                """,
+                (job_id,),
+            )
+        from tax_tables.service.jobs import process_job
+
+        assert process_job(TEST_DSN, UUID(job_id), env=LEASE_ENV) == "failed"
+        assert client.get(f"/jobs/{job_id}").json()["attempt"] == 2
+
+    def test_a_queued_job_is_always_claimable(
+        self, client: TestClient, no_credentials: None
+    ) -> None:
+        """The common path must be untouched: a fresh upload has no
+        `started_at` at all, and the predicate must not exclude it."""
+        job_id = client.post("/documents", content=tiny_pdf(text="Fresh"), headers=AUTH).json()[
+            "job_id"
+        ]
+        from tax_tables.service.jobs import process_job
+
+        assert process_job(TEST_DSN, UUID(job_id), env={}) == "failed"
+        assert client.get(f"/jobs/{job_id}").json()["attempt"] == 1

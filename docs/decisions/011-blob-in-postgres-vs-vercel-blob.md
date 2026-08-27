@@ -14,7 +14,7 @@ the async pipeline needs to re-read the document some time after the request
 that uploaded it has ended. On request-scoped compute there is no local disk
 to leave it on.
 
-The `BlobStore` port already has an S3 adapter (AWS) and a filesystem adapter
+The `BlobStore` port already has an S3 adapter (AWS) and a Postgres `bytea` adapter
 (local). The question is what the Vercel target uses.
 
 ## Decision

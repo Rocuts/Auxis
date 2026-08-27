@@ -32,6 +32,7 @@ from uuid import UUID
 import pdfplumber
 import psycopg
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request, Response
+from fastapi.responses import JSONResponse
 
 from tax_tables.adapters.postgres import PostgresRecordRepository
 from tax_tables.api import queries
@@ -68,6 +69,34 @@ def _decode_cursor(cursor: str) -> tuple[datetime, UUID]:
         raise HTTPException(status_code=400, detail="malformed cursor") from exc
 
 
+#: The int8 ceiling. `bracket` is an `int8range`, so an amount past this
+#: cannot be contained by any stored bracket — it must be refused at the
+#: edge as a 422 rather than reaching the driver and surfacing as a 500.
+_MAX_INT8 = 9_223_372_036_854_775_807
+
+_UNAUTHORIZED: dict[int | str, dict[str, Any]] = {
+    401: {"description": "Missing or wrong credential."}
+}
+_NOT_FOUND: dict[int | str, dict[str, Any]] = {404: {"description": "No such id."}}
+_UPLOAD_REJECTIONS: dict[int | str, dict[str, Any]] = {
+    401: {"description": "Missing or wrong `X-API-Key`."},
+    413: {"description": "Body over the size limit, or page count over the cap."},
+    415: {"description": "Not a PDF: missing `%PDF` header, or unparsable."},
+}
+
+
+async def _unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """Every error this API returns is JSON with a `detail` key.
+
+    Without this, one unhandled exception escapes as `text/plain` — off the
+    contract every other response honours, and a client parsing `detail`
+    crashes on the one response it most needs to read. The message is
+    deliberately fixed: an exception string can carry a connection string or
+    a key name (anti-goal #10), so it goes to the logs and never to the wire.
+    """
+    return JSONResponse(status_code=500, content={"detail": "internal server error"})
+
+
 def create_app(settings: ApiSettings, *, runner: JobRunner | None = None) -> FastAPI:
     job_runner = runner if runner is not None else NullJobRunner()
     app = FastAPI(
@@ -79,7 +108,9 @@ def create_app(settings: ApiSettings, *, runner: JobRunner | None = None) -> Fas
             "Uploads are processed asynchronously: POST /documents returns "
             "202 with a job id; poll GET /jobs/{job_id}."
         ),
+        responses={422: {"description": "Request failed validation."}},
     )
+    app.add_exception_handler(Exception, _unhandled_exception_handler)
 
     def connection() -> Iterator[psycopg.Connection[Any]]:
         conn = psycopg.connect(settings.database_url, connect_timeout=30)
@@ -109,8 +140,39 @@ def create_app(settings: ApiSettings, *, runner: JobRunner | None = None) -> Fas
         response_model=IngestAccepted,
         dependencies=[Depends(require_api_key)],
         summary="Upload a PDF for ingestion (asynchronous)",
+        description=(
+            "The body is the **raw PDF bytes** — not multipart, not base64. "
+            "Because there is no multipart part name, `x-filename` is the "
+            "only way to name the document; without it the stored row reads "
+            "`upload.pdf`.\n\n"
+            "Returns **202** with a `job_id`; poll `GET /jobs/{job_id}`. "
+            "Re-uploading identical bytes is a no-op — the SHA-256 of the "
+            "body is the document's natural key, so the existing job comes "
+            "back with `duplicate: true`.\n\n"
+            "```bash\n"
+            'curl -X POST "$BASE/documents" \\\n'
+            '  -H "X-API-Key: $API_KEY" \\\n'
+            '  -H "Content-Type: application/pdf" \\\n'
+            '  -H "x-filename: 01_federal_income_tax_rate_schedules_TY2026.pdf" \\\n'
+            "  --data-binary @fixtures/01_federal_income_tax_rate_schedules_TY2026.pdf\n"
+            "```"
+        ),
+        openapi_extra={
+            "requestBody": {
+                "required": True,
+                "content": {"application/pdf": {"schema": {"type": "string", "format": "binary"}}},
+            }
+        },
+        responses=_UPLOAD_REJECTIONS,
     )
-    async def upload_document(request: Request, conn: Conn) -> IngestAccepted:
+    async def upload_document(
+        request: Request,
+        conn: Conn,
+        x_filename: Annotated[
+            str | None,
+            Header(description="Name to store for this document; defaults to `upload.pdf`."),
+        ] = None,
+    ) -> IngestAccepted:
         # Guards run cheapest-first, and every one of them before a byte
         # reaches the pipeline (CLAUDE.md hardening).
         declared = request.headers.get("content-length")
@@ -136,7 +198,7 @@ def create_app(settings: ApiSettings, *, runner: JobRunner | None = None) -> Fas
                 detail=f"{page_count} pages exceeds the cap of {settings.max_pages}",
             )
 
-        filename = request.headers.get("x-filename", "upload.pdf")
+        filename = x_filename or "upload.pdf"
         repository = PostgresRecordRepository.from_connection(conn)
         outcome = enqueue_ingest(
             repository,
@@ -153,7 +215,12 @@ def create_app(settings: ApiSettings, *, runner: JobRunner | None = None) -> Fas
             duplicate=not outcome.created,
         )
 
-    @app.get("/jobs/{job_id}", response_model=JobOut, summary="Job status and counts")
+    @app.get(
+        "/jobs/{job_id}",
+        response_model=JobOut,
+        summary="Job status and counts",
+        responses=_NOT_FOUND,
+    )
     def read_job(job_id: UUID, conn: Conn) -> JobOut:
         row = queries.get_job(conn, job_id)
         if row is None:
@@ -164,7 +231,12 @@ def create_app(settings: ApiSettings, *, runner: JobRunner | None = None) -> Fas
     def read_documents(conn: Conn) -> list[DocumentOut]:
         return [DocumentOut(**row) for row in queries.list_documents(conn)]
 
-    @app.get("/documents/{document_id}", response_model=DocumentOut, summary="One document")
+    @app.get(
+        "/documents/{document_id}",
+        response_model=DocumentOut,
+        summary="One document",
+        responses=_NOT_FOUND,
+    )
     def read_document(document_id: UUID, conn: Conn) -> DocumentOut:
         row = queries.get_document(conn, document_id)
         if row is None:
@@ -242,7 +314,7 @@ def create_app(settings: ApiSettings, *, runner: JobRunner | None = None) -> Fas
     )
     def resolve(
         conn: Conn,
-        amount: Annotated[int, Query(ge=0)],
+        amount: Annotated[int, Query(ge=0, le=_MAX_INT8)],
         tax_year: Annotated[int, Query(ge=1900, le=2999)],
         filing_status: FilingStatus | None = None,
         taxpayer_class: str | None = None,
@@ -307,6 +379,7 @@ def create_app(settings: ApiSettings, *, runner: JobRunner | None = None) -> Fas
         "/reviews/{review_id}",
         response_model=ReviewOut,
         summary="One review item, with its adjudication audit trail",
+        responses=_NOT_FOUND,
     )
     def read_review(review_id: UUID, conn: Conn) -> ReviewOut:
         row = queries.get_review(conn, review_id)
@@ -320,9 +393,11 @@ def create_app(settings: ApiSettings, *, runner: JobRunner | None = None) -> Fas
         `POST` is the JobRunner's immediate self-kick after an upload. `GET`
         exists because **Vercel Cron issues GET requests** — a mutating GET
         is not a choice, it is the platform's contract, and the endpoint is
-        bearer-authenticated and safe to repeat (`FOR UPDATE SKIP LOCKED`
-        means a duplicate sweep claims different jobs, never the same ones
-        twice). Vercel injects `Authorization: Bearer $CRON_SECRET`
+        bearer-authenticated and safe to repeat: `FOR UPDATE SKIP LOCKED`
+        keeps two sweepers off the same row while they select, and the claim
+        itself refuses any job still inside its lease, so an overlapping
+        sweep picks up different work rather than re-running live work.
+        Vercel injects `Authorization: Bearer $CRON_SECRET`
         automatically when that variable is set, which is exactly the check
         `require_cron_secret` already performs.
         """
@@ -340,6 +415,7 @@ def create_app(settings: ApiSettings, *, runner: JobRunner | None = None) -> Fas
             dependencies=[Depends(require_cron_secret)],
             operation_id=operation_id,
             summary="Process queued jobs (cron / self-kick path)",
+            responses=_UNAUTHORIZED,
         )
 
     return app

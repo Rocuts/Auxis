@@ -188,18 +188,36 @@ class PostgresRecordRepository:
                 INSERT INTO documents
                     (sha256, filename, byte_size, content_type, page_count, source_kind)
                 VALUES (%s, %s, %s, %s, %s, %s)
-                ON CONFLICT (sha256) DO NOTHING
-                RETURNING id
+                ON CONFLICT (sha256) DO UPDATE SET
+                    -- BACKFILL, never overwrite. The upload path registers a
+                    -- document before anything is extracted, so it carries no
+                    -- source_kind and a placeholder filename; the pipeline
+                    -- registers the same sha256 again with both. DO NOTHING
+                    -- discarded them, and since no UPDATE existed anywhere the
+                    -- column was structurally always null -- the router's
+                    -- digital/scanned decision left no trace in the data while
+                    -- the OpenAPI published the field as required.
+                    --
+                    -- COALESCE(existing, new) and not last-write-wins: a later
+                    -- bare re-upload must never downgrade provenance already
+                    -- earned.
+                    source_kind = COALESCE(documents.source_kind, EXCLUDED.source_kind),
+                    page_count  = COALESCE(documents.page_count,  EXCLUDED.page_count),
+                    filename    = CASE
+                                    WHEN documents.filename = 'upload.pdf'
+                                    THEN EXCLUDED.filename
+                                    ELSE documents.filename
+                                  END
+                RETURNING id, (xmax = 0) AS inserted
                 """,
                 (sha256, filename, byte_size, content_type, page_count, source_kind),
             ).fetchone()
-            if row is not None:
-                return DocumentHandle(id=row[0], created=True)
-            existing = self._conn.execute(
-                "SELECT id FROM documents WHERE sha256 = %s", (sha256,)
-            ).fetchone()
-            assert existing is not None  # unique key: insert lost means row exists
-            return DocumentHandle(id=existing[0], created=False)
+            # DO UPDATE always returns a row, so `created` can no longer be
+            # inferred from its presence. `xmax = 0` is true only for a tuple
+            # this statement inserted, which is exactly the distinction the
+            # sha256 no-op contract depends on.
+            assert row is not None  # DO UPDATE returns on both paths
+            return DocumentHandle(id=row[0], created=bool(row[1]))
 
     def ingest(self, document_id: UUID, records: Sequence[CanonicalRecord]) -> IngestOutcome:
         """Replace this document's records with ``records``, atomically.

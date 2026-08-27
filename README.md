@@ -19,11 +19,12 @@ that touches a platform is a port with three adapters behind it.
 >    the shipped number rather than replacing it, because two pre-registered
 >    repair attempts both made the score worse and suppressing that would
 >    turn a specification into a curve fit.
-> 2. **The live database holds 113 of 128 records.** The 15 missing are one
->    document: `05`, the scanned one. It extracts **19 of 19 on the local
+> 2. **The live database holds 113 of 128 records.** Document `05`, the
+>    scanned one, is short **16** of its 19; document `04` carries one extra,
+>    so the net gap is 15. It extracts **19 of 19 on the local
 >    Tesseract path** (gate-measured) and **3 of 19 on Vercel's vision path**
 >    (live-measured once, 2026-08-27) — a documented
->    [per-target limitation](#cost), fail-visible via 13 review-queue items
+>    [per-target limitation](#cost), fail-visible via 19 review-queue items
 >    rather than a silent loss.
 >
 > **Getting there took three deployment defects that only a real deployment
@@ -141,6 +142,29 @@ uv run python -m tax_tables.migrate
 make api                      # http://localhost:8000/docs
 ```
 
+**Ingesting a document locally takes one more call, and that is by design.**
+`JOB_RUNNER` defaults to `none`, so an upload is *enqueued* and returns `202`
+without starting work — there is no resident worker in this tree, and the
+compose file runs Postgres only. Start the work explicitly:
+
+```bash
+curl -X POST localhost:8000/documents \
+  -H "X-API-Key: $API_KEY" -H "Content-Type: application/pdf" \
+  -H "x-filename: 01_federal_income_tax_rate_schedules_TY2026.pdf" \
+  --data-binary @fixtures/01_federal_income_tax_rate_schedules_TY2026.pdf
+
+curl -X POST "localhost:8000/internal/sweep?limit=1" \
+  -H "Authorization: Bearer $CRON_SECRET"     # runs the pipeline, blocking
+
+curl "localhost:8000/records?limit=5"
+```
+
+The sweep needs a funded model key (`SCHEMA_MAPPER_API_KEY`, or
+`ANTHROPIC_API_KEY` to go direct); without one the job reaches a terminal
+`failed` with `error.type = "missing_credentials"`, which is the honest
+outcome rather than a hung request. Setting `JOB_RUNNER=vercel` is what makes
+the upload self-kick instead, and that is what the deployed target runs.
+
 Run everything the project can verify without credentials:
 
 ```bash
@@ -238,7 +262,7 @@ flowchart TB
 
     subgraph pipe_b["Pipeline - run_document"]
         router["ExtractionRouter<br/>[Component]<br/>Classifies every page on raw<br/>evidence: text layer, page image,<br/>orientation. Never on filename"]
-        extractor["TableExtractor<br/>[Port]<br/>The only component<br/>licensed to read pixels"]
+        extractor["TableExtractor<br/>[Port]<br/>Every page goes through here.<br/>Its adapters are the only<br/>components licensed to read pixels"]
         extractor_a["pdfplumber - digital, $0<br/>Tesseract - local OCR<br/>vision-OCR - Vercel<br/>Textract - AWS"]
         mapper["SchemaMapper<br/>[Port]<br/>Cell grid to records.<br/>Semantic mapping only:<br/>never reads a number<br/>off an image"]
         verifier["RecordVerifier<br/>[Port]<br/>Re-derives in a fresh<br/>context under a skeptic<br/>prompt. Flags, never corrects"]
@@ -257,8 +281,8 @@ flowchart TB
     guards --> registrar --> enqueue --> runner
     runner --> router
     router -->|"page needs pixels"| extractor
+    router -->|"page has a usable text layer"| extractor
     extractor --> mapper
-    router -->|"page has a usable text layer"| mapper
     mapper --> verifier --> triage
     triage -->|"persistable records"| repo
     triage -->|"findings and mapper issues"| repo
@@ -299,9 +323,9 @@ The domain and the pipeline do not know that AWS or Vercel exist.
 | `SchemaMapper` | AI Gateway · `zai/glm-5.3-flash` | AI Gateway · `zai/glm-5.3-flash` | Bedrock |
 | `RecordVerifier` | AI Gateway · `alibaba/qwen-3-235b` | AI Gateway · `alibaba/qwen-3-235b` | Bedrock |
 | `Adjudicator` | AI Gateway · inherits the mapper | AI Gateway · inherits the mapper | Bedrock |
-| `JobRunner` | in-process worker pool | cron sweep | Step Functions Distributed Map |
+| `JobRunner` | no-op runner + explicit sweep | self-kick + cron sweep | Step Functions Distributed Map |
 | `RecordRepository` | psycopg → container | psycopg → Neon pooled | psycopg → RDS Proxy |
-| `BlobStore` | filesystem | Postgres `bytea` | S3 |
+| `BlobStore` | Postgres `bytea` | Postgres `bytea` | S3 |
 
 All three semantic roles speak the **Anthropic Messages protocol**; which
 endpoint answers it is configuration. The live and local route is the **Vercel
@@ -392,13 +416,14 @@ application code; they are *unrepresentable*:
 
 ```sql
 EXCLUDE USING gist (
-    jurisdiction  WITH =,
-    record_type   WITH =,
-    tax_year      WITH =,
-    filing_status WITH =,
-    taxpayer_class WITH =,
-    bracket       WITH &&
-) WHERE (bracket IS NOT NULL AND lifecycle_status = 'active')
+    jurisdiction                   WITH =,
+    record_type                    WITH =,
+    tax_year                       WITH =,
+    (COALESCE(filing_status, ''))  WITH =,
+    (COALESCE(taxpayer_class, '')) WITH =,
+    lifecycle_status               WITH =,
+    bracket                        WITH &&
+) WHERE (bracket IS NOT NULL)
 ```
 
 Three facts about the domain that a naive schema gets wrong, each with a test:
@@ -973,10 +998,32 @@ what it measured.
 ### What production runs
 
 **The same configuration the gate measured.** No unmeasured configuration
-ships: the same two models, the same endpoint, and `CANONICAL_CONVENTIONS`
-frozen and hash-pinned at `sha256:88b9ca03eaafcf05`. The 81/128 record is a
-measurement *of the thing that ships*, which is worth more than a better number
-measured on something else.
+ships: the same two models, the same endpoint, and the same frozen
+`CANONICAL_CONVENTIONS`. The 81/128 record is a measurement *of the thing that
+ships*, which is worth more than a better number measured on something else.
+
+The freeze is now a command rather than a sentence — reproduce it:
+
+```bash
+uv run python -c "import hashlib; \
+from tax_tables.adapters.anthropic_mapper import CANONICAL_CONVENTIONS as C; \
+print(hashlib.sha256(C.encode()).hexdigest()[:16], len(C))"
+# a5987cc0c324d1ac 18579
+```
+
+`tests/mapping/test_spec_freeze.py` asserts both values, so a reworded prompt
+fails `make check`.
+
+> **Deflating correction, 2026-08-27.** This paragraph previously read
+> "hash-pinned at `sha256:88b9ca03eaafcf05`". **That literal reproduces under
+> no recipe** — adversarial review hashed the constant at every commit in
+> history under 11 normalisations, 3 encodings and 7 algorithms and found no
+> match, and its derivation is lost. It was a number with no command behind
+> it, in the one place the document claimed proof rather than assurance. The
+> *invariance* it was standing for is real and independently checkable:
+> `git diff fda868a..HEAD -- src/tax_tables/adapters/anthropic_mapper.py`
+> is empty, so the text is byte-identical from the SPEC FREEZE v2 commit
+> through HEAD, across every gate run in the dev-log.
 
 
 ## Cost
@@ -1006,7 +1053,7 @@ cost table that hid it would be selling the cheap column:
 The Vercel figure is the vision path's **first end-to-end run**, and it
 under-extracts: 3 `special_gain_rate` records arrived and the 16 bracket
 records did not. It is **fail-visible, not silent** — the same run queued
-**13 review items** naming what it could not place, which is anti-goal #8
+**19 review items** naming what it could not place, which is anti-goal #8
 working rather than a regression. No system binary can exist in a Vercel
 function ([ADR 010](docs/decisions/010-vision-ocr-vercel-extractor.md)), so
 this is the trade that target makes, and the honest reading is that **the
@@ -1194,12 +1241,13 @@ checks is a coupling that drifts. The reclaim behaviour has its own four tests,
 including `test_live_worker_is_never_stolen` — the one that would catch a lease
 shortened below `maxDuration` by someone who had not read this section.
 
-**What the repair does not yet claim.** It has never run on production. The
-promotion that would deploy it is a human action and has not been taken, so as
-of 2026-08-27 the live URL still runs the 300 s build and the five jobs above
-are still `running`. `scripts/mark_stranded_jobs.py` closes those rows to
-`failed` with an error payload naming the gate — **mark, never delete: the rows
-are the evidence** — and it too has not been run. Re-seeding the corpus is
+**What happened next.** The repair was promoted, and it worked on the platform
+that had defeated it: the reclaim fired live at `17:24:16Z`, taking a job whose
+worker the platform had killed and running it to a terminal state — the exact
+transition that was impossible the day before. The five stranded rows were
+closed by `scripts/mark_stranded_jobs.py` — **mark, never delete: the rows are
+the evidence** — and the corpus was re-seeded to the 113 records the live URL
+serves now. Re-seeding the corpus is
 blocked until it is, since a `running` job reads as live to the SHA-256 key.
 The honest status is: *the defect is understood, the fix is tested, the
 deployment is pending a human.*
@@ -1255,10 +1303,24 @@ adapters already make this cheap: prices are configuration
 ### What breaks first, in order
 
 **1 — Model provider rate limits. This is the real ceiling.** Two calls per
-document, and document 03's grid is the large one. At 0.42 documents/second
-and an order of 25k input tokens per call, the pipeline asks for roughly
-`0.42 × 2 × 25,000 ≈ 21,000 tokens/second`, or **~1.26M tokens/minute** —
-above the default organization TPM tier on either provider. Mitigations, in
+document. The per-call size is not a guess — it is the ten calls of the final
+gate run, read off
+[`docs/audit/evidence/2026-08-27-gate6-81-128.txt`](docs/audit/evidence/2026-08-27-gate6-81-128.txt):
+**108,162 input tokens over 10 calls, a mean of 10,816 per call** (12,080 if
+cache reads are counted, which most providers do). So at 0.42 documents/second
+the pipeline asks for `0.42 × 2 × 10,816 ≈ 9,100 tokens/second`, or
+**~545k tokens/minute** — ~609k on the cache-inclusive basis.
+
+> **Corrected 2026-08-27.** This paragraph previously used "an order of 25k
+> input tokens per call" and concluded ~1.26M TPM. The artifact says 10,816,
+> so the estimate was high by roughly 2.3×. The *conclusion* is unchanged —
+> 545k TPM still sits at or above the default organization tier on either
+> provider, and rate limits are still what binds first — but a number
+> reachable from a committed artifact should never have been an order-of
+> guess, least of all in the section whose whole claim is that it is
+> quantitative.
+
+Mitigations, in
 the order they should be reached for: (a) the router already keeps 4 of 5
 documents off the model path for *extraction*, so only the semantic layer
 scales with volume; (b) `RECORD_VERIFIER_MODEL` deliberately accepts a
@@ -1417,17 +1479,17 @@ nowhere near deploy-correct. See [`docs/audit/`](docs/audit/) for the full
 > — public, no SSO gate, every `GET` serving, **113 of 128 records
 > persisted with zero duplicates.**
 >
-> | Production, measured 2026-08-27 | Result |
+> | Production, measured 2026-08-27 (current at this commit) | Result |
 > |---|---|
 > | `GET` endpoints (`/records`, `/documents`, `/reviews`, filtered) | **200**, correct shapes |
 > | **Records persisted** | **113 / 128**, **0 duplicates**, all `active` |
 > | — by document | `01` 32/32 · `02` 8/8 · `03` 51/51 · `04` 19/18 · `05` **3/19** |
-> | Open review-queue items | **37** — every value the pipeline would not guess |
+> | Open review-queue items | **38** — every value the pipeline would not guess |
 > | Warm latency, data path, median of 3 | **272 ms** (`/documents` 278 ms, `/records/resolve` 283 ms) |
 > | True first click, cold function **+ Neon resume** | **6.76 s** — *measured on preview*, see below |
 > | `POST /documents`, no key / wrong key | **401 / 401** |
 > | `POST /internal/sweep`, no bearer / wrong bearer / cron bearer | **401 / 401 / 200** |
-> | **Total project spend, all six gate runs and every live seed** | **`$0.71`** of a `$5.00` free allowance |
+> | **Total project spend, all six gate runs and every live seed** | **`$0.74`** of a `$5.00` free allowance |
 >
 > **Copy-paste the headline query.** It proves the range index and the
 > bracket-integrity constraint deliver something real, over the live URL:
@@ -1440,8 +1502,8 @@ nowhere near deploy-correct. See [`docs/audit/`](docs/audit/) for the full
 >
 > Two honest caveats on that table. **Document 05 is 3 of 19** — the scanned
 > one, on Vercel's vision path, against 19/19 on the local Tesseract path; it
-> is a measured [per-target limitation](#cost), fail-visible via 13 of those
-> 37 review items. And **document 04 is 19 against an expected 18**: a sixth
+> is a measured [per-target limitation](#cost), fail-visible via 19 of those
+> 38 review items. And **document 04 is 19 against an expected 18**: a sixth
 > `surtax_threshold` with a null `filing_status`, which the model declined to
 > emit at the gates and emitted here — the same stochasticity ADR 014
 > measured, admitted legitimately by the natural key rather than smuggled past
@@ -1556,18 +1618,64 @@ or a slow run reports as a timeout. The default is documented rather than
 silently raised, for the same reason the stranded rows are marked rather than
 deleted: the number is evidence of when it was chosen.
 
-### 3. docker-compose — the evaluator's one-command reproduction
+### 3. docker-compose — the evaluator's local reproduction
 
-`docker compose up -d --wait db` plus `uv run python -m tax_tables.migrate`
-brings up Postgres 18 and applies all eight migrations; `make api` serves the
-full surface. This is the target the test suite runs against, and it works
-from a fresh clone.
+**Postgres only.** `docker compose up -d --wait db` starts a `postgres:18`
+container — the same major as the Neon branch — and that is the whole compose
+file: no API image, no worker service, no Dockerfile. The application runs on
+the host under `uv`, which is what the test suite does too, so the local path
+is exercised on every `make check` rather than only when someone tries it.
+
+`uv run python -m tax_tables.migrate` applies all eight migrations; `make api`
+serves the full surface; a document is ingested with the two calls in
+[Quick start](#quick-start). It works from a fresh clone, and the heading says
+"local reproduction" rather than "one command" because it is four.
 
 ---
 
 ## Honest limitations
 
 Consolidated, and deliberately specific. If something is unproven, it says so.
+
+### Known and accepted, with the fix shape written down
+
+Three defects an external adversarial review confirmed on 2026-08-27 that are
+**not fixed here**. Each is stated with what it costs and what closing it
+would take, because "we did not get to it" and "we did not notice" are
+different sentences and only the first is true.
+
+**A Postgres backend sits `idle in transaction` for the whole of a job.**
+`service/jobs.py` opens a connection, claims the job, then reads the filename
+outside any explicit `transaction()` on a non-autocommit connection — so an
+implicit transaction stays open across the model calls, measured at 331 s for
+document 03's mapper alone. A transaction-mode pooler cannot multiplex that
+slot, which is exactly the mitigation bottleneck #3 leans on, and it pins the
+`xmin` horizon while it is held. At the demo's sequential five-document scale
+the practical impact is nil; at the 10,000/day target it is the connection
+ceiling arriving early. **Fix shape:** release the claim transaction before
+the model calls and re-claim by id to persist. **Why not now:** it moves
+transaction boundaries around the pipeline's only write path, days after
+three other concurrency fixes; the risk asymmetry this close to delivery
+favours the documented defect over the rushed repair. This is bottleneck #3
+confirmed live rather than predicted.
+
+**Record `confidence` is uncalibrated.** 91 of the 113 live records sit at
+exactly `1.000`, and the extraction floor is a literal `1.0` on both live
+paths, so `min(self_report, floor)` reduces to the model's self-report. The
+`confidence_floor` triage rule has produced **zero** of the queue items. The
+field is therefore a *self-report*, not a calibrated probability, and
+`min_confidence` filters on it accordingly. The README elsewhere reports
+high-confidence-wrong records at length; this says the underlying field was
+never calibrated to begin with. **Fix shape:** calibrate against the oracle
+and report a reliability curve — real work, not an afternoon.
+
+**ADR 014 is 1,279 lines against the ADR index's own "one page each".** That
+is deliberate and it is the one convention this project knowingly breaks: 014
+is not a decision record, it is the *evidence* record for model selection —
+six gate runs, two falsified predictions, a pre-registered escalation rule and
+its unfunded close. Splitting it would scatter the only through-line that
+makes the 81/128 number legible. The index is annotated to say so, so a
+reader meets the exception before the exception meets them.
 
 ### Gates still open
 
@@ -1653,18 +1761,19 @@ Consolidated, and deliberately specific. If something is unproven, it says so.
    rather than a regression. Document 05 is extracted today by Tesseract in
    `docker compose`, or by Textract in the AWS design.
 
-6. **The production pipeline has never carried a document end to end, and
-   the repair for that is written but not deployed.** The 3.5-LIVE seed put
-   all five fixtures into a `maxDuration` kill and persisted zero records; the
-   lease/visibility timeout, the re-derived 1800 s `maxDuration` and the
-   `limit=3` cron that answer it are implemented and covered by tests
-   (`TestKilledWorkerReclaim`, `TestLeaseInvariant`), and **none of it has run
-   on the live URL.** Re-checked 2026-08-27: production serves every `GET`,
-   its five jobs are still `running`, and its record count is still zero.
-   Three things therefore remain unproven rather than proven-and-reported —
-   that a reclaimed job completes on the platform that killed it, that 1800 s
-   is enough clock for a five-way fan-out against a free-tier allowance, and
-   what document 05's vision branch actually does (item 5). Closing this needs
+6. **The production pipeline carries documents end to end, and one of the
+   three questions this item used to list is still open.** The first 3.5-LIVE
+   seed put all five fixtures into a `maxDuration` kill and persisted zero
+   records; the lease/visibility timeout, the re-derived 1800 s `maxDuration`
+   and the `limit=3` cron were then deployed, and two of the three unknowns
+   closed on the live URL: **a reclaimed job does complete on the platform
+   that killed it** (observed `17:24:16Z`), and **document 05's vision branch
+   under-extracts at 3 of 19** rather than failing closed (item 5). What
+   remains genuinely unproven is the third: **1800 s has never been shown to
+   be enough clock for a five-way concurrent fan-out** — the successful
+   re-seed was deliberately sequential, and the one concurrent burst that did
+   happen was an operator error whose documents landed correctly but whose
+   timings are not gate-comparable. Closing this needs
    a promotion, `scripts/mark_stranded_jobs.py` against the stranded rows, and
    one more seed — in that order, each by a human.
 

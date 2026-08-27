@@ -1,6 +1,14 @@
 # Architecture Decision Records
 
-One page each, written when the decision became real. Where a decision is made
+One page each, written when the decision became real — with **one deliberate
+exception: [ADR 014](014-semantic-layer-model-selection.md) is long** because
+it is not a decision record but the *evidence* record for model selection: six
+gate runs, two falsified pre-registered predictions, and an escalation rule
+that was designed, wired, tested and then declined on cost. Splitting it would
+scatter the only through-line that makes the 81/128 accuracy number legible.
+Every other ADR here honours the one-page convention.
+
+Where a decision is made
 but its implementation waits on an open gate, the ADR says so in its status
 line rather than implying code that does not exist. The status column is
 maintained: an ADR whose implementation shipped says so, and an ADR whose fix

@@ -3473,3 +3473,148 @@ than only in this log.
 
 `$0.0749` this step. **`$0.6175` of the `$5.00` allowance.** No purchase, no
 new provider, nothing escalated.
+
+---
+
+## 2026-08-27 — The adversarial hiring review, and the fix batch it produced
+
+An external skeptical-hiring-engineer review ran over the repo and the live
+URL: six adversarial lenses (the brief's four criteria, plus the README alone
+and the C4 diagrams against shipped code), every finding then checked by a
+refute-by-default verifier before it could be reported. 47 raw findings, **27
+survived verification, 20 refuted or dropped.**
+
+**Verdict: advance the candidate.** No offer-killers. The decisive sentence
+from the memo: *"the worst defect in this submission is one missing predicate
+in a `WHERE` clause, and the candidate built the thing that contains it,
+deployed it, measured it, and wrote down what it cost."* The stated
+reservation is proportionality and closing discipline, not engineering.
+
+**The strongest attacks died against prior disclosure.** The memo says so
+itself: the loudest findings — that the exclusion-constraint centrepiece is
+guarded by free-text LLM-written columns, that the verifier is a schema
+linter, that the superseded trap is unproven live — were refuted or
+downgraded *because this project had already documented them, more precisely
+than the reviewer stated them.* That is the return on writing down what does
+not work.
+
+The memo itself is process tooling and stays out of the shipped repo.
+
+### Fixed, test-first
+
+**Finding 1 — the real bug, and it was mine.** `sweep_pending` selects with
+`FOR UPDATE SKIP LOCKED`, but that transaction commits when the SELECT
+returns, so the row locks are gone before any work starts. `process_job`'s
+claim then accepted `status IN ('queued','running')` unconditionally — so a
+second sweeper arriving mid-pipeline re-claimed a live worker's job, bumped
+`attempt`, and ran the document again concurrently. At the shipped settings (a
+60 s cron over documents measured at 346 s) that overlap is the steady state.
+The lease predicate I added last round guarded the *select* and not the
+*claim*; I fixed half the bug and documented it as whole. Test reproduces the
+double-claim red-first. Three assertions of the opposite are corrected:
+`jobs.py`, the OpenAPI text served live from `app.py`, and ADR 009's section
+heading — now *"…is half the design"*, with the original paragraph left
+standing because the gap between what the project believed and what it shipped
+is the point. **The lock guards the SELECT; the predicate guards the CLAIM.**
+
+**Finding 4 — provenance was computed and thrown away on every run.** The
+upload path registers a document before extraction (no `source_kind`,
+placeholder filename); the pipeline registers the same sha256 again with both,
+and `ON CONFLICT DO NOTHING` discarded them. No `UPDATE documents` existed
+anywhere, so the column was structurally always null while the OpenAPI
+published it as *required* — the router's digital/scanned decision, which the
+"four of five documents cost $0" headline rests on, left no trace in the data.
+Now `DO UPDATE` with `COALESCE(existing, new)`: backfill, never overwrite, so
+a later bare re-upload cannot downgrade provenance already earned. `created`
+now comes from `xmax = 0` rather than from row presence. `seed_remote.sh`
+sends `x-filename`.
+
+**The five live documents were NOT re-seeded.** They predate the fix and will
+keep reading `upload.pdf` with a null `source_kind`. Re-rolling a stochastic
+mapper over correct data to polish a provenance field is a trade this project
+refuses; the README's live-data note discloses it instead.
+
+**Findings 8 and 12 — the contract deliverable and the one non-JSON error.**
+`POST /documents` — the only write endpoint — documented no request body,
+because the handler takes a raw `Request` and FastAPI had nothing to
+introspect; `/docs` "Try it out" rendered no body field, and `x-filename`, the
+only way to name a document, appeared nowhere. Now declared via
+`openapi_extra`, with the header as a typed parameter and a curl example. The
+union of documented response codes across ten operations was `200/202/422`
+while the live service returns 401/413/415/404/400 in ordinary use; each is
+now declared where it can occur. A global handler makes every error JSON with
+a `detail` key — one unhandled exception previously escaped as `text/plain`,
+off the contract every other response honours — and its message is fixed
+rather than the exception string, because an exception can carry a connection
+string (anti-goal #10). `amount` gained its `int8` upper bound, so an absurd
+value 422s at the edge instead of reaching the driver as a 500.
+
+### The trust sweep
+
+**Finding 6 — the hash pin had no command behind it.** `88b9ca03eaafcf05`
+reproduces under no recipe; the reviewer hashed the constant at every commit
+under 11 normalisations, 3 encodings and 7 algorithms and found nothing, and
+its derivation is lost. **Verified independently rather than copied:** the
+real value is `sha256(CANONICAL_CONVENTIONS.encode())[:16] =`
+**`a5987cc0c324d1ac`**, over 18,579 characters. `tests/mapping/test_spec_freeze.py`
+now pins both, and the README prints the reproducing command. The claim the
+gate actually rests on is separately checkable and true:
+`git diff fda868a..HEAD -- src/tax_tables/adapters/anthropic_mapper.py` is
+empty. A deflating correction in the one place the document said *proof*.
+
+**Finding 2 — four dated "re-checked" statements the live URL refuted.**
+Deleted or rewritten. They all ran in the deflating direction — claiming
+production never ran when it had — but a reader met "113 records" at line 22
+and "record count is still zero" at line 1663, and the document's governing
+promise is that nothing estimated is presented as measured.
+
+**Finding 3 — two ports-table cells were prose.** `JobRunner | local` read
+"in-process worker pool"; there is none in `src/`, and the shipped default is
+`NullJobRunner`, whose body is `return None`. `BlobStore | local` read
+"filesystem"; there is no such module. Both corrected, in the table that
+carries the "one domain, three targets — proven, not asserted" argument, plus
+the sibling claims in ADR 009 and ADR 011. The local quickstart is rewritten
+to the flow that actually works — upload returns 202, then an explicit
+authenticated `/internal/sweep` call runs the pipeline — and the
+docker-compose section now says "local reproduction" over a Postgres-only
+compose file rather than "one-command" over four commands.
+
+**Finding 5 — a `CHECK` that does not exist, and a constraint printed wrong
+in three places.** Only `record_type` is CHECK-constrained; `attribute_key`
+ships as bare `text`, enforced by prompt text alone — and it is a natural-key
+column, which is exactly the drift that produced "60 rows where 32 are right".
+ADR 005 annotated. The exclusion constraint was printed in README, ADR 001 and
+ADR 005 without its two `COALESCE` arms and with `lifecycle_status` as a
+predicate rather than a chain column; the docs printed a *weaker* constraint
+than the code ships. All three now carry the shipped DDL.
+
+**Findings 9, 11, 15.** Every "measured" cell re-read live at the end of this
+pass: 38 open review items (19 of them document 05's, not 13), `$0.74` total
+spend, document 05 short **16** with document 04 carrying one extra for a net
+gap of 15. The L3 diagram drew the text-layer path bypassing `TableExtractor`;
+both paths now route through the port, which is both what the router does and
+the stronger invariant. Bottleneck #1's "an order of 25k input tokens per
+call" is replaced by the artifact: **108,162 input tokens over 10 calls, mean
+10,816**, giving ~545k TPM rather than the ~1.26M claimed — high by 2.3×. The
+conclusion survives (rate limits still bind first); an order-of guess in the
+section whose whole claim is that it is quantitative does not.
+
+### Accepted with eyes open, not fixed
+
+- **Finding 7** — a Postgres backend sits `idle in transaction` across the
+  model calls. Bottleneck #3 confirmed live rather than predicted. Fix shape
+  written down (release the claim transaction before the model calls, re-claim
+  by id to persist); declined this close to delivery on risk asymmetry, days
+  after three other concurrency fixes touched the same write path.
+- **Finding 10** — `confidence` is uncalibrated: 91 of 113 live records sit at
+  exactly `1.000`, the extraction floor is a literal `1.0` on both live paths,
+  and the confidence floor has produced zero queue items. It is a self-report,
+  and the README now says so.
+- **Finding 13** — ADR 014's length is deliberate: it is the evidence record
+  for model selection, not a decision record. The ADR index is annotated so a
+  reader meets the exception before the exception meets them.
+
+One item is left for the operator rather than edited: `CLAUDE.md:169` still
+promises docker-compose brings up "API + Postgres + worker + the five fixtures
+ingested". It is the project's own instruction file, not a deliverable, and
+not mine to rewrite.

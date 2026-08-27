@@ -32,8 +32,10 @@ Two Postgres features carry the design, and neither has a portable equivalent:
    ```sql
    EXCLUDE USING gist (
        jurisdiction WITH =, record_type WITH =, tax_year WITH =,
-       filing_status WITH =, taxpayer_class WITH =, bracket WITH &&
-   ) WHERE (bracket IS NOT NULL AND lifecycle_status = 'active')
+       (COALESCE(filing_status, '')) WITH =,
+       (COALESCE(taxpayer_class, '')) WITH =,
+       lifecycle_status WITH =, bracket WITH &&
+   ) WHERE (bracket IS NOT NULL)
    ```
 
    Mixing scalar equality with range overlap in one GiST index requires the

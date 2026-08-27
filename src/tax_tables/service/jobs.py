@@ -175,16 +175,36 @@ def process_job(
     regardless of the developer's shell.
     """
     source = os.environ if env is None else env
+    lease_seconds = _int_setting(source, "JOB_LEASE_SECONDS", DEFAULT_LEASE_SECONDS)
     with psycopg.connect(dsn, connect_timeout=30) as conn:
         with conn.transaction():
+            # The claim carries the SAME lease predicate the sweep selects on,
+            # and it has to: `sweep_pending`'s `FOR UPDATE SKIP LOCKED`
+            # transaction COMMITS when its SELECT returns, so the row locks are
+            # gone before any work begins. Without this predicate a second
+            # sweeper arriving mid-pipeline re-claimed a live worker's job,
+            # bumped `attempt`, and ran the document again concurrently — at
+            # the shipped settings (a 60 s cron over documents measured at
+            # 346 s) that overlap is the steady state, not an edge case.
+            #
+            # The lock guards the SELECT; this predicate guards the CLAIM.
+            # Both are the design (ADR 009, annotated 2026-08-27).
             claimed = conn.execute(
                 """
                 UPDATE jobs
                 SET status = 'running', attempt = attempt + 1, started_at = now()
-                WHERE id = %s AND status IN ('queued', 'running')
+                WHERE id = %s
+                  AND (
+                        status = 'queued'
+                        OR (
+                             status = 'running'
+                             AND started_at IS NOT NULL
+                             AND started_at < now() - make_interval(secs => %s)
+                           )
+                      )
                 RETURNING document_id
                 """,
-                (job_id,),
+                (job_id, lease_seconds),
             ).fetchone()
         if claimed is None:
             return "not_claimable"
@@ -335,9 +355,15 @@ def sweep_pending(
     limit: int = 10,
 ) -> list[UUID]:
     """Claim up to ``limit`` claimable jobs and process each. The cron-sweep
-    JobRunner on Vercel and the docker-compose worker loop both call this;
+    JobRunner on Vercel and the local sweep both call this.
+
     ``FOR UPDATE SKIP LOCKED`` keeps concurrent sweepers off each other's
-    jobs.
+    rows **while this SELECT runs** — and only then. The transaction commits
+    when the SELECT returns, so by the time the loop below starts working the
+    locks are gone. That is why the claim in :func:`process_job` carries the
+    lease predicate too: the lock guards the SELECT, the predicate guards the
+    CLAIM, and a sweeper arriving mid-pipeline is turned away by the second,
+    never by the first.
 
     **Claimable is not the same as queued.** A job whose worker the platform
     killed stays ``running`` forever — nothing rewrites the row, because the

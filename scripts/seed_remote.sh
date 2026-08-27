@@ -51,9 +51,14 @@ declare -a job_names=()
 
 for pdf in "${FIXTURES_DIR}"/0*.pdf; do
   name="$(basename "${pdf}")"
+  # x-filename is the only way to name an uploaded document: the body is raw
+  # PDF bytes, so there is no multipart part name to read one from. Without it
+  # every row in GET /documents reads `upload.pdf`, which is what the live
+  # dataset shows for uploads made before this was added.
   response="$(curl "${CURL_COMMON[@]}" \
     -w '\n%{http_code}' \
     -H 'Content-Type: application/pdf' \
+    -H "x-filename: ${name}" \
     --data-binary "@${pdf}" \
     "${BASE_URL}/documents")"
   status="$(tail -n1 <<<"${response}")"

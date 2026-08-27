@@ -58,14 +58,31 @@ column must be promoted out of `attrs`.
 What the typed core buys, concretely:
 
 - the GiST exclusion constraint over `(jurisdiction, record_type, tax_year,
-  filing_status, taxpayer_class, bracket)` — overlap is unrepresentable;
-- `EXCLUDE`-compatible partial indexing on `lifecycle_status = 'active'`, so
-  superseded document 05 records simply cannot collide with active 2026 ones;
+  COALESCE(filing_status, ''), COALESCE(taxpayer_class, ''), lifecycle_status,
+  bracket)` — overlap is unrepresentable. The two `COALESCE` arms matter: a
+  NULL discriminator is `DISTINCT` from every other NULL under `WITH =`, so
+  without them two scalar chains would never be compared and the constraint
+  would silently not apply to them;
+- `lifecycle_status` is a **chain column, not a predicate**, so superseded
+  document 05 records simply cannot collide with active 2026 ones while the
+  constraint still governs both;
 - a single indexed path for every documented filter;
 - `numeric` rates that permit the legitimately negative local rate in
   document 03, and `NULL` rates that mean *no tax imposed* rather than zero.
 
 ## Consequences
+
+> **ANNOTATION 2026-08-27 (adversarial review).** The paragraph below claims
+> more than the schema delivers, and the correction is deflating. **Only
+> `record_type` is `CHECK`-constrained. `attribute_key` ships as bare `text`
+> with no CHECK in any of the eight migrations** — its vocabulary is enforced
+> by prompt text alone (`adapters/anthropic_mapper.py`), and the mapper's tool
+> schema types it as a free string while typing its neighbours as enums. It is
+> a natural-key column, so drift there is not cosmetic: migration
+> `0003_records.sql` records exactly this class of drift producing "60 rows
+> where 32 are right". A model writing an unconstrained key column is the
+> weakest joint in this data model, and it is stated here rather than left for
+> a reader to find.
 
 `record_type` and `attribute_key` are `CHECK`-constrained enumerations, so a
 typo becomes a rejected insert rather than an orphaned row — the enumeration

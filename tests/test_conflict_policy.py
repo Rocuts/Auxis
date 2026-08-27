@@ -195,3 +195,65 @@ def test_ingestion_order_is_commutative(db: psycopg.Connection) -> None:
     state_ba = run([("old.pdf", superseded), ("new.pdf", active)])
     assert state_ab == state_ba
     assert len(state_ab) == 4
+
+
+class TestProvenanceIsBackfilled:
+    """`source_kind` is computed on every run and was thrown away on every run.
+
+    The upload path registers the document *before* anything is extracted, so
+    it has no `source_kind` and no real filename yet. The pipeline then
+    registers the same sha256 again, this time carrying both — and
+    `ON CONFLICT (sha256) DO NOTHING` discarded them. There is no
+    `UPDATE documents` anywhere in `src/`, so the column was structurally
+    always null while `docs/openapi.yaml` published it as *required*, and
+    `GET /documents` — the endpoint the README calls "provenance" — returned
+    `source_kind: null` and `filename: "upload.pdf"` for all ten live rows.
+
+    That is the extraction router's decision, the thing the "four of five
+    documents cost $0" headline rests on, leaving no trace in the data.
+    Found by adversarial review, 2026-08-27; nothing had disclosed it.
+
+    Backfill, never overwrite: a value already recorded wins, so a re-ingest
+    cannot downgrade known provenance to null.
+    """
+
+    def test_second_registration_backfills_source_kind(self, db: psycopg.Connection) -> None:
+        """The regression, minimally: register bare, then register enriched."""
+        with PostgresRecordRepository(TEST_DSN) as repo:
+            first = repo.register_document(
+                sha256=_sha("prov.pdf"), filename="upload.pdf", byte_size=10
+            )
+            second = repo.register_document(
+                sha256=_sha("prov.pdf"),
+                filename="03_state_local_sales_tax_rates_2026.pdf",
+                byte_size=10,
+                page_count=2,
+                source_kind="digital",
+            )
+        assert first.id == second.id
+        assert second.created is False
+        row = db.execute(
+            "SELECT source_kind, filename, page_count FROM documents WHERE id = %s",
+            (first.id,),
+        ).fetchone()
+        assert row == ("digital", "03_state_local_sales_tax_rates_2026.pdf", 2)
+
+    def test_a_known_value_is_never_overwritten_by_a_bare_re_register(
+        self, db: psycopg.Connection
+    ) -> None:
+        """Backfill is COALESCE(existing, new), not last-write-wins: a later
+        upload that knows nothing must not erase provenance already earned."""
+        with PostgresRecordRepository(TEST_DSN) as repo:
+            handle = repo.register_document(
+                sha256=_sha("keep.pdf"),
+                filename="real_name.pdf",
+                byte_size=10,
+                page_count=7,
+                source_kind="scanned",
+            )
+            repo.register_document(sha256=_sha("keep.pdf"), filename="upload.pdf", byte_size=10)
+        row = db.execute(
+            "SELECT source_kind, filename, page_count FROM documents WHERE id = %s",
+            (handle.id,),
+        ).fetchone()
+        assert row == ("scanned", "real_name.pdf", 7)
