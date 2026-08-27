@@ -409,6 +409,80 @@ unattended close: closing a row whose record is in the table loses nothing,
 because the row's own record is still there to be re-examined; closing a row
 whose record is absent destroys the only live signal of the loss (anti-goal #8).
 
+### 8c. The extra-attribute dictionary, adopted once and CLOSED
+
+The third gate run (39/128) moved the failure outward again and made the
+remaining gap measurable: of 128 records, **85 differed on nothing but
+absent `attrs` keys**, and not one differed on a wrong value. `rate_unit`
+and `effective_date` on 51 records each, `imposes_state_sales_tax` on its
+46 positive cases, `jurisdiction_name`, `superseded_effective`,
+`employer_match`, `threshold`, `unlimited`, `floor_amount`,
+`earned_income_addition`. `CANONICAL_CONVENTIONS` simply never named them.
+
+**Operator ruling, under the §8 boundary and consistent with it: the
+expected attribute KEY NAMES are adoptable encoding vocabulary.** They pass
+the same extractability test `US-FED` passed — `rate_unit` prints in no PDF,
+`imposes_state_sales_tax` prints in no PDF — while every value beneath them
+is read from the page: the unit from *"All rates are expressed as
+percentages"*, the effective date from *"Rates in effect as of January 1,
+2026"*, the supersession date from *"taxable years beginning before January
+1, 2026"*, the dash convention from the note that explains the dash.
+
+Two conditions attach, and both matter more than the ruling itself:
+
+1. **One pass, then closed.** The dictionary was built COMPLETE — every
+   record type, every key — in a single reading of the target schema, and
+   `CANONICAL_CONVENTIONS` now declares it closed. There will be no further
+   incremental vocabulary rulings. Adopting a vocabulary one gate run at a
+   time is how a spec becomes a transcript of the oracle; adopting it once,
+   in full, is a specification.
+2. **`imposes_state_sales_tax` gets both halves.** The old rule said to
+   emit `false` for the five dashed jurisdictions and was silent about the
+   other 46 — a rule written for the exception that forgot the norm, which
+   is why 46 records were missing a field the schema thought it required.
+   The rule now states both: `true` wherever a state rate prints, `false`
+   only on the dash.
+
+The boundary is unchanged in every other respect: per-record values remain
+forbidden, `src/` never opens the oracle at runtime, and values stay
+extract-only. What was adopted is a set of names and the derivation rule
+under each — never a value.
+
+### 8d. Output discipline is per role, not per schema-law
+
+The conventions are shared verbatim across all three roles because they are
+the part that must NOT differ (ADR 012). The response ENVELOPE is the
+opposite: each role returns a different one. While the output-discipline
+paragraph lived inside the shared conventions, every role inherited the
+*mapper's* — an instruction to put commentary in `"issues"`, a key only the
+mapper's schema has and one both other schemas forbid under
+`additionalProperties: False`.
+
+For the verifier this was not a tidiness problem. The token `verdicts`
+appeared **nowhere** in its prompt: every leaf was named (`record_index`,
+`reason`, `confirmed`, `disputed`) and the container never was, while the
+wrong key was named twice. Through a gateway that forwards `output_config`
+without enforcing it, the prompt is the only channel carrying the envelope —
+so the model was told the wrong key and never the right one, and document 05
+lost verification three times consecutively, through both bounded retries.
+Three consecutive failures is not the per-call coin flip the mapper's
+prose-after-JSON was; it is the signature of a systematic mismatch.
+
+This is the mapper's §7 minimization at the altitude that actually
+transfers: **stop letting a non-semantic detail the pipeline already holds
+cost the whole document.** For the mapper that detail was `source_page` (18
+of document 05's 19 records); here it is the envelope's own name. Each role
+now states its own envelope; the mapper's text is byte-identical to what it
+was, so its prompt is unchanged. The verifier additionally drops `reason`
+from its item-level `required` — the one required-but-derivable key it had,
+since absent, null and blank already mean the same thing to the parser.
+
+Nothing is adapted at the parse layer and nothing is guessed: a body that
+still lacks the envelope is still a hard failure. What changed is that the
+failure now names the SHAPE that arrived — keys and type names only, never
+document content — so the next occurrence is a measurement rather than the
+inference this one required.
+
 ## Consequences
 
 - The model choice is now falsifiable: a rule, two thresholds, and two tables.

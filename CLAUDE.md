@@ -428,3 +428,11 @@ Postgres under fan-out — the reason RDS Proxy (AWS) and the pooled Neon endpoi
 - At a real design fork, stop and ask. Do not guess and build.
 - Prefer boring, correct code over clever code.
 - When a gate fails, report the failure. Never adjust the test.
+- **One interactive session per repository.** Two sessions on one working
+  tree have no protocol between them: on 2026-08-26 a second session's
+  `git add -A` swept another's five staged-but-uncommitted files into an
+  unrelated commit, and ran a gate against a spec that changed underneath
+  it. `.fanout-active` and the separate `tax_test` database guard a session
+  against its own background work; nothing guards two sessions against each
+  other, and a lock would be the wrong instrument. See the incident entry
+  in `docs/dev-log.md`.

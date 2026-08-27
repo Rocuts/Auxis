@@ -34,6 +34,7 @@ that touches a platform is a port with three adapters behind it.
   - [The data model](#the-data-model)
 - [API surface](#api-surface)
 - [Accuracy](#accuracy)
+- [Defense in depth, demonstrated](#defense-in-depth-demonstrated)
 - [Cost](#cost)
 - [Parallel processing and bottlenecks](#parallel-processing-and-bottlenecks)
 - [Fixture design](#fixture-design)
@@ -366,6 +367,76 @@ A per-record-type breakdown prints alongside it. The **verifier disagreement**
 column is deliberately not folded into the accuracy number: it measures how
 much friction independent re-derivation produces, which is a different
 question from whether the mapper was right.
+
+---
+
+## Defense in depth, demonstrated
+
+Layered safeguards are easy to claim and hard to evidence. This one was
+evidenced by accident, on document 05, and it is the single result this
+project would most like read closely — because **every semantic layer passed
+a record that was wrong, and the database caught it anyway, with no access to
+the test oracle.**
+
+The document prints its top rate bands as `Over $566,700`. The schema stores
+brackets as inclusive integers, so that band begins at 566,701. Here is what
+each layer did with it.
+
+**1 — The conventions steered it wrong.** `CANONICAL_CONVENTIONS` enumerated
+the open-*top* forms (`and over`, `or more`, `No limit`) and then said
+*"transcribe, never re-derive"*. No rule covered an exclusive *lower* bound.
+The specification, not the model, was the defect.
+
+**2 — The model obeyed.** It transcribed `lower_bound: 566700`, exactly as
+instructed, at confidence 0.94. Four records, one per filing status.
+
+**3 — The independent verifier was unavailable.** On that document it
+returned a body with no verdict envelope, three times. Containment did its
+job — the records were flagged `verifier_unavailable` rather than blessed,
+because silence is never assent — but the second opinion never arrived.
+
+**4 — The adjudicator endorsed it at 0.95.** With `citations_valid: true`,
+citing cell `p1_t0 r3,c4`, and concluding *"the persisted record matches the
+page, so no change is needed"*. **The mechanical citation check passed too**,
+and correctly: it verifies that the cited cells carry the figures the
+resolution asserts, and `Over $566,700` genuinely contains 566700. The figure
+was right. The derivation was wrong. No citation check can see that
+difference.
+
+**5 — The database refused all four.** An inclusive lower bound of 566,700
+collides with the band below, whose upper bound *is* 566,700. The
+`EXCLUDE USING gist` constraint rejected every one:
+
+```
+bracket_overlap: bracket [566700, and over] overlaps [64751, 566700] in the same chain
+```
+
+15 of 19 records persisted, 4 refused, **4 open review-queue rows** — the
+no-silent-loss proof (anti-goal #8). The constraint needed to know only that
+two intervals in one chain overlapped. It needed no ground truth, no model,
+and no network.
+
+**What it cost, and what it bought.** The harness later confirmed all four
+against the oracle, so the constraint was right. But the constraint reached
+that verdict *first*, and independently — which is the entire argument for
+making bracket overlap unrepresentable in the DDL rather than validating it
+in application code. Application-level validation would have been written by
+the same author, from the same wrong understanding of `Over $X`, and would
+have agreed with the mapper.
+
+**And the near miss, which is the sharper half.** Those four records were
+absent from the fact table, yet the adjudicator's 0.95 endorsement had
+cleared threshold, citations, and mechanical support. It did not auto-close
+them for one reason only: the flag happened to be `verifier_unavailable`,
+which is default-denied for unrelated reasons. Had it been `confidence_floor`
+— a rule this same document also produced — the item would have closed itself
+as "verified-correct" over data the database had rejected, because
+eligibility keyed on the queue row's *rule name* rather than on whether the
+record was actually there. It now keys on presence, asked of the fact table
+per item ([ADR 014 §8a-b](docs/decisions/014-semantic-layer-model-selection.md));
+the two reachable paths are pinned by tests. Full evidence, including the
+adjudicator's verbatim rationale, is in
+[`docs/audit/evidence/`](docs/audit/evidence/).
 
 ---
 
@@ -824,6 +895,26 @@ Consolidated, and deliberately specific. If something is unproven, it says so.
     adapters are real and fixture-tested, but whether a live Bedrock runtime
     accepts the exact structured-output request shape is a deploy-time
     verification item. The parsers fail closed, so the failure would be loud.
+17. **The mechanical citation check validates figures, not derivations —
+    and cannot be made to.** Before an adjudication may auto-close a review
+    item, `resolution_is_supported` requires every number the resolution
+    asserts to appear in a cited cell, or to be reachable from one by a
+    documented transform. That catches an invented figure. It is structurally
+    blind to the *right figure reached by the wrong reasoning*: a resolution
+    asserting `lower_bound 566700` while citing a cell reading
+    `Over $566,700` passes, because the figure is genuinely there. Document
+    05 produced exactly that, at 0.95 confidence, on all four of its top
+    bands (see [Defense in depth](#defense-in-depth-demonstrated)).
+
+    This is a real limit and the design answers it by placement rather than
+    by patching the check. Convention errors of that class are caught one
+    layer down, by the bracket-integrity constraint, which compares a
+    record against its *neighbours* instead of against its own citation —
+    and that is why bracket overlap is a database constraint here and not an
+    application-level validator. A citation check reasons about one record
+    in isolation and can never see a collision; making it try would be
+    scope it cannot carry. The honest statement is that no single layer
+    catches everything, which is the reason there is more than one.
 
 ---
 

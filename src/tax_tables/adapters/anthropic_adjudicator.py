@@ -254,7 +254,7 @@ value. You produce a proposal; someone else applies it.
 #: ``additionalProperties: False``. The adjudicator has not failed on it (it
 #: names its three keys in prose above, which the verifier never did), but a
 #: standing instruction to emit a forbidden key is the same latent defect
-#: (ADR 014 §8c).
+#: (ADR 014 §8d).
 ADJUDICATOR_OUTPUT_DISCIPLINE = """\
 ## Output discipline
 

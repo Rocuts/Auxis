@@ -2086,6 +2086,19 @@ fails in the direction that looks responsible.
 
 ## 2026-08-26 — The final gate: 39/128, and every remaining failure is one spec gap
 
+> **Provenance annotation, added after the fact — this entry is kept
+> verbatim, including its title.** This run was executed by a second
+> interactive session while *this* session held uncommitted edits to the
+> mapper, the verifier and ADR 014 (see the incident entry below). It
+> therefore ran with the vocabulary fix but **without** the `Over $X` bound
+> rule and **without** the attribute dictionary, neither of which existed
+> when it started. It is not the final run its title claims: it is the
+> **third, "with the gap"** row of the progression — the diagnostic that
+> made the attribute gap measurable — and it is superseded by the fourth
+> run below. Its numbers are unedited because a superseded measurement is
+> still a measurement, and rewriting the title would erase how the gap was
+> found.
+
 Third gate run, conventions corrected. **39/128** — up from 0/128 twice — and
 the failure mode changed for the third time, which is the useful part.
 
@@ -2190,3 +2203,62 @@ exercise was document 05's `566751`, which the next run did not reproduce.
 Gate 2b remains **OPEN** at 39/128. The remaining work is a canonical
 extra-attribute vocabulary and one bracket rule — both spec, both in this
 repository's own conventions, neither a model failure.
+
+## 2026-08-26 — Incident: two interactive sessions, one working tree
+
+Not a code defect. An operating one, and it is worth the space because the
+failure mode is one this project's own ADRs cite in the abstract.
+
+### What happened
+
+Two interactive Claude Code sessions were open on this repository at once —
+one started 14:38, this one 20:40. Neither knew about the other. At 20:53 the
+older session committed `5b0bf4a` with `git add -A` while this session had
+five files edited and staged but not yet committed. Those five —
+`anthropic_mapper.py`, `anthropic_verifier.py`, `ports/repository.py`, ADR
+014, and `docs/audit/evidence/05_over_x_bound_semantics.md` — were swept into
+a commit whose message describes an entirely different piece of work.
+
+The same collision put a gate run and a spec change out of order: `5b0bf4a`'s
+run had already finished when the `Over $X` rule landed in the working tree,
+so its message correctly reports "no rule covers it" about a rule that, by
+the time the commit existed, was in the very diff it was committing.
+
+### Disposition — annotate, do not rewrite
+
+No history rewrite. `5b0bf4a` stands with its message; `544e086` supersedes
+it with the intended content and message, and the 39/128 entry above now
+carries a provenance annotation naming the circumstances. Verified at the
+tip: all five swept files match this session's completed intent byte for
+byte, working tree clean, `make check` green at 640 passed / 1 skipped. **No
+residue.**
+
+The one substantive consequence is one of attribution rather than content:
+`5b0bf4a`'s message takes credit for work it did not do, and `544e086`'s
+diff is smaller than its message implies. Both are now explained here, which
+is the honest repair available without rewriting published history.
+
+### Why nothing caught it
+
+`.fanout-active` and the separate `tax_test` database were built after a
+`make check` destroyed a live fan-out's data — but both guard the
+*fan-out* class: one interactive session against its own background work.
+Neither guards two humans-with-agents against each other. The sentinel was
+not even armed, and arming it would not have helped: it protects the
+database, and what collided here was the git index.
+
+A lock is the wrong instrument anyway. Two interactive sessions on one tree
+is not a race to be arbitrated but a mistake to be avoided, so the remedy is
+operational: **one interactive session per repository**, added to the
+runbook, plus this entry.
+
+### The irony, stated once
+
+ADR 012 bounds the semantic layer at three single-pass roles specifically to
+avoid uncoordinated agents interfering with each other — no loops, no
+agent-to-agent negotiation, no shared mutable state between roles. The
+pipeline honours that. The development process around it did not, and the
+result was exactly the predicted failure: two actors, one shared mutable
+resource, no protocol, and a write that silently absorbed another's
+in-flight state. The coordination hazard the architecture designs against,
+experienced operationally rather than argued theoretically.

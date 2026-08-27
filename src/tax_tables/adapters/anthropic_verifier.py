@@ -345,7 +345,7 @@ values and its citations.
 #: 05's 19 records); here it is the envelope's name, hard-coded in
 #: ``RESPONSE_SCHEMA`` and never spoken. Nothing is adapted at the parse
 #: layer and nothing is guessed: a body that still misses the envelope is
-#: still a hard failure (ADR 014 §8c).
+#: still a hard failure (ADR 014 §8d).
 VERIFIER_OUTPUT_DISCIPLINE = """\
 ## Output discipline
 

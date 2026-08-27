@@ -477,10 +477,12 @@ document prints):
   The typed "rate" slot carries the combined (total) rate converted to a
   decimal fraction, or null if the combined value is null. Map a derived
   or computed column like any other column — downstream validators check
-  its arithmetic; you do not. When the document marks a jurisdiction as
-  imposing no state sales tax (a dash plus an explanatory note), also emit
-  the boolean extra attr "imposes_state_sales_tax": false on that record,
-  with provenance to the note.
+  its arithmetic; you do not. Every record carries the boolean extra attr
+  "imposes_state_sales_tax", BOTH halves of it: false where the state-rate
+  cell prints a long dash (cite the note that explains the dash), and true
+  wherever a state rate actually prints. It is a fact about every
+  jurisdiction, not a marker on the exceptions — emitting it only for the
+  dashed rows leaves the norm unstated, which is the majority of the table.
 - employment_tax_rate: attribute_key = the tax component slug (as printed,
   e.g. social security / medicare variants). A single-rate row puts the
   fraction in "rate"; parallel columns for different payer sides become
@@ -524,6 +526,88 @@ Every other record_type uses attribute_key null. If a document presents a
 labelled row whose slug is not on this list, still emit the record with the
 slug you derive AND raise an issue naming it: an unlisted label is a gap in
 this vocabulary, and it must be visible rather than silently absorbed.
+
+## The extra-attribute dictionary — CLOSED
+
+Extra attrs are NOT free-form. Below is the complete set of attr keys this
+schema defines, per record_type. Emit every key listed for a record type
+whose document supports it; a key you cannot support from the page is
+omitted, never guessed. Keys are fixed spellings, exactly as written here —
+a differently-spelled key is a key nobody downstream reads.
+
+Values are always read from the page under the rules above (percent columns
+keep "_pct" as printed; a plain "_rate" attr is a decimal fraction). The
+KEY NAMES are this schema's vocabulary; the VALUES beneath them are yours
+to extract and never to invent.
+
+- ordinary_income_bracket: no extra attrs. Everything it states has a typed
+  slot.
+- preferential_gain_bracket: superseded_effective.
+- standard_deduction: prior_year_amount.
+- additional_standard_deduction: condition.
+- dependent_deduction_rule: rule, floor_amount, earned_income_addition.
+- sales_tax_rate: jurisdiction_name, state_rate_pct, avg_local_rate_pct,
+  combined_rate_pct, rate_unit, effective_date, imposes_state_sales_tax.
+- employment_tax_rate: component, employee_rate, employer_rate,
+  self_employed_rate.
+- wage_base: item, prior_year_amount, unlimited.
+- surtax_threshold: surtax, threshold, employer_match,
+  superseded_effective.
+- special_gain_rate: category, max_rate, superseded_effective.
+- withholding_allowance: payroll_period, periods_per_year, allowance.
+
+How each is read:
+
+- condition, component, item, surtax, category, payroll_period are NOT
+  yours to supply. They are the attribute_key under its per-type name, and
+  the pipeline mirrors it into the tail for you from the attribute_key you
+  set. They are listed above so the dictionary is complete; supplying them
+  changes nothing, and omitting them costs nothing.
+- jurisdiction_name: the jurisdiction exactly as printed in the row's label
+  column ("Alabama"). The typed "jurisdiction" field is the ISO encoding of
+  the same fact; this attr preserves the printed string.
+- rate_unit: the unit the document states its rate columns are expressed
+  in, as a lowercase word ("All rates are expressed as percentages" ->
+  "percent"). Prose provenance — the unit is stated in the body, not in the
+  headers.
+- effective_date: the ISO date the document says its rates take effect
+  ("Rates in effect as of January 1, 2026" -> "2026-01-01").
+- superseded_effective: the ISO date FROM which a superseded document has
+  been replaced ("applicable to taxable years beginning before January 1,
+  2026 ... for taxable years beginning on or after January 1, 2026, see
+  ..." -> "2026-01-01"). Every record of a superseded document carries it.
+- employee_rate / employer_rate / self_employed_rate: the parallel
+  payer-side columns of an employment-tax row, as decimal fractions (the
+  page prints "6.20%" -> 0.062; these keys end in "_rate", not "_pct").
+- threshold: the amount a surtax begins to apply above, from its row.
+- employer_match: false where the document states the surtax is imposed on
+  one side only ("imposed on the employee only; there is no employer
+  match"). Emit it only where the document says so.
+- unlimited: true where the wage-base cell prints "No limit", false where
+  it prints a figure. The typed "amount" is null in the first case; this
+  attr is what distinguishes "no ceiling exists" from "we could not read
+  it".
+- max_rate: the maximum rate printed for a special gain category, as a
+  decimal fraction ("25 percent" -> 0.25). Null where the cell names
+  another schedule instead of a figure ("Ordinary rates") — that is a
+  cross-reference, not a number, and it never becomes a rate.
+- periods_per_year / allowance: the two data columns of a withholding
+  row, read as printed (allowance keeps its cents).
+- prior_year_amount: the comparison column, per the prior-year rule below.
+- rule / floor_amount / earned_income_addition: a prose-stated dependent
+  rule. floor_amount and earned_income_addition are the two figures the
+  sentence prints. "rule" is that sentence expressed as a FORMULA in
+  exactly this form:
+      max(<floor_amount>, earned_income + <earned_income_addition>), capped
+      at basic standard deduction
+  written on one line. The numbers come from the page; the shape is this
+  schema's, because a reviewer comparing two jurisdictions' dependent rules
+  needs them in one form, not in two paraphrases.
+
+This dictionary is CLOSED. A document fact with no key here has no home in
+extra attrs: raise an issue naming it rather than inventing a key. Carrying
+an unlisted attr is not an error — nothing downstream reads it — but a
+missing LISTED key is, because it is a fact this schema promised to record.
 
 ## Two tax years in one row — settled, do not deviate
 
@@ -597,7 +681,7 @@ object. An empty set of extra attrs is [] or omitted.
 #: On a gateway that forwards ``output_config`` without enforcing it, the
 #: prompt is the ONLY channel that names the envelope — so this was a live
 #: defect, not a tidiness one. The verifier's envelope key was named nowhere
-#: in its prompt while its wrong key was named twice (ADR 014 §8c).
+#: in its prompt while its wrong key was named twice (ADR 014 §8d).
 #:
 #: The mapper's text below is byte-identical to what it was inside the
 #: conventions, so this split changes the mapper's prompt not at all.
