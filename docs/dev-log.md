@@ -2901,8 +2901,15 @@ harness fails the gate on a verifier failure exactly as on a mapper failure.
 Found by reading, not by losing a run to it, and now pinned in
 `tests/test_enforcement_arm_routing.py`.
 
-**No escalation trigger ever fired, at any of six gates.** Trigger A wants a
-miss attributable to the model's semantic judgment, and there was never one to
+**Trigger A never fired, at any of six gates.** [Corrected 2026-08-27 during
+the 3.5-LIVE open: this sentence first read "No escalation trigger ever fired",
+which is wrong and contradicted this same log. The B-class conformance triggers
+*did* fire at the baseline — B1 at 3 hard contract failures, B2 at 72.9%
+malformed items (ADR 014 §6) — with escalation blocked-not-declined at that
+moment, and the hardening pass of §7 drove both to zero. ADR 014 §8k was
+already precise and said only "Trigger A never fired"; the loose rendering was
+this log's and the README's. Both are now fixed.] Trigger A wants a miss
+attributable to the model's semantic judgment, and there was never one to
 find: across six runs and 1,250+ compared fields per scored run, not one mapped
 value was ever wrong. Every difference was `actual <absent>`. A larger model
 was never shown to fix a contract-adherence defect that a prompt change did fix

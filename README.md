@@ -844,12 +844,26 @@ while leaving the verifier's routing variables unset makes the verifier
 wrong key, failing every verifier call, and failing the gate. That was found by
 reading the config chain before spending, not by losing a run to it.
 
-**No trigger ever fired.** At none of the six gates was a miss attributable to
-the model's semantic judgment, because at none of them was a value wrong. A
-larger model was never shown to fix a contract-adherence defect that a prompt
-change did fix, four times over. Escalating would have bought a different
-transport, not a better reading — a question worth answering with a budget, and
-not one this exercise needed answered to be honest about what it measured.
+**Trigger A never fired. The B-class triggers did, once.** Trigger A is the
+semantic one, and at none of the six gates was a miss attributable to the
+model's semantic judgment, because at none of them was a value wrong. The
+conformance triggers are a different story and the record should carry it: at
+the baseline run, **B1 fired at 3 hard contract failures and B2 at a 72.9%
+malformed-item rate** ([ADR 014 §6](docs/decisions/014-semantic-layer-model-selection.md)).
+Both were transport- and envelope-shaped, not reading-shaped. The escalation
+they called for was, at that moment, *blocked rather than declined* — the §5
+venue was direct Anthropic and that budget did not exist — so the
+pre-registered hardening pass ran as the primary remedy and drove both to zero
+(§7, §8). They stayed down: the closing gate recorded one hard failure that
+retried and recovered, `item_ok` at 100% and B2 at 0%, which ADR 014 §8h reads
+as not firing.
+
+So the sentence that survives all six gates is narrower than "nothing fired",
+and more useful: **a larger model was never shown to fix a contract-adherence
+defect that a prompt change did fix, four times over.** Escalating would have
+bought a different transport, not a better reading — a question worth answering
+with a budget, and not one this exercise needed answered to be honest about
+what it measured.
 
 ### What production runs
 
@@ -1205,10 +1219,12 @@ Consolidated, and deliberately specific. If something is unproven, it says so.
    cause of the 28 remains unidentified**: the sixth run falsified both the
    leading hypothesis and the competing one, which is a real open question and
    is stated as one. **The escalation to a larger model was designed, wired,
-   tested — and deliberately not funded.** No escalation trigger ever fired at
-   any of the six gates, because at no gate was a miss attributable to the
-   model's semantic judgment; the failures were contract adherence, and a
-   larger model was never shown to fix them. See
+   tested — and deliberately not funded.** The *semantic* trigger never fired
+   at any of the six gates, because at no gate was a miss attributable to the
+   model's semantic judgment; the conformance triggers fired once, at the
+   baseline, and the hardening pass — not a larger model — cleared them. The
+   failures were contract adherence throughout, and a larger model was never
+   shown to fix them. See
    [Model selection](#model-selection-a-decision-with-a-rule-written-before-the-numbers)
    for the full close. Full tables in [`docs/dev-log.md`](docs/dev-log.md) and
    [ADR 014 §6-8k](docs/decisions/014-semantic-layer-model-selection.md).
