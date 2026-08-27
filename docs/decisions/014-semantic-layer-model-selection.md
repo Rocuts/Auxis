@@ -818,6 +818,83 @@ scope and the spec is frozen:
   the next occurrence is a measurement rather than a surprise.
 
 
+### 8h. Outcome of the sixth run — both §8g predictions falsified, and the gate closes
+
+**81/128.** Recorded here against the predictions §8g wrote before the run,
+which is the entire reason those predictions exist.
+
+| Record type | Gate 4 | Gate 5 | §8g predicted | **Gate 6 actual** |
+|---|---|---|---|---|
+| `ordinary_income_bracket` | 32/32 | 4/32 | 32/32 | **4/32** |
+| `preferential_gain_bracket` | 12/12 | 12/12 | 12/12 | **0/12** |
+| `special_gain_rate` | 3/3 | 3/3 | 3/3 | **0/3** |
+| `surtax_threshold` | 4/9 | 9/9 | 9/9 | **5/9** |
+| `wage_base` | 0/3 | 3/3 | 3/3 | **3/3** |
+| `employment_tax_rate` | 3/4 | 4/4 | 4/4 | **4/4** |
+| **TOTAL** | 119/128 | 100/128 | **128/128** | **81/128** |
+
+#### Failure 1 — the revert bought nothing on its target
+
+`ordinary_income_bracket` did not move. Both fix 3 and the `No extra attrs.`
+clause were deleted, and document 01 scored exactly what it scored with both
+in place. **Gate 5's causal story and the pre-run audit's competing story are
+both refuted.** The cause of the 28 is unidentified and this ADR does not
+supply a third guess; the remaining untested difference from gate 4 is the
+rewritten section preamble, and testing it would require a seventh run the
+pre-registration forbids.
+
+#### Failure 2 — §8g's own "information-free" test was wrong
+
+This is the finding worth carrying forward, because it invalidates a test this
+ADR introduced two sections earlier.
+
+§8g justified deleting *"Carries superseded_effective when its document is
+superseded"* on the grounds that the closed dictionary states
+`preferential_gain_bracket: superseded_effective` and that entry is
+byte-identical at gate 4 and now — therefore the deletion removed a
+restatement and no information.
+
+**All 19 of document 05's records then omitted `superseded_effective`.** At
+gate 4, the dictionary entry alone was sufficient; at gate 6, same bullet and
+same entry, it was not. The test is therefore refuted as stated, and its
+corrected form is:
+
+> A deletion is information-free only if the rule's *surviving* statement is
+> still read in the same context it was read in when it last worked.
+> Byte-identity of the surviving statement is not enough — the reader's
+> context is part of the statement.
+
+Which is the same neighbourhood principle §8g invoked against gate 5, applied
+to §8g. The pre-run audit said so explicitly ("this is a fourth, never-run
+prompt state ... the lesson cuts at this revert too"), that warning was
+recorded in §8g, and it was under-weighted in the prediction table of the very
+section that recorded it.
+
+#### What held
+
+Document 04 stayed 18/18. §8g argued its gate-5 recovery was independent of
+both edited bullets because that document contains no records of either type,
+and the run confirmed it. Conformance held for the third run: 128 items
+proposed, zero malformed, verifier answering on all five documents with zero
+records flagged unverified. Ten calls, $0.0424.
+
+#### Disposition
+
+**Gate 2b CLOSED at 81/128.** No seventh run; no further spec text. The
+escalation rule of §3 is re-evaluated one final time and still does not fire:
+Trigger A requires a miss attributable to the *model's* semantic judgment, and
+all 47 failures are fields the specification asked for without describing well
+enough to get. B1 is 1 hard failure retried and recovered — the run's rate is
+83.3% call_ok with 100% item_ok, and B2 is 0%. **Escalating the model would
+not move a single one of these records**, which is the same reading this ADR
+has reached at every gate since §8.
+
+The best-measured configuration is the fourth run's 119/128. It is recorded
+beside 81/128 rather than replacing it, because two pre-registered repair
+attempts that both made the number worse are evidence about the method — and
+suppressing them would make the remaining number worth less, not more.
+
+
 ## Consequences
 
 - The model choice is now falsifiable: a rule, two thresholds, and two tables.

@@ -361,38 +361,86 @@ without revisiting the decision.
 
 ## Accuracy
 
-> **Gate OPEN at 100/128, and the honest headline is that the last change made
-> it worse.** Ten of the eleven record types are perfect, four of the five
-> documents are perfect, and across **1,250 compared fields not one differs**.
-> All 28 failures are one record type, on one document, on one field. Every
-> failing record is named below.
+> **Gate 2b CLOSED at 81/128 — the sixth run was pre-registered as final, and
+> it is the worst of the three that mattered.** The best result this project
+> measured was the fourth run's **119/128**. Two attempts to repair the fifth
+> run's regression made it worse instead, and the honest close is to report
+> that rather than to keep tuning. Every failing record is named below, and
+> **no mapped value was wrong in any of the six runs** — every failure is a
+> field the specification asked for and did not describe well enough to get.
 
 | Document | Expected | Correct | Field-diff | Missing | Spurious | Verifier disputes |
 |---|---|---|---|---|---|---|
 | `01_federal_income_tax_rate_schedules_TY2026.pdf` | 32 | 4 | 0 | 28 | 28 | 1 |
-| `02_standard_deduction_schedule_TY2026.pdf` | 8 | **8** | 0 | 0 | 0 | 0 |
+| `02_standard_deduction_schedule_TY2026.pdf` | 8 | **8** | 0 | 0 | 0 | 3 |
 | `03_state_local_sales_tax_rates_2026.pdf` | 51 | **51** | 0 | 0 | 0 | 0 |
 | `04_employment_tax_rates_and_thresholds_2026.pdf` | 18 | **18** | 0 | 0 | 0 | 0 |
-| `05_capital_gains_preferential_rates_TY2025.pdf` | 19 | **19** | 0 | 0 | 0 | 1 |
-| **Total** | **128** | **100** | **0** | **28** | **28** | **2** |
+| `05_capital_gains_preferential_rates_TY2025.pdf` | 19 | 0 | 19 | 0 | 0 | 5 |
+| **Total** | **128** | **81** | **19** | **28** | **28** | **9** |
 
-**The 28 failures, named.** All document 01, all `ordinary_income_bracket`,
-all the same field:
+| Record type | Gate 4 | Gate 5 | **Gate 6** |
+|---|---|---|---|
+| `ordinary_income_bracket` | 32/32 | 4/32 | **4/32** |
+| `preferential_gain_bracket` | 12/12 | 12/12 | **0/12** |
+| `special_gain_rate` | 3/3 | 3/3 | **0/3** |
+| `surtax_threshold` | 4/9 | 9/9 | **5/9** |
+| `wage_base` | 0/3 | 3/3 | **3/3** |
+| `employment_tax_rate` | 3/4 | 4/4 | **4/4** |
+| `sales_tax_rate` | 51/51 | 51/51 | **51/51** |
+| `standard_deduction` | 5/5 | 5/5 | **5/5** |
+| `additional_standard_deduction` | 2/2 | 2/2 | **2/2** |
+| `dependent_deduction_rule` | 1/1 | 1/1 | **1/1** |
+| `withholding_allowance` | 6/6 | 6/6 | **6/6** |
+| **Total** | **119/128** | **100/128** | **81/128** |
 
-> `US-FED | 2026 | <filing_status> | taxpayer_class` — **expected `individual`,
-> got `null`**, across 7 bracket rows x 4 filing statuses. The same document's
-> 4 `estate_or_trust` records matched and scored. Every other field on all 28
-> is correct; they fail on the natural key alone, which is why `Field-diff` is
-> 0 while `Missing` and `Spurious` are 28.
+**The 47 failures, named, in two groups.**
 
-**The cause was a fix, and it is worth being blunt about.** The previous run
-scored 119/128 with nine failures in document 04. Reconciling the conventions
-repaired all nine — document 04 went 9/18 to **18/18** — and one of the same
-edits added an emphatic *"taxpayer_class is null on this record type"* to the
-bullet directly below the ordinary-income rule, to protect 12 records from a
-risk that never materialised. It generalised: the model nulled the field on
-every filing-status row. **A fix for a hypothetical 12-record risk cost 28 real
-ones.**
+*Group 1 — 28 missing, document 01, `ordinary_income_bracket`:*
+
+> `US-FED | 2026 | <filing_status> | taxpayer_class` — **expected
+> `individual`, got `null`**, across 7 bracket rows x 4 filing statuses. The
+> same document's 4 `estate_or_trust` records matched and scored. Every other
+> field on all 28 is correct; they fail on the natural key alone, which is why
+> they show as `Missing` and `Spurious` rather than `Field-diff`.
+
+*Group 2 — 19 field mismatches, document 05, every record it has:*
+
+> **All 19** are missing `superseded_effective` (expected `2026-01-01`). Three
+> `special_gain_rate` records are additionally missing `max_rate` (`0.25`,
+> `0.28`, `null`) and four `surtax_threshold` records are additionally missing
+> `threshold` (`200000`, `200000`, `250000`, `125000`). 26 differing fields
+> over 1,250 compared. **Not one is a wrong value** — every difference is
+> `actual <absent>`, a key the model did not emit.
+
+### The blast radius of the final revert, measured
+
+The sixth run existed to undo the fifth run's regression by returning two
+record-shape bullets to the text that scored 119/128. Both of its
+pre-registered predictions ([ADR 014
+§8g](docs/decisions/014-semantic-layer-model-selection.md)) were **wrong**,
+and the two ways they were wrong are different:
+
+| Prediction | Result | Reading |
+|---|---|---|
+| `ordinary_income_bracket` 4/32 → **32/32** | **4/32 — no change** | Neither deleted clause was the cause of the fifth run's 28-record regression. That causal story, and the competing hypothesis the pre-run audit raised against it, are **both refuted by measurement.** The true cause is still unidentified. |
+| `preferential_gain_bracket` 12/12 → **12/12** | **0/12** | The revert cost this record type entirely — and took `special_gain_rate` (3/3 → 0/3) and document 05's four `surtax_threshold` records with it. |
+
+The second row is the one that matters, and the reason is exact. Restoring the
+`preferential_gain_bracket` bullet to its gate-4 wording deleted the sentence
+*"Carries superseded_effective when its document is superseded."* That deletion
+was justified — by us, in writing, before the run — on the grounds that it was
+**information-free**, because the closed attribute dictionary states
+`preferential_gain_bracket: superseded_effective` and that entry is
+byte-identical at gate 4 and now.
+
+The measurement says otherwise. **All 19 of document 05's records now omit
+`superseded_effective`**, and at gate 4 — same bullet, same dictionary entry —
+all 19 carried it. A rule stated identically in the authoritative dictionary
+was sufficient then and is not sufficient now, because *everything around it
+changed in between.*
+
+Document 04 was the one prediction that held: 18/18, exactly as §8g argued,
+because that document contains no records of either edited type.
 
 ### A prompt is read as a whole — the most transferable thing this project produced
 
@@ -435,40 +483,84 @@ lines above, already said so **by name**:
 
 That sentence is byte-identical in the 39/128, 119/128 and 100/128 runs, and
 `preferential_gain_bracket` scored **12/12 in every one of them**. The
-protection was already in place, already explicit, already named, and already
-measured. The added clause bought nothing and cost 28 records — the
-restatement was not merely redundant, it was the defect. *A second statement
-of a rule you have already stated is not free; it is a change in emphasis, and
-emphasis is exactly what a model generalises.*
+protection against *that* leak was already in place, already explicit, already
+named, and already measured. The added clause bought nothing on the risk it
+named and cost 28 records elsewhere — a restatement that was not merely
+redundant but was itself the defect. *A second statement of a rule you have
+already stated is not free; it is a change in emphasis, and emphasis is
+exactly what a model generalises.*
+
+> **Read this passage with the sixth run in hand, though.** The clause was
+> removed, and `ordinary_income_bracket` did **not** recover — so the
+> restatement was not the cause of the 28 after all, and the paragraph above
+> is an argument this project believed, acted on, and then falsified with a
+> measurement. What survives it is the general principle, not this particular
+> attribution. The `12/12` streak ended at the same run, for an unrelated
+> reason, in [the blast-radius table](#the-blast-radius-of-the-final-revert-measured).
 
 **What we would do differently**, stated as a rule rather than a regret: an
 adversarial reviewer that clears a finding on "this text is unchanged" must be
 required to check what moved *next to* it. Stability is a property of a
 neighbourhood, not of a line.
 
-**Disposition — a bounded regression revert, then one final run.** 100/128 is
-the last *measured* result and it is recorded here rather than quietly
-replaced. It is not the shipped configuration: the three sentences gate 5
-added to two record-shape bullets have been deleted, returning both bullets to
-the text that scored 119/128, and a sixth run is pre-registered as final
-([ADR 014 §8g](docs/decisions/014-semantic-layer-model-selection.md)). All
-three deletions remove *restatements* of rules the closed attribute dictionary
-already carries verbatim — no rule was weakened, only emphasis removed. The
-sixth run's numbers replace this section whatever they are; there is no
-seventh.
+#### The third occurrence — where the lesson cost the most, and we caused it
 
-### How it got here: five runs, and what each one measured
+The rule above was written into this README *before* the sixth run. The sixth
+run then broke it, in the one direction nobody had guarded.
 
-| | Baseline | Hardened | Gapped | Reconciled-1 | Frozen |
-|---|---|---|---|---|---|
-| Records delivered | 0 | 128 | 128 | 128 | 128 |
-| mapper `item_ok` | 27.1% | 100% | 100% | 100% | 100% |
-| verifier `call_ok` | 0% | 100% | 33.3% | 100% | **100%** |
-| Records flagged unverified | 128 | 0 | 50 | 0 | **0** |
-| Natural keys matching | 0 | 0 | 124 | **128** | 100 |
-| Fields compared | 0 | 0 | 1,562 | 1,614 | 1,250 |
-| Fields **differing** | — | — | 255 | 11 | **0** |
-| **Field-level accuracy** | **0/128** | **0/128** | **39/128** | **119/128** | **100/128** |
+The revert restored two bullets to their gate-4 wording. One deletion it made
+was defended in writing, in advance, as **information-free**: the sentence
+*"Carries superseded_effective when its document is superseded"* duplicated an
+entry the closed attribute dictionary already carried, and that entry is
+byte-identical at gate 4 and today. The reasoning was that a rule stated twice
+loses nothing by being stated once — the same reasoning that had just been
+vindicated when a redundant restatement cost 28 records.
+
+**It cost all 19 of document 05's records.** At gate 4 the dictionary entry
+alone was enough; at gate 6, with the same bullet and the same entry, it was
+not. Everything *around* both had been rewritten in between.
+
+So the lesson is not "redundancy is dangerous". It is stricter and less
+comfortable than that:
+
+> **Text has no fixed meaning to a model — only a meaning in place.** Removing
+> a restatement is as much a change as adding one, and *restoring* text to a
+> wording that once worked does not restore its behaviour if its neighbourhood
+> has moved. "This is byte-identical to a version that scored 32/32" is not a
+> safety argument. It was not one when an arbitrator used it before gate 5, and
+> it was not one when we used it before gate 6.
+
+Three occurrences, three directions: an *added* emphasis generalising to its
+neighbour (gate 5, −28), a *removed* redundancy that turned out to be
+load-bearing (gate 6, −19), and a clause we *kept* whose stated justification
+was simply false (§8f, caught by audit before it could cost anything). The
+first was inherited. The second was ours, made while writing this section. We
+are reporting it in the same document that argues the principle, because a
+lesson a project learns and then violates is worth more evidence than one it
+only recites.
+
+### How it got here: six runs, and what each one measured
+
+| | Baseline | Hardened | Gapped | **Reconciled-1** | Frozen | Reverted |
+|---|---|---|---|---|---|---|
+| Records delivered | 0 | 128 | 128 | 128 | 128 | 128 |
+| mapper `item_ok` | 27.1% | 100% | 100% | 100% | 100% | 100% |
+| verifier `call_ok` | 0% | 100% | 33.3% | 100% | 100% | 100% |
+| Records flagged unverified | 128 | 0 | 50 | 0 | 0 | 0 |
+| Natural keys matching | 0 | 0 | 124 | **128** | 100 | 100 |
+| Fields compared | 0 | 0 | 1,562 | 1,614 | 1,250 | 1,250 |
+| Fields **differing** | — | — | 255 | 11 | **0** | 26 |
+| Verifier disputes | — | — | 0 | 9 | 2 | 9 |
+| Cost, USD | — | — | — | 0.0428 | 0.0401 | 0.0424 |
+| **Field-level accuracy** | **0/128** | **0/128** | **39/128** | **119/128** | **100/128** | **81/128** |
+
+**The fourth run is the high-water mark, and the last two runs are recorded
+beside it rather than in place of it.** That ordering is the point: a project
+that reports only its best number has no way to distinguish a specification
+from a curve fit. Runs five and six were both attempts to repair a regression,
+both were made under a frozen spec and a pre-registered rule, and both made the
+number worse. They are the evidence that the method was applied honestly, and
+they are also the evidence that it did not converge.
 
 Each run moved the failure one layer outward, and **every layer was a defect in
 the specification, not in the model** — transport framing, then the identity
@@ -478,14 +570,16 @@ that paragraph. The harness drove specification completion in five steps, and
 the fifth is the one that shows the method has teeth: it caught a regression
 that a three-agent adversarial review had talked itself out of.
 
-> **The closing fact of the progression: across all five runs, no mapped
-> value was ever wrong** — and the final run puts that on its firmest footing,
-> with **1,250 fields compared and zero differing.** Every failure at every stage was a field the schema
-> asked for and did not describe well enough to get — a framing convention, an
-> identity vocabulary, a bound semantics, an attribute name, a contradiction
-> between two paragraphs, a discriminator nulled by an adjacent sentence. The
-> single value error in the entire exercise was document 05's `566751`, which
-> no later run reproduced.
+> **The closing fact of the progression: across all six runs, no mapped value
+> was ever wrong.** Over 1,250 fields compared in the final run, 26 differ and
+> **every one of them is `actual <absent>`** — a key the model did not emit,
+> never a figure it got wrong. Every failure at every stage was a field the
+> specification asked for and did not describe well enough to get: a framing
+> convention, an identity vocabulary, a bound semantics, an attribute name, a
+> contradiction between two paragraphs, a discriminator nulled by an adjacent
+> sentence, an attribute lost when its restatement was deleted. The single
+> value error in the entire exercise was document 05's `566751`, in the third
+> run, which no later run reproduced.
 >
 > That is the honest summary of what an LLM did well here and what it did not.
 > It read these documents correctly and consistently. What it could not do was
@@ -506,26 +600,45 @@ bundle, and a test enforces both.
 that a second model reviewing its own family's output is an echo, and puts a
 *different* family (`alibaba/qwen-3-235b`) on the mapper's
 (`zai/glm-5.3-flash`) work in a fresh context under a skeptic prompt — both
-through the AI Gateway, one protocol, two vendors. That
-argument was theoretical until this run.
+through the AI Gateway, one protocol, two vendors. Six runs give that
+argument a measured answer rather than a theoretical one.
 
-**It named five of the failures before the oracle was ever consulted.** Of
-nine disputes, five landed on exactly the `additional_medicare` records that
-the harness later scored wrong, each with the correct reason — that the
-threshold belongs to the cited cell. A model that had never seen the mapper's
-reasoning, working only from the same grid, independently re-derived the
-records and found the defect. That is cross-family verification doing the one
-thing it exists to do, measured rather than asserted.
+**It named the final run's real failures before the oracle was consulted, and
+it did so twice across two different regressions.** In the fourth run, five of
+nine disputes landed on exactly the `additional_medicare` records the harness
+later scored wrong. In the sixth, five of nine landed on document 05 and named
+the precise missing attributes:
 
-Reported honestly, it also cried wolf four times. Three disputes object to
-`$192.30` being stored as `192.3` — presentation, not value; those records
-are correct and the conventions now state that numeric equality is decimal
-equality. The fourth reproduces a known misread, claiming a record holds
-`257300` when it holds `257250`; it is kept as a documented limitation rather
-than papered over. Its cost is one review-queue row on a correct record —
-which is a false positive behaving exactly as a review queue is designed to
-absorb. The failure worth fearing is the false *negative*, and that is what
-the second family buys protection against.
+> *"the record ... fails to include the extra attr `max_rate` as required by
+> the schema for special_gain_rate records"* — and, on four `surtax_threshold`
+> records, *"lacks the required extra attr `threshold`"*.
+
+Those are, exactly, 5 of the 26 differing fields the harness found afterwards.
+A model that had never seen the mapper's reasoning, working from the same
+grid, re-derived the records and found the defect — the one thing
+cross-family verification exists to do, measured rather than asserted.
+
+Reported honestly, it cried wolf four times in the sixth run too. Three
+disputes are against document 02, which scored **8/8**; two of the three
+visibly argue themselves out of their own position and file the dispute
+anyway (*"…so this is actually correct. Re-evaluating: no dispute … Therefore,
+confirmed."*), and the third objects to a provenance citation naming one
+prose index rather than another. The fourth is the recurring document 01
+`257250` / `257300` dispute; this run cannot adjudicate it, because those
+records failed on the natural key and never reached field comparison.
+
+Four false positives cost four review-queue rows on correct records — a false
+positive behaving exactly as a review queue is designed to absorb. The failure
+worth fearing is the false *negative*, and a second family is what buys
+protection against it.
+
+**The limit of that protection, stated plainly.** `CANONICAL_CONVENTIONS` is
+concatenated verbatim into the mapper's, the verifier's *and* the
+adjudicator's system prompts. When the defect is in the conventions rather
+than in a value, both models are reading the same law, and independence buys
+nothing: the fifth run's 28-record regression drew **one** dispute. ADR 012's
+context isolation is real for values and absent for conventions — worth
+knowing before trusting a clean verifier column.
 
 No dispute was settled by the models talking to each other. All nine became
 review-queue flags for a human, which is the bound
@@ -637,10 +750,37 @@ Every price is configuration, not a hardcoded constant, and the accounting is
 arithmetic rather than estimation: the extractor counts API calls, and the
 model adapters read token usage off the response.
 
-> **TBD — gate open.** Measured USD per document, itemized by role
-> (extraction / mapper / verifier / adjudicator), lands here with the accuracy
-> run. A clean document costs exactly one extra call for verification; the
-> adjudicator's cost is bounded by queue length, not by a constant.
+### Measured — the final run, itemized by document and role
+
+Ten calls, **`$0.0424` for the whole corpus**. Every figure below is read off
+the responses' token usage, not estimated.
+
+| Document | Extraction | Mapper | Verifier | Total |
+|---|---|---|---|---|
+| `01_…_TY2026.pdf` | `$0.0000` pdfplumber | `$0.0033` | `$0.0043` | `$0.0076` |
+| `02_…_TY2026.pdf` | `$0.0000` pdfplumber | `$0.0025` | `$0.0028` | `$0.0053` |
+| `03_…_2026.pdf` | `$0.0000` pdfplumber | `$0.0078` | `$0.0077` | `$0.0155` |
+| `04_…_2026.pdf` | `$0.0000` pdfplumber | `$0.0041` | `$0.0034` | `$0.0075` |
+| `05_…_TY2025.pdf` | `$0.0000` Tesseract (CPU) | `$0.0026` | `$0.0039` | `$0.0065` |
+| **Total** | **`$0.0000`** | **`$0.0203`** | **`$0.0221`** | **`$0.0424`** |
+
+Three things this table is worth reading for:
+
+- **The extraction column is zero all the way down.** Four documents have a
+  text layer and the router keeps them off every paid engine; the fifth is
+  scanned and Tesseract runs on CPU. The structural finding survives contact
+  with the numbers.
+- **Independent verification roughly doubles semantic-layer cost** — `$0.0221`
+  against the mapper's `$0.0203` — and on this run it bought five true
+  positives that named the exact missing attributes on document 05 before the
+  oracle was consulted. That is the price of the second opinion, stated
+  plainly so it can be judged.
+- **`$0.0424` for 128 records across 5 documents** is `$0.00033` per record.
+  The cost of the whole six-run gate programme was under `$0.30`.
+
+The `Adjudicator` row above stays per-item rather than measured: it runs over
+open review-queue items, and its cost is bounded by queue length rather than
+by corpus size.
 
 ---
 
@@ -905,25 +1045,32 @@ Consolidated, and deliberately specific. If something is unproven, it says so.
 
 ### Gates still open
 
-1. **The accuracy gate stands at 100/128, every failing record is named, and
-   the previous run scored higher.** Five runs ship as evidence: 0/128
+1. **The accuracy gate closes at 81/128, every failing record is named, and
+   the best run scored 119/128.** Six runs ship as evidence, in order: 0/128
    baseline (transport), 0/128 hardened (identity vocabulary), 39/128 (bound
-   semantics and an unnamed attribute tail), 119/128 (one unreconciled
-   paragraph), 100/128 (the fix for that paragraph over-generalised). Ten of
-   eleven record types and four of five documents are perfect, and **1,250
-   fields were compared with zero differing** — no matched record carries a
-   wrong value anywhere. All 28 failures are one field on one record type:
-   `ordinary_income_bracket.taxpayer_class`, expected `individual`, got
-   `null`, on document 01. See [Accuracy](#accuracy) for the naming and the
-   cause. It ships at 100/128 under a frozen specification rather than being
-   tuned further, and the higher previous score is recorded rather than
-   quietly replaced — a spec tuned run-by-run against a scoring harness stops
-   being a specification. The escalation route to an enforcing endpoint is
+   semantics and an unnamed attribute tail), **119/128** (one unreconciled
+   paragraph), 100/128 (the fix for that paragraph over-generalised), 81/128
+   (the revert of that fix deleted a restatement that was load-bearing). The
+   last two runs were repair attempts, both pre-registered, and both made the
+   number worse — that is the honest shape of the result and it is not
+   smoothed over. **No mapped value was wrong in any run**: all 26 differing
+   fields in the final run are `actual <absent>`, a key not emitted. The
+   47 failures are two groups — 28 on `ordinary_income_bracket.taxpayer_class`
+   (document 01) and 19 on document 05, all missing `superseded_effective`.
+   See [Accuracy](#accuracy) for the naming, the cause, and the measured blast
+   radius of the final revert.
+
+   It ships at 81/128 rather than being tuned further, and the higher earlier
+   score is recorded beside it rather than quietly replacing it — a spec tuned
+   run-by-run against a scoring harness stops being a specification. **The
+   cause of the 28 remains unidentified**: the sixth run falsified both the
+   leading hypothesis and the competing one, which is a real open question and
+   is stated as one. The escalation route to an enforcing endpoint is
    budget-gated and remains **blocked, not waived**; no escalation trigger
    fires, because the model followed the conventions it was given and the
    conventions were what needed fixing. Full tables in
    [`docs/dev-log.md`](docs/dev-log.md) and
-   [ADR 014 §6-8](docs/decisions/014-semantic-layer-model-selection.md).
+   [ADR 014 §6-8g](docs/decisions/014-semantic-layer-model-selection.md).
 2. **Four identity fields are encodings, not extractions — and that boundary
    is deliberate.** `jurisdiction` is `US-FED` or `US-<ISO 3166-2 code>`,
    `taxpayer_class` is `individual` or `estate_or_trust`, and `attribute_key`

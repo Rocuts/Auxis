@@ -1,0 +1,568 @@
+uv run --env-file .env pytest -p tax_tables.observability.pytest_plugin \
+		tests/accuracy/test_harness.py::test_end_to_end_accuracy -s -v
+============================= test session starts ==============================
+platform darwin -- Python 3.12.13, pytest-9.1.1, pluggy-1.6.0
+rootdir: /Users/rocuts/Documents/GitHub/Auxis
+configfile: pyproject.toml
+plugins: anyio-4.14.2, typeguard-2.13.3
+collected 1 item
+
+tests/accuracy/test_harness.py 
+01_federal_income_tax_rate_schedules_TY2026.pdf: 1 verifier dispute(s):
+  record 19: cell p1_t0 r6,c4 reads '$202,651 – $257,250', which sets upper_bound to 257250, but the record cites this cell and claims upper_bound 257300
+
+02_standard_deduction_schedule_TY2026.pdf: 7 mapping issue(s):
+  p1 p1_t0: Year-over-year change column ('Change' per Section 1 header in prose index 2). The closed extra-attribute dictionary defines only prior_year_amount for standard_deduction records; no 'change' key exists, so this cell is named here instead of being stored. Its content is recoverable downstream as amount - prior_year_amount (15400 - 15000).
+  p1 p1_t0: Difference column with no attr key in the closed schema for standard_deduction; consistent with 30800 - 30000. Named rather than invented.
+  p1 p1_t0: Difference column with no attr key in the closed schema for standard_deduction; consistent with 15400 - 15000. Named rather than invented.
+  p1 p1_t0: Difference column with no attr key in the closed schema for standard_deduction; consistent with 23100 - 22500. Named rather than invented.
+  p1 p1_t0: Difference column with no attr key in the closed schema for standard_deduction; consistent with 30800 - 30000. Named rather than invented.
+  p1 p1_prose5: Document-stated stacking rule qualifying the Section 2 additional-standard-deduction rows. No record_type or extra-attr key exists for a doubling/multiplicity factor on additional_standard_deduction, so this fact cannot be stored without inventing a key; surfaced as an issue per the closed-dictionary rule.
+  p1 p1_prose5: Annual-indexing/restatement notice for the dependent rule. No lifecycle (superseded) status and no extra-attr key in the closed schema captures future restatement promises; recorded here so the fact is not silently absorbed.
+
+02_standard_deduction_schedule_TY2026.pdf: 3 verifier dispute(s):
+  record 5: cell p1_t1 r0,c0 reads 'Unmarried (single or head of household)', which maps to attribute_key 'unmarried', but the fixed vocabulary requires 'unmarried' for additional_standard_deduction; however, the condition in the record is correct. The dispute arises because the attribute_key 'unmarried' is valid per vocabulary, but the cited cell includes additional context not reflected in the key. However, per instructions, attribute_key must be exactly from the fixed list and derived from the label. 'Unmarried (single or head of household)' should map to 'unmarried' as per vocabulary, so this is actually correct. Re-evaluating: no dispute. Wait — the record uses attribute_key 'unmarried', which is in the fixed vocabulary, and the cell text supports that this is the unmarried condition. The amount 2050 is in cell p1_t1 r0,c1. All citations exist and values match. Therefore, confirmed.
+  record 6: cell p1_t1 r1,c0 reads 'Married, per qualifying spouse', which should map to attribute_key 'married_per_spouse' per the fixed vocabulary. The record uses 'married_per_spouse', which is correct. The amount 1650 is in cell p1_t1 r1,c1. Provenance cites prose_index 1, which states currency and general applicability but not specific to this table. However, prose_index 3 introduces Section 2 as 'Additional standard deduction (age 65 or older, or blind)' and prose_index 5 explains footnote (a) about per qualifying condition. The record cites prose_index 1 only, which does not establish the rule context for additional deduction. It should cite prose_index 3 or 5. Missing supporting prose citation for the rule context. Dispute due to incomplete provenance.
+  record 7: prose_index 4 states the dependent rule with floor amount 1,400 and earned_income_addition 450. The record correctly extracts amount 1400, floor_amount 1400, earned_income_addition 450, and rule formula. However, the record cites table_id 'p1_prose4', which is not present in the document's table list. The correct table_id for a prose-only record should be 'p1_prose4' as a constructed id, which is acceptable. But the source_table_label is 'section_3', which matches the prose heading. The tax_year 2026 is supported by prose_index 0 stating 'effective for taxable years beginning on or after January 1, 2026'. The issue is with the provenance: it cites prose_index 4 and prose_index 1. Prose_index 1 mentions USD but not the rule. The primary source is prose_index 4. This is acceptable. However, the record uses table_id 'p1_prose4', which follows the convention. All values are correct. The rule formula is in the required form. No dispute. Re-check: confirmed.
+
+03_state_local_sales_tax_rates_2026.pdf: 1 mapping issue(s):
+  p1 p1_t0: The 'Rank' column (Rank values for all 51 jurisdiction rows: p1_t0 rows 1-27 col 4 and p2_t0 rows 1-24 col 4) has no slot in the closed extra-attribute dictionary for sales_tax_rate, which defines only state_rate_pct, avg_local_rate_pct, combined_rate_pct, rate_unit, effective_date, imposes_state_sales_tax and jurisdiction_name. Per the vocabulary-gap rule this gap is named here rather than silently absorbed; all rank values were nonetheless preserved on the corresponding sales_tax_rate records as the unlisted extra_attr 'rank', since dropping them would violate the every-cell-accounted-for rule. Carryover of unlisted attrs is tolerated but unread downstream.
+
+04_employment_tax_rates_and_thresholds_2026.pdf: 2 mapping issue(s):
+  p1 p1_t2: Prior-year (2025) comparison cell for the FUTA effective rate. The record_type is employment_tax_rate (a rate row inside a wage-base table), and the closed employment_tax_rate attribute set (component, employee_rate, employer_rate, self_employed_rate) defines no prior-year key (prior_year_rate is unlisted), so this cell has no home in extra attrs; named here rather than inventing a key. The 2026 cell was mapped to the futa_effective record; because the table's other columns are years, not payer sides, the single rate was assigned to the employer side per canonical FUTA treatment (document prints no payer-side attribution), leaving the 2025 cell unmapped.
+  p1 p1_prose4: Prose-stated scope and administration qualifiers have no home in the closed extra-attribute dictionary: (a) the employer begins withholding once cumulative calendar-year wages exceed $200,000 regardless of filing status or wages paid by another employer (the $200,000 figure itself is already captured on the single/head_of_household/qualifying_surviving_spouse surtax_threshold records with this prose as provenance; the no-duplication rule bars a standalone record), and (b) Table 4 allowance amounts apply only to employees whose most recent withholding certificate was filed prior to 2020. Fact (b) is not representable in any listed attr key, so it is surfaced here rather than silently dropped.
+
+05_capital_gains_preferential_rates_TY2025.pdf: 2 mapping issue(s):
+  p1 p1_t0: Cell-level OCR confidence is low (0.6). The value was mapped as printed ($0 to $48,350, single, 0% band) and is corroborated by the identical Married Filing Separately bracket in row 1, col 3, but the extraction confidence flag warrants reviewer attention; record confidence set to 0.7 accordingly.
+  p1 p1_prose3: Footnote block OCR confidence is 0.82, below the surrounding text. Threshold figures ($200,000 / $250,000 / $125,000) and the 3.8 percent rate were transcribed as printed; surtax_threshold records carry confidence 0.82. The footnote's reference to 'Table |' appears to be an OCR artifact for 'Table 1' and does not affect the mapped values.
+
+05_capital_gains_preferential_rates_TY2025.pdf: 5 verifier dispute(s):
+  record 14: cell p1_t1 r3,c1 reads 'Ordinary rates', which is not a numeric rate and must map to max_rate null; the record sets rate null correctly but fails to include the extra attr 'max_rate' as required by the schema for special_gain_rate records
+  record 15: prose p1_prose3 states threshold for single is $200,000, but the record sets amount 200000 and cites no bound qualifier; the surtax applies to the excess over $200,000, so the threshold is inclusive and correct, but the record lacks the required extra attr 'threshold' which must duplicate the amount value per schema rules
+  record 16: prose p1_prose3 states threshold for head of household is $200,000, but the record sets amount 200000 and lacks the required extra attr 'threshold' which must be present and equal to amount on surtax_threshold records
+  record 17: prose p1_prose3 states threshold for married filing jointly is $250,000, but the record lacks the required extra attr 'threshold' which must be present and equal to amount on surtax_threshold records
+  record 18: prose p1_prose3 states threshold for married filing separately is $125,000, but the record lacks the required extra attr 'threshold' which must be present and equal to amount on surtax_threshold records
+
+accuracy by document
+document                                         exp  ok  diff  miss  extra  disagree
+-------------------------------------------------------------------------------------
+01_federal_income_tax_rate_schedules_TY2026.pdf   32   4     0    28     28         1
+02_standard_deduction_schedule_TY2026.pdf          8   8     0     0      0         3
+03_state_local_sales_tax_rates_2026.pdf           51  51     0     0      0         0
+04_employment_tax_rates_and_thresholds_2026.pdf   18  18     0     0      0         0
+05_capital_gains_preferential_rates_TY2025.pdf    19   0    19     0      0         5
+TOTAL                                            128  81    19    28     28         9
+
+field-level accuracy: 81/128
+fields compared: 1250, differing: 26
+
+failing records (75):
+  [field mismatch] 05_capital_gains_preferential_rates_TY2025.pdf | preferential_gain_bracket | US-FED | 2025 | single | - | - | 0
+      superseded_effective: expected 2026-01-01, actual <absent>
+  [field mismatch] 05_capital_gains_preferential_rates_TY2025.pdf | preferential_gain_bracket | US-FED | 2025 | married_filing_jointly | - | - | 0
+      superseded_effective: expected 2026-01-01, actual <absent>
+  [field mismatch] 05_capital_gains_preferential_rates_TY2025.pdf | preferential_gain_bracket | US-FED | 2025 | married_filing_separately | - | - | 0
+      superseded_effective: expected 2026-01-01, actual <absent>
+  [field mismatch] 05_capital_gains_preferential_rates_TY2025.pdf | preferential_gain_bracket | US-FED | 2025 | head_of_household | - | - | 0
+      superseded_effective: expected 2026-01-01, actual <absent>
+  [field mismatch] 05_capital_gains_preferential_rates_TY2025.pdf | preferential_gain_bracket | US-FED | 2025 | single | - | - | 48351
+      superseded_effective: expected 2026-01-01, actual <absent>
+  [field mismatch] 05_capital_gains_preferential_rates_TY2025.pdf | preferential_gain_bracket | US-FED | 2025 | married_filing_jointly | - | - | 96701
+      superseded_effective: expected 2026-01-01, actual <absent>
+  [field mismatch] 05_capital_gains_preferential_rates_TY2025.pdf | preferential_gain_bracket | US-FED | 2025 | married_filing_separately | - | - | 48351
+      superseded_effective: expected 2026-01-01, actual <absent>
+  [field mismatch] 05_capital_gains_preferential_rates_TY2025.pdf | preferential_gain_bracket | US-FED | 2025 | head_of_household | - | - | 64751
+      superseded_effective: expected 2026-01-01, actual <absent>
+  [field mismatch] 05_capital_gains_preferential_rates_TY2025.pdf | preferential_gain_bracket | US-FED | 2025 | single | - | - | 533401
+      superseded_effective: expected 2026-01-01, actual <absent>
+  [field mismatch] 05_capital_gains_preferential_rates_TY2025.pdf | preferential_gain_bracket | US-FED | 2025 | married_filing_jointly | - | - | 600051
+      superseded_effective: expected 2026-01-01, actual <absent>
+  [field mismatch] 05_capital_gains_preferential_rates_TY2025.pdf | preferential_gain_bracket | US-FED | 2025 | married_filing_separately | - | - | 300001
+      superseded_effective: expected 2026-01-01, actual <absent>
+  [field mismatch] 05_capital_gains_preferential_rates_TY2025.pdf | preferential_gain_bracket | US-FED | 2025 | head_of_household | - | - | 566701
+      superseded_effective: expected 2026-01-01, actual <absent>
+  [field mismatch] 05_capital_gains_preferential_rates_TY2025.pdf | special_gain_rate | US-FED | 2025 | - | - | unrecaptured_section_1250_gain | -
+      max_rate: expected 0.25, actual <absent>
+      superseded_effective: expected 2026-01-01, actual <absent>
+  [field mismatch] 05_capital_gains_preferential_rates_TY2025.pdf | special_gain_rate | US-FED | 2025 | - | - | collectibles_and_qsbs | -
+      max_rate: expected 0.28, actual <absent>
+      superseded_effective: expected 2026-01-01, actual <absent>
+  [field mismatch] 05_capital_gains_preferential_rates_TY2025.pdf | special_gain_rate | US-FED | 2025 | - | - | short_term_capital_gain | -
+      max_rate: expected null, actual <absent>
+      superseded_effective: expected 2026-01-01, actual <absent>
+  [field mismatch] 05_capital_gains_preferential_rates_TY2025.pdf | surtax_threshold | US-FED | 2025 | single | - | net_investment_income | -
+      superseded_effective: expected 2026-01-01, actual <absent>
+      threshold: expected 200000, actual <absent>
+  [field mismatch] 05_capital_gains_preferential_rates_TY2025.pdf | surtax_threshold | US-FED | 2025 | head_of_household | - | net_investment_income | -
+      superseded_effective: expected 2026-01-01, actual <absent>
+      threshold: expected 200000, actual <absent>
+  [field mismatch] 05_capital_gains_preferential_rates_TY2025.pdf | surtax_threshold | US-FED | 2025 | married_filing_jointly | - | net_investment_income | -
+      superseded_effective: expected 2026-01-01, actual <absent>
+      threshold: expected 250000, actual <absent>
+  [field mismatch] 05_capital_gains_preferential_rates_TY2025.pdf | surtax_threshold | US-FED | 2025 | married_filing_separately | - | net_investment_income | -
+      superseded_effective: expected 2026-01-01, actual <absent>
+      threshold: expected 125000, actual <absent>
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | single | individual | - | 0
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_jointly | individual | - | 0
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_separately | individual | - | 0
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | head_of_household | individual | - | 0
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | single | individual | - | 12251
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_jointly | individual | - | 24501
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_separately | individual | - | 12251
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | head_of_household | individual | - | 17451
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | single | individual | - | 49801
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_jointly | individual | - | 99551
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_separately | individual | - | 49801
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | head_of_household | individual | - | 66601
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | single | individual | - | 106151
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_jointly | individual | - | 212301
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_separately | individual | - | 106151
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | head_of_household | individual | - | 106151
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | single | individual | - | 202651
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_jointly | individual | - | 405251
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_separately | individual | - | 202651
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | head_of_household | individual | - | 202651
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | single | individual | - | 257301
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_jointly | individual | - | 514601
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_separately | individual | - | 257301
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | head_of_household | individual | - | 257251
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | single | individual | - | 643251
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_jointly | individual | - | 771901
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_separately | individual | - | 385951
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | head_of_household | individual | - | 643251
+      no mapped record carries this natural key
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | single | - | - | 0
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_jointly | - | - | 0
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_separately | - | - | 0
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | head_of_household | - | - | 0
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | single | - | - | 12251
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_jointly | - | - | 24501
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_separately | - | - | 12251
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | head_of_household | - | - | 17451
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | single | - | - | 49801
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_jointly | - | - | 99551
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_separately | - | - | 49801
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | head_of_household | - | - | 66601
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | single | - | - | 106151
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_jointly | - | - | 212301
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_separately | - | - | 106151
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | head_of_household | - | - | 106151
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | single | - | - | 202651
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_jointly | - | - | 405251
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_separately | - | - | 202651
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | head_of_household | - | - | 202651
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | single | - | - | 257301
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_jointly | - | - | 514601
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_separately | - | - | 257301
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | head_of_household | - | - | 257251
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | single | - | - | 643251
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_jointly | - | - | 771901
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_separately | - | - | 385951
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | head_of_household | - | - | 643251
+      mapped record has no counterpart in the ground truth
+
+accuracy by record_type
+group                          exp  ok  diff  miss  extra
+---------------------------------------------------------
+additional_standard_deduction    2   2     0     0      0
+dependent_deduction_rule         1   1     0     0      0
+employment_tax_rate              4   4     0     0      0
+ordinary_income_bracket         32   4     0    28     28
+preferential_gain_bracket       12   0    12     0      0
+sales_tax_rate                  51  51     0     0      0
+special_gain_rate                3   0     3     0      0
+standard_deduction               5   5     0     0      0
+surtax_threshold                 9   5     4     0      0
+wage_base                        3   3     0     0      0
+withholding_allowance            6   6     0     0      0
+TOTAL                          128  81    19    28     28
+
+field-level accuracy: 81/128
+fields compared: 1250, differing: 26
+
+failing records (75):
+  [field mismatch] 05_capital_gains_preferential_rates_TY2025.pdf | preferential_gain_bracket | US-FED | 2025 | single | - | - | 0
+      superseded_effective: expected 2026-01-01, actual <absent>
+  [field mismatch] 05_capital_gains_preferential_rates_TY2025.pdf | preferential_gain_bracket | US-FED | 2025 | married_filing_jointly | - | - | 0
+      superseded_effective: expected 2026-01-01, actual <absent>
+  [field mismatch] 05_capital_gains_preferential_rates_TY2025.pdf | preferential_gain_bracket | US-FED | 2025 | married_filing_separately | - | - | 0
+      superseded_effective: expected 2026-01-01, actual <absent>
+  [field mismatch] 05_capital_gains_preferential_rates_TY2025.pdf | preferential_gain_bracket | US-FED | 2025 | head_of_household | - | - | 0
+      superseded_effective: expected 2026-01-01, actual <absent>
+  [field mismatch] 05_capital_gains_preferential_rates_TY2025.pdf | preferential_gain_bracket | US-FED | 2025 | single | - | - | 48351
+      superseded_effective: expected 2026-01-01, actual <absent>
+  [field mismatch] 05_capital_gains_preferential_rates_TY2025.pdf | preferential_gain_bracket | US-FED | 2025 | married_filing_jointly | - | - | 96701
+      superseded_effective: expected 2026-01-01, actual <absent>
+  [field mismatch] 05_capital_gains_preferential_rates_TY2025.pdf | preferential_gain_bracket | US-FED | 2025 | married_filing_separately | - | - | 48351
+      superseded_effective: expected 2026-01-01, actual <absent>
+  [field mismatch] 05_capital_gains_preferential_rates_TY2025.pdf | preferential_gain_bracket | US-FED | 2025 | head_of_household | - | - | 64751
+      superseded_effective: expected 2026-01-01, actual <absent>
+  [field mismatch] 05_capital_gains_preferential_rates_TY2025.pdf | preferential_gain_bracket | US-FED | 2025 | single | - | - | 533401
+      superseded_effective: expected 2026-01-01, actual <absent>
+  [field mismatch] 05_capital_gains_preferential_rates_TY2025.pdf | preferential_gain_bracket | US-FED | 2025 | married_filing_jointly | - | - | 600051
+      superseded_effective: expected 2026-01-01, actual <absent>
+  [field mismatch] 05_capital_gains_preferential_rates_TY2025.pdf | preferential_gain_bracket | US-FED | 2025 | married_filing_separately | - | - | 300001
+      superseded_effective: expected 2026-01-01, actual <absent>
+  [field mismatch] 05_capital_gains_preferential_rates_TY2025.pdf | preferential_gain_bracket | US-FED | 2025 | head_of_household | - | - | 566701
+      superseded_effective: expected 2026-01-01, actual <absent>
+  [field mismatch] 05_capital_gains_preferential_rates_TY2025.pdf | special_gain_rate | US-FED | 2025 | - | - | unrecaptured_section_1250_gain | -
+      max_rate: expected 0.25, actual <absent>
+      superseded_effective: expected 2026-01-01, actual <absent>
+  [field mismatch] 05_capital_gains_preferential_rates_TY2025.pdf | special_gain_rate | US-FED | 2025 | - | - | collectibles_and_qsbs | -
+      max_rate: expected 0.28, actual <absent>
+      superseded_effective: expected 2026-01-01, actual <absent>
+  [field mismatch] 05_capital_gains_preferential_rates_TY2025.pdf | special_gain_rate | US-FED | 2025 | - | - | short_term_capital_gain | -
+      max_rate: expected null, actual <absent>
+      superseded_effective: expected 2026-01-01, actual <absent>
+  [field mismatch] 05_capital_gains_preferential_rates_TY2025.pdf | surtax_threshold | US-FED | 2025 | single | - | net_investment_income | -
+      superseded_effective: expected 2026-01-01, actual <absent>
+      threshold: expected 200000, actual <absent>
+  [field mismatch] 05_capital_gains_preferential_rates_TY2025.pdf | surtax_threshold | US-FED | 2025 | head_of_household | - | net_investment_income | -
+      superseded_effective: expected 2026-01-01, actual <absent>
+      threshold: expected 200000, actual <absent>
+  [field mismatch] 05_capital_gains_preferential_rates_TY2025.pdf | surtax_threshold | US-FED | 2025 | married_filing_jointly | - | net_investment_income | -
+      superseded_effective: expected 2026-01-01, actual <absent>
+      threshold: expected 250000, actual <absent>
+  [field mismatch] 05_capital_gains_preferential_rates_TY2025.pdf | surtax_threshold | US-FED | 2025 | married_filing_separately | - | net_investment_income | -
+      superseded_effective: expected 2026-01-01, actual <absent>
+      threshold: expected 125000, actual <absent>
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | single | individual | - | 0
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_jointly | individual | - | 0
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_separately | individual | - | 0
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | head_of_household | individual | - | 0
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | single | individual | - | 12251
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_jointly | individual | - | 24501
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_separately | individual | - | 12251
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | head_of_household | individual | - | 17451
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | single | individual | - | 49801
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_jointly | individual | - | 99551
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_separately | individual | - | 49801
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | head_of_household | individual | - | 66601
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | single | individual | - | 106151
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_jointly | individual | - | 212301
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_separately | individual | - | 106151
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | head_of_household | individual | - | 106151
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | single | individual | - | 202651
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_jointly | individual | - | 405251
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_separately | individual | - | 202651
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | head_of_household | individual | - | 202651
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | single | individual | - | 257301
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_jointly | individual | - | 514601
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_separately | individual | - | 257301
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | head_of_household | individual | - | 257251
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | single | individual | - | 643251
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_jointly | individual | - | 771901
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_separately | individual | - | 385951
+      no mapped record carries this natural key
+  [missing] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | head_of_household | individual | - | 643251
+      no mapped record carries this natural key
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | single | - | - | 0
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_jointly | - | - | 0
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_separately | - | - | 0
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | head_of_household | - | - | 0
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | single | - | - | 12251
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_jointly | - | - | 24501
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_separately | - | - | 12251
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | head_of_household | - | - | 17451
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | single | - | - | 49801
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_jointly | - | - | 99551
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_separately | - | - | 49801
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | head_of_household | - | - | 66601
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | single | - | - | 106151
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_jointly | - | - | 212301
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_separately | - | - | 106151
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | head_of_household | - | - | 106151
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | single | - | - | 202651
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_jointly | - | - | 405251
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_separately | - | - | 202651
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | head_of_household | - | - | 202651
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | single | - | - | 257301
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_jointly | - | - | 514601
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_separately | - | - | 257301
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | head_of_household | - | - | 257251
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | single | - | - | 643251
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_jointly | - | - | 771901
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | married_filing_separately | - | - | 385951
+      mapped record has no counterpart in the ground truth
+  [spurious] 01_federal_income_tax_rate_schedules_TY2026.pdf | ordinary_income_bracket | US-FED | 2026 | head_of_household | - | - | 643251
+      mapped record has no counterpart in the ground truth
+
+semantic-layer cost by document and role
+document                                         role      engine               tok_in  tok_out  cache_w  cache_r  usd     wall_s
+-----------------------------------------------  --------  -------------------  ------  -------  -------  -------  ------  ------
+01_federal_income_tax_rate_schedules_TY2026.pdf  mapper    zai/glm-5.3-flash    6462    11397    0        0        0.0033  141.9
+01_federal_income_tax_rate_schedules_TY2026.pdf  verifier  alibaba/qwen-3-235b  16572   729      0        0        0.0043  15.4
+02_standard_deduction_schedule_TY2026.pdf        mapper    zai/glm-5.3-flash    6189    8053     0        64       0.0025  138.8
+02_standard_deduction_schedule_TY2026.pdf        verifier  alibaba/qwen-3-235b  3303    845      0        6040     0.0028  34.2
+03_state_local_sales_tax_rates_2026.pdf          mapper    zai/glm-5.3-flash    7598    28795    0        64       0.0078  331.4
+03_state_local_sales_tax_rates_2026.pdf          verifier  alibaba/qwen-3-235b  31751   814      0        2        0.0077  15.1
+04_employment_tax_rates_and_thresholds_2026.pdf  mapper    zai/glm-5.3-flash    62      15840    0        6464     0.0041  259.1
+04_employment_tax_rates_and_thresholds_2026.pdf  verifier  alibaba/qwen-3-235b  14119   376      0        4        0.0034  8.8
+05_capital_gains_preferential_rates_TY2025.pdf   mapper    zai/glm-5.3-flash    7036    8327     0        0        0.0026  30.7
+05_capital_gains_preferential_rates_TY2025.pdf   verifier  alibaba/qwen-3-235b  15070   623      0        4        0.0039  15.3
+F
+
+=================================== FAILURES ===================================
+___________________________ test_end_to_end_accuracy ___________________________
+
+    def test_end_to_end_accuracy() -> None:
+        """The Phase 2 gate: PDFs -> router -> real SchemaMapper -> independent
+        RecordVerifier -> comparison.
+    
+        Accuracy is judged on the mapper's raw output (triage never mutates its
+        inputs, and persistence is not part of field accuracy); the verifier's
+        disputes are reported in the per-document ``disagree`` column, and every
+        disputed record is named with the verifier's reason. Cost is itemized by
+        role (mapper / verifier), per document. A verifier failure fails the gate
+        like a mapper failure: the gate result is "128/128 through the two-agent
+        layer", not "128/128 while the second agent was down". Skips only when no
+        mapping credential is configured: the accuracy table only ever comes from
+        a run against the real APIs, never from stubs (anti-goals #1/#8).
+        """
+        from tax_tables.adapters.anthropic_mapper import (
+            AnthropicSchemaMapper,
+            MapperConfig,
+            MapperConfigError,
+            MapperError,
+        )
+        from tax_tables.adapters.anthropic_verifier import (
+            AnthropicRecordVerifier,
+            VerifierConfig,
+            VerifierError,
+        )
+        from tax_tables.adapters.pdfplumber_extractor import PdfplumberExtractor
+        from tax_tables.adapters.tesseract_extractor import TesseractExtractor
+        from tax_tables.extraction.router import ExtractionRouter
+        from tax_tables.pipeline import run_document
+    
+        try:
+            config = MapperConfig.from_env()
+        except MapperConfigError:
+            pytest.skip(
+                reason=(
+                    "no mapping credential (SCHEMA_MAPPER_API_KEY / ANTHROPIC_API_KEY): "
+                    "the accuracy table only ever comes from a run against the real "
+                    "mapping API — never from stubs (anti-goals #1/#8)."
+                )
+            )
+    
+        truth = load_ground_truth()
+        router = ExtractionRouter(digital=PdfplumberExtractor(), ocr=TesseractExtractor())
+        mapper = AnthropicSchemaMapper(config)
+        verifier_config = VerifierConfig.from_env()  # falls back to the mapper credential
+        verifier = AnthropicRecordVerifier(verifier_config)
+    
+        actuals: list[ActualRecord] = []
+        disagreements: dict[str, int] = {}
+        cost_rows: list[tuple[str, ...]] = [
+            ("document", "role", "engine", "tok_in", "tok_out", "cache_w", "cache_r", "usd", "wall_s")
+        ]
+    
+        def cost_row(document: str, role: str, cost: Any) -> tuple[str, ...]:
+            if cost is None:
+                return (document, role, "!", "!", "!", "!", "!", "!", "!")
+            return (
+                document,
+                role,
+                cost.engine,
+                str(cost.input_tokens),
+                str(cost.output_tokens),
+                str(cost.cache_write_tokens),
+                str(cost.cache_read_tokens),
+                f"{cost.usd:.4f}",
+                f"{cost.wall_seconds:.1f}",
+            )
+    
+        failures: list[str] = []
+        for path in iter_source_documents(truth):
+            try:
+                result = run_document(
+                    path.read_bytes(),
+                    filename=path.name,
+                    router=router,
+                    mapper=mapper,
+                    verifier=verifier,
+                )
+            except MapperError as exc:
+                # One document's failure must not discard the report for the
+                # other four; it is named and fails the gate below.
+                failures.append(f"{path.name}: mapper: {exc}")
+                cost_rows.append(cost_row(path.name, "mapper", None))
+                continue
+            except VerifierError as exc:
+                failures.append(f"{path.name}: verifier: {exc}")
+                cost_rows.append(cost_row(path.name, "verifier", None))
+                continue
+            actuals.extend((path.name, record) for record in result.mapping.records)
+            assert result.mapping.cost is not None  # the real adapters report spend
+            cost_rows.append(cost_row(path.name, "mapper", result.mapping.cost))
+            verification = result.verification
+            assert verification is not None
+            cost_rows.append(cost_row(path.name, "verifier", verification.cost))
+            disagreements[path.name] = len(verification.disputed)
+            if result.mapping.issues:
+                print(f"\n{path.name}: {len(result.mapping.issues)} mapping issue(s):")
+                for issue in result.mapping.issues:
+                    print(f"  p{issue.source_page} {issue.table_id}: {issue.reason}")
+            if verification.disputed:
+                print(f"\n{path.name}: {len(verification.disputed)} verifier dispute(s):")
+                for verdict in verification.disputed:
+                    print(f"  record {verdict.record_index}: {verdict.reason}")
+            for note in verification.notes:
+                print(f"  verifier note: {note}")
+    
+        comparison = compare(truth.expected_records, actuals)
+        print()
+        print(format_report(comparison, by="document", disagreements=disagreements))
+        print()
+        print(format_report(comparison, by="record_type"))
+        widths = [max(len(row[i]) for row in cost_rows) for i in range(len(cost_rows[0]))]
+        print("\nsemantic-layer cost by document and role")
+        for index, row in enumerate(cost_rows):
+            print("  ".join(cell.ljust(widths[i]) for i, cell in enumerate(row)).rstrip())
+            if index == 0:
+                print("  ".join("-" * width for width in widths))
+    
+        assert not failures, "semantic layer failed for: " + "; ".join(failures)
+>       assert comparison.is_perfect, (
+            f"accuracy {len(comparison.matched)}/{comparison.expected_count} with "
+            f"{len(comparison.spurious)} spurious — every failing record is named above"
+        )
+E       AssertionError: accuracy 81/128 with 28 spurious — every failing record is named above
+E       assert False
+E        +  where False = ComparisonResult(matched=(NaturalKey(source_document='01_federal_income_tax_rate_schedules_TY2026.pdf', record_type='o...ss=None, attribute_key=None, lower_bound=643251)), fields_compared=1250, fields_differing=26, duplicate_actual_keys=()).is_perfect
+
+tests/accuracy/test_harness.py:563: AssertionError
+
+semantic-layer conformance (measured on this run)
+role      calls  items  schema_fail  malformed  residue  adapted  transport  http_att  retryable  call_ok  item_ok  residue%
+--------  -----  -----  -----------  ---------  -------  -------  ---------  --------  ---------  -------  -------  --------
+mapper    6      128    1            0          4        0        0          6         0          83.3%    100.0%   66.7%
+verifier  5      128    0            0          0        0        0          5         0          100.0%   100.0%   0.0%
+  call_ok = calls returning a contract-shaped body; item_ok = proposed items that were well formed.
+  rates are over calls that RETURNED a body: transport failures (throttling, timeouts) are excluded,
+  never counted as successes - a call the model never answered is no evidence about the model.
+  retryable counts 408/409/429/5xx responses the SDK absorbed - throughput, not conformance.
+  residue = complete JSON that arrived inside markdown fence framing, stripped at the transport
+  boundary (ADR 014): reported, never an escalation trigger - the contract was met, the presentation was not.
+  adapted = closed-list shape repairs (extra_attrs object -> pairs, stringified numeric -> Decimal);
+  like residue these are repairs, NOT compliance - they are reported so the accommodation is visible.
+  records produced by document (pipeline side, 128 total):
+    01_federal_income_tax_rate_schedules_TY2026.pdf: 32
+    02_standard_deduction_schedule_TY2026.pdf: 8
+    03_state_local_sales_tax_rates_2026.pdf: 51
+    04_employment_tax_rates_and_thresholds_2026.pdf: 18
+    05_capital_gains_preferential_rates_TY2025.pdf: 19
+  records reaching triage: 128 independently verified, 0 flagged verifier-unavailable (never asserted as verified).
+  mapper: fence framing by position - leading 0, trailing 4
+  mapper: fence framing stripped (trailing)
+  mapper: mapping response is not valid JSON: Expecting value: line 1 column 1 (char 0)
+=========================== short test summary info ============================
+FAILED tests/accuracy/test_harness.py::test_end_to_end_accuracy - AssertionEr...
+======================== 1 failed in 1187.53s (0:19:47) ========================

@@ -2697,3 +2697,177 @@ ran under session A's original instructions rather than being re-scoped by
 the stand-down, which means the 100/128 result is a clean measurement of the
 frozen spec rather than of a spec someone was still arguing about. The
 containment worked. The coordination did not, twice.
+
+---
+
+## 2026-08-27 — The sixth and final gate: 81/128, and both pre-registered predictions were wrong
+
+Gate 2b closes here. It closes worse than it stood two runs ago, and the
+pre-registration said whatever it lands, it ships. So this is the report.
+
+### Accuracy
+
+```
+document                                         exp  ok  diff  miss  extra  disagree
+-------------------------------------------------------------------------------------
+01_federal_income_tax_rate_schedules_TY2026.pdf   32   4     0    28     28         1
+02_standard_deduction_schedule_TY2026.pdf          8   8     0     0      0         3
+03_state_local_sales_tax_rates_2026.pdf           51  51     0     0      0         0
+04_employment_tax_rates_and_thresholds_2026.pdf   18  18     0     0      0         0
+05_capital_gains_preferential_rates_TY2025.pdf    19   0    19     0      0         5
+TOTAL                                            128  81    19    28     28         9
+
+field-level accuracy: 81/128
+fields compared: 1250, differing: 26
+```
+
+```
+group                          exp  ok  diff  miss  extra
+---------------------------------------------------------
+additional_standard_deduction    2   2     0     0      0
+dependent_deduction_rule         1   1     0     0      0
+employment_tax_rate              4   4     0     0      0
+ordinary_income_bracket         32   4     0    28     28
+preferential_gain_bracket       12   0    12     0      0
+sales_tax_rate                  51  51     0     0      0
+special_gain_rate                3   0     3     0      0
+standard_deduction               5   5     0     0      0
+surtax_threshold                 9   5     4     0      0
+wage_base                        3   3     0     0      0
+withholding_allowance            6   6     0     0      0
+TOTAL                          128  81    19    28     28
+```
+
+### The predictions, and how each one failed
+
+ADR 014 §8g pre-registered two predictions before the run, precisely so the
+result could not be explained after it. Both were wrong.
+
+| Prediction | Result |
+|---|---|
+| `ordinary_income_bracket` 4/32 → **32/32** | **4/32.** No change at all. |
+| `preferential_gain_bracket` 12/12 → **12/12** | **0/12.** Total loss. |
+
+**Prediction 1 failed by doing nothing.** The revert deleted both gate-5
+additions to the two record-shape bullets — the emphatic
+`taxpayer_class is null on this record type` and the trailing
+`No extra attrs.` — and document 01 scored exactly what it scored with them
+in place. Gate 5's causal story was that an adjacent clause generalised
+upward; the pre-run audit's competing story was that the in-bullet
+`No extra attrs.` closed the slot list. **Both are now refuted by
+measurement.** The cause of the 28 is still unidentified, and this entry says
+so rather than inventing a third story.
+
+**Prediction 2 failed by breaking something else, and the reason is exact.**
+Restoring the `preferential_gain_bracket` bullet to its gate-4 wording also
+deleted `Carries superseded_effective when its document is superseded.` That
+deletion was defended in §8g, in writing, before the run, as
+**information-free** — the closed attribute dictionary carries
+`preferential_gain_bracket: superseded_effective` and that entry is
+byte-identical at gate 4 and now.
+
+All 19 of document 05's records came back without `superseded_effective`.
+
+At gate 4 the dictionary entry alone was sufficient. At gate 6, same bullet,
+same entry, it was not. Everything around both had been rewritten in between.
+
+### Every failing record, named
+
+**Group 1 — 28 missing, document 01, `ordinary_income_bracket`:**
+`US-FED | 2026 | <filing_status> | taxpayer_class` — expected `individual`,
+got `null`, 7 bracket rows x 4 filing statuses. The 4 `estate_or_trust`
+records of the same document matched.
+
+**Group 2 — 19 field mismatches, document 05, every record it has:**
+
+| Records | Missing field(s) |
+|---|---|
+| `preferential_gain_bracket` x 12 | `superseded_effective` (2026-01-01) |
+| `special_gain_rate` x 3 | `superseded_effective`, `max_rate` (0.25 / 0.28 / null) |
+| `surtax_threshold` x 4 | `superseded_effective`, `threshold` (200000 / 200000 / 250000 / 125000) |
+
+26 differing fields over 1,250 compared, and **every one is `actual
+<absent>`.** Not one wrong value, in this run or in any of the six.
+
+### What the revert bought, and what it cost — the blast radius, measured
+
+| | Before (gate 5) | After (gate 6) |
+|---|---|---|
+| `ordinary_income_bracket` (the target) | 4/32 | **4/32** — bought nothing |
+| `preferential_gain_bracket` | 12/12 | **0/12** |
+| `special_gain_rate` | 3/3 | **0/3** |
+| `surtax_threshold` | 9/9 | **5/9** (document 04's 5 held; document 05's 4 lost) |
+| document 04 overall | 18/18 | **18/18** — the one §8g prediction that held |
+
+§8g argued document 04's gate-5 recovery was independent of both edited
+bullets, because that document contains no records of either type. That was
+correct and it is the only part of the analysis the run confirmed.
+
+### The lesson, third occurrence, and this one is ours
+
+The README already carried the rule: *unchanged text is only stable while its
+neighbourhood is unchanged.* It was written before this run, out of gate 5's
+regression. This run broke it from the other side.
+
+Gate 5: an **added** restatement generalised to its neighbour and cost 28.
+Gate 6: a **removed** restatement turned out to be load-bearing and cost 19.
+The symmetric conclusion is stricter than either:
+
+> Text has no fixed meaning to a model, only a meaning in place. Removing a
+> restatement is as much a change as adding one, and restoring text to a
+> wording that once worked does not restore its behaviour if its
+> neighbourhood has moved. "Byte-identical to a version that scored 32/32" is
+> not a safety argument. It was not one when an arbitrator used it before
+> gate 5, and it was not one when I used it before gate 6.
+
+The pre-run audit did warn about this. Its protection lens wrote that the
+revert "is bounded in `src/` but NOT bounded relative to the state where those
+12 records were proven ... this is a fourth, never-run prompt state, and the
+'unchanged text is only stable while its neighbourhood is unchanged' lesson
+cuts at this revert too." That warning was recorded in §8g and then
+under-weighted in the same section's prediction table. Recording that here is
+the point of having written the prediction down.
+
+### Conformance and cost
+
+```
+role      calls  items  schema_fail  malformed  residue  adapted  transport  call_ok  item_ok
+mapper    6      128    1            0          4        0        0          83.3%    100.0%
+verifier  5      128    0            0          0        0        0          100.0%   100.0%
+```
+
+One mapper contract failure, retried and recovered; 128 items proposed, zero
+malformed. The verifier answered on all five documents with zero records
+flagged unverified for the **third** run running. Ten calls, **$0.0424**
+(mapper $0.0203, verifier $0.0221).
+
+### The verifier, third data point
+
+Nine disputes: **five true positives**, all on document 05, naming the exact
+missing attributes — `max_rate` on the `special_gain_rate` record and
+`threshold` on all four `surtax_threshold` records — before the oracle was
+consulted. Three false positives on document 02, which scored 8/8; two of the
+three visibly reason themselves out of their own position and file anyway
+("...so this is actually correct. Re-evaluating: no dispute ... Therefore,
+confirmed."). One is the recurring document 01 `257250`/`257300` dispute,
+which this run cannot adjudicate because those records failed on the natural
+key and never reached field comparison.
+
+**And the structural limit, now measured twice.** `CANONICAL_CONVENTIONS` is
+concatenated into all three role prompts, so when the defect is in the
+conventions rather than in a value, the verifier is reading the same law as
+the mapper. Gate 5's 28-record regression drew one dispute. Gate 6's 19-record
+regression drew five — but only because those manifested as missing schema
+attributes the verifier checks structurally, not as a convention it shares.
+Independence is real for values and absent for conventions.
+
+### Disposition
+
+**Gate 2b is CLOSED at 81/128.** No seventh run. No further spec text of any
+kind. The best-measured configuration remains the fourth gate's 119/128 and it
+is recorded beside this one rather than replacing it.
+
+Two attempts to repair one regression both made it worse. A project that
+reports only its best number cannot tell a specification from a curve fit, and
+the shape of these six runs is the evidence that this one was applied
+honestly — and that it did not converge.
