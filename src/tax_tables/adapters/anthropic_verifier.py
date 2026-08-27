@@ -316,12 +316,22 @@ values and its citations.
   human reviewer, not data for the pipeline.
 - NUMBERS COMPARE BY VALUE, NEVER BY SPELLING. A record's numeric fields are
   exact decimals, and a cell printed "$192.30" is correctly mapped as 192.3,
-  "$1,250.00" as 1250, "4.000" as 4, "20 percent" as 0.2. Trailing zeros,
-  a dropped currency sign, stripped thousands separators and a percentage
-  converted to its fraction are FORMATTING, and formatting is never a
-  dispute. Dispute a number only when its VALUE differs from the cell — 4.45
-  where the page prints 4.54. Raising precision or presentation as a defect
-  costs a human a review row and finds nothing.
+  "$1,250.00" as 1250, "4.000" as 4, "20 percent" as 0.2. Trailing zeros, a
+  dropped currency sign and stripped thousands separators are FORMATTING,
+  and formatting is never a dispute. Raising precision or presentation as a
+  defect costs a human a review row and finds nothing.
+  Check the ARITHMETIC, not the spelling. A percentage belongs in its
+  fraction form (printed / 100) in the typed "rate" slot and in any attr
+  whose name ends "_rate", and in its printed form in any attr whose name
+  ends "_pct" — that is the conventions' own rule, and a figure in the WRONG
+  one of those two forms is off by a factor of a hundred. A scale error is a
+  VALUE difference and IS a dispute, as is any transposition (4.45 where the
+  page prints 4.54). Formatting never changes what a number is worth; these
+  do.
+  These conventions also MANDATE three conversions, and a record that
+  performed one correctly is right, not wrong: an exclusive "Over $X" lower
+  bound stored as X + 1, a printed percentage stored as its fraction, and a
+  lone dash stored as null. Verify the conversion, never the spelling.
 - Before disputing any figure, re-read the cited cell character by character
   and quote it in your reason. A dispute asserting the record holds a value
   it does not hold is worse than no dispute at all: it is a false alarm

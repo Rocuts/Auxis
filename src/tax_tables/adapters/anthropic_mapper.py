@@ -465,9 +465,11 @@ from the printed label.
 - ordinary_income_bracket: one record per (bracket row x filing-status or
   taxpayer-class column) of an income-tax rate schedule. A wide matrix with
   one rate column and several filing-status columns yields one record per
-  filing status per row: same rate, that column's bounds. No attrs.
-- preferential_gain_bracket: same granularity and slots as
-  ordinary_income_bracket, for preferential (e.g. capital gain) schedules.
+  filing status per row: same rate, that column's bounds. No extra attrs.
+- preferential_gain_bracket: same granularity and typed slots as
+  ordinary_income_bracket — one record per (bracket row x filing-status
+  column) — for preferential (e.g. capital gain) schedules, but by filing
+  status ONLY: taxpayer_class is null on this record type.
   Carries superseded_effective when its document is superseded.
 - special_gain_rate: one record per special asset or gain category.
   attribute_key = the category slug. The printed maximum rate goes in the
@@ -499,9 +501,15 @@ from the printed label.
   self_employed_rate — as decimal fractions, with null in any side the row
   does not charge. A row printing one rate is NOT exempt from this: decide
   from the document which side that rate falls on and null the other two
-  (an employer-only levy is employer_rate set, the other two null). Put the
+  (a levy charged to one side only sets that side's attr and nulls the
+  other two). Where a component row sits in a table whose OTHER columns are
+  YEARS rather than payer sides, those cells are that component's rate per
+  year, not per payer: one rate, one side. Put the
   same fraction in the typed "rate" slot for a single-rate row.
-- wage_base: one record per item row. attribute_key = the item slug from
+- wage_base: one record per wage-base or limit row; a RATE row printed in
+  the same table is an employment_tax_rate record, because the fixed
+  vocabulary decides a row's record_type, not the table the row sits in.
+  attribute_key = the item slug from
   the fixed vocabulary. amount = the wage base, and "No limit" means amount
   null. Both dictionary attrs are required on every record: unlimited
   (true only where the cell prints "No limit", false where a figure
@@ -511,8 +519,9 @@ from the printed label.
   = the surtax slug from the fixed vocabulary. rate = the surtax rate the
   document states at that row or in a footnote (footnote provenance then).
   The threshold amount rides in the "threshold" attr, which is REQUIRED —
-  putting it only in the typed "amount" slot loses it. Fill "amount" too if
-  you wish; "threshold" is the field that is read. Where the document
+  putting it only in the typed "amount" slot loses it. It fills the typed
+  "amount" slot as well: fill BOTH with the same figure; neither
+  substitutes for the other. Where the document
   states the surtax is imposed on one side only, also emit employer_match
   false; where its document is superseded, superseded_effective.
 - withholding_allowance: one record per payroll period. attribute_key = the
@@ -554,9 +563,14 @@ this vocabulary, and it must be visible rather than silently absorbed.
 ## The extra-attribute dictionary — CLOSED
 
 Extra attrs are NOT free-form. Below is the complete set of attr keys this
-schema defines, per record_type. Emit every key listed for a record type
-whose document supports it; a key you cannot support from the page is
-omitted, never guessed. Keys are fixed spellings, exactly as written here —
+schema defines, per record_type. Emit EVERY key listed for a record type,
+every time. A key whose value the page states as ABSENT — a dash, "No
+limit", a payer side the row does not charge, a prior-year column that
+prints nothing for this row — is emitted with the value null: null is an
+answer, and an absent key is the one thing this dictionary cannot record.
+Omit a key only where this document has no column, row or sentence bearing
+on it at all, and never guess a value. Keys are fixed spellings, exactly as
+written here —
 a differently-spelled key is a key nobody downstream reads.
 
 Values are always read from the page under the rules above (percent columns
