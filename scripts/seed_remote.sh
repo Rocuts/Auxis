@@ -13,6 +13,14 @@
 #   POLL_SECONDS                     how long to wait for a job to finish
 #                                    (default 180).
 #
+# SET POLL_SECONDS DELIBERATELY. The default predates the wall-clock
+# measurements: the slowest single document measured 346 s sequentially and
+# longer under fan-out, so 180 reports a timeout on a run that is merely slow.
+# The default is left alone rather than guessed upward — a poll budget is a
+# property of the deployment being seeded (`maxDuration`, cron `limit`, the
+# provider's rate limit), not of this script. Against the current Vercel
+# configuration (`maxDuration` 1800), POLL_SECONDS=1800 is the honest value.
+#
 # Exit status is the point: non-zero if any upload was rejected or any job
 # ended in `failed`, so this is usable as a gate and not only as a demo. A
 # job that is still `queued`/`running` when the poll budget runs out is

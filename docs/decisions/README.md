@@ -2,7 +2,9 @@
 
 One page each, written when the decision became real. Where a decision is made
 but its implementation waits on an open gate, the ADR says so in its status
-line rather than implying code that does not exist.
+line rather than implying code that does not exist. The status column is
+maintained: an ADR whose implementation shipped says so, and an ADR whose fix
+is written but undeployed says *that*, which is the more useful sentence.
 
 | # | Decision | Phase | Status |
 |---|---|---|---|
@@ -13,19 +15,19 @@ line rather than implying code that does not exist.
 | 005 | [Polymorphic fact table over per-type tables](005-polymorphic-fact-table.md) | 1 | accepted, implemented |
 | 006 | [Hybrid extraction router](006-hybrid-extraction-router.md) — deterministic first, OCR only when unavoidable | 2 | accepted, implemented |
 | 007 | [CDK over Terraform](007-cdk-over-terraform.md) — offline synth | 4 | accepted, implemented |
-| 008 | [Vercel as the live demo target](008-vercel-as-the-live-target.md) | 3.5 | accepted; **implementation pending** |
-| 009 | [Cron-sweep `JobRunner` on request-scoped compute](009-cron-sweep-jobrunner.md) — Queues unavailable on this account | 3.5 | accepted; sweep built, cron pending |
-| 010 | [Vision-OCR as the Vercel extractor for scanned input](010-vision-ocr-vercel-extractor.md) | 3.5 | accepted; **implementation pending** |
+| 008 | [Vercel as the live demo target](008-vercel-as-the-live-target.md) | 3.5 | accepted, implemented; **live in production** |
+| 009 | [Cron-sweep `JobRunner` on request-scoped compute](009-cron-sweep-jobrunner.md) — Queues unavailable on this account | 3.5 | accepted, implemented; **amended 2026-08-27** — lease/visibility timeout, fix tested and not deployed |
+| 010 | [Vision-OCR as the Vercel extractor for scanned input](010-vision-ocr-vercel-extractor.md) | 3.5 | accepted, built, model probed; **no end-to-end run** |
 | 011 | [Blob-in-Postgres (`bytea`) vs Vercel Blob](011-blob-in-postgres-vs-vercel-blob.md) | 3.5 | accepted, implemented |
 | 012 | [Runtime multi-agent semantic layer: mapper + verifier + adjudicator](012-runtime-multi-agent-semantic-layer.md) | 2 | accepted, implemented |
 | 013 | [Tracing without the X-Ray SDK, directly or transitively](013-tracing-without-the-xray-sdk.md) | 5 | accepted, enforced by test |
-| 014 | [Semantic-layer model selection, and its pre-registered escalation rule](014-semantic-layer-model-selection.md) | 2b | accepted, rule pre-registered |
+| 014 | [Semantic-layer model selection, and its pre-registered escalation rule](014-semantic-layer-model-selection.md) | 2b | **CLOSED 2026-08-27** — escalation designed, wired, tested, unfunded |
 | 015 | [Convention-derived discriminators are declared, never dressed as cited](015-convention-derived-discriminators.md) | 2b | accepted, implemented |
 | — | [Orchestration alignment with Anthropic's published criteria](adr-orchestration-alignment.md) | all | reference |
 
 ## The rejections are the load-bearing ones
 
-Three of the fourteen are rejections, and each records **the threshold at which
+Three of the fifteen are rejections, and each records **the threshold at which
 it would flip** rather than only the reason it was made:
 
 - **Aurora DSQL** would become correct the day it gains range types and

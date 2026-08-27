@@ -1,13 +1,26 @@
 # ADR 008 — Vercel as the live demo target
 
-**Status:** accepted; **implementation pending Phase 3.5 (gate open)** · **Date:** 2026-08-25 · **Phase:** 3.5
+**Status:** accepted; **implemented and promoted to production 2026-08-27** ·
+**Date:** 2026-08-25 (status updated 2026-08-27) · **Phase:** 3.5
 
-> This ADR records a decision that is made and settled. The Vercel adapters
-> are **not yet built** — there is no `vercel.json`, no vision-OCR adapter, and
-> no live URL. The README says so plainly in its three-targets section. The
-> parts already built and tested are the cron-sweep `JobRunner`
-> ([ADR 009](009-cron-sweep-jobrunner.md)) and the `bytea` blob store
-> ([ADR 011](011-blob-in-postgres-vs-vercel-blob.md)).
+> Every adapter this ADR anticipated is built and deployed: `vercel.json` with
+> its `maxDuration`, `excludeFiles` and cron; the cron-sweep `JobRunner`
+> ([ADR 009](009-cron-sweep-jobrunner.md)); the vision-OCR extractor
+> ([ADR 010](010-vision-ocr-vercel-extractor.md)); the `bytea` blob store
+> ([ADR 011](011-blob-in-postgres-vs-vercel-blob.md)); and Neon behind the
+> pooled endpoint. The live URL is
+> **https://auxis-johan-rocuts-projects.vercel.app**, public and serving every
+> `GET` at a warm median of 272 ms.
+>
+> **What the decision did not buy, stated here so this page is not read as a
+> success report.** The API surface works on Vercel; the *pipeline* has not
+> completed a document there. The five-fixture seed of 2026-08-27 was killed
+> at `maxDuration` under a five-way fan-out and persisted zero records — the
+> platform's request-scoped compute meeting a free-tier provider allowance,
+> which is exactly the seam this ADR chose to live on. The repair (a
+> lease/visibility timeout, a re-derived `maxDuration`, a smaller cron batch)
+> is written and tested and **not yet deployed**. See the README's bottleneck
+> section for the measurements.
 
 ## Context
 

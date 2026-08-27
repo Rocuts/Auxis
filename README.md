@@ -20,12 +20,23 @@ that touches a platform is a port with three adapters behind it.
 >    repair attempts both made the score worse and suppressing that would
 >    turn a specification into a curve fit.
 > 2. **The production pipeline does not complete.** All five fixtures upload
->    (`202`) and all five jobs are then killed at the function's 300 s
+>    (`202`) and all five jobs were then killed at the function's 300 s
 >    `maxDuration`, persisting **zero** records. The cause is measured, not
 >    guessed — provider rate limits under a five-way fan-out — and the two
 >    defects it exposed are named in
 >    [Parallel processing and bottlenecks](#parallel-processing-and-bottlenecks).
->    Neither is fixed here: the gate that found it is a measurement gate.
+>
+> **Both defects are now fixed in this tree, and neither fix has been
+> deployed.** The gate that found them was a measurement gate, so nothing was
+> changed while it was open; the repair landed after it closed, written
+> test-first — a lease/visibility timeout so a killed worker's job is
+> *reclaimed* instead of stranded, `maxDuration` re-derived from the measured
+> wall-clock (300 s → 1800 s), and the cron batch size cut to match. Promotion
+> is a human action and has not been taken, so **production still runs the
+> pre-fix build.** Re-checked on 2026-08-27 against the live URL: all five
+> seeded jobs still read `running` at `attempt = 1`, and `GET /records` still
+> returns `{"items": [], "next_cursor": null}`. The fix is proven by tests, not
+> by production, and that line is held everywhere below.
 >
 > So the live URL serves the API surface, and its database is empty. Nothing
 > in this document is estimated and then presented as measured; where
@@ -122,13 +133,22 @@ make api                      # http://localhost:8000/docs
 Run everything the project can verify without credentials:
 
 ```bash
-make check       # ruff + mypy --strict + pytest (540 passed, 1 skipped)
+make check       # ruff + mypy --strict + pytest (675 passed, 1 skipped)
 make synth-check # cdk synth with NO AWS credentials, then cfn-lint
 make diagrams    # every README mermaid block, under two Mermaid majors
 ```
 
 `make accuracy` runs the end-to-end accuracy gate; it needs a funded
 `ANTHROPIC_API_KEY` and is the one skipped test above.
+
+The four scripts, since each answers a question the test suite cannot:
+
+| Script | What it is for |
+|---|---|
+| [`scripts/seed_remote.sh`](scripts/seed_remote.sh) | POST the five fixtures to a deployed URL and poll every job to a terminal state. Non-zero exit if any upload is rejected or any job fails — a gate, not a demo. **Set `POLL_SECONDS`** (see [below](#reproducing-the-seed-against-a-deployment)) |
+| [`scripts/probe_transport.py`](scripts/probe_transport.py) | Two probes run *before* a paid gate: is this key entitled to this model, and does the transport **enforce** a structured-output contract or merely forward it? The second question is the one that cost this project a run to learn ([ADR 014 §8j](docs/decisions/014-semantic-layer-model-selection.md)) |
+| [`scripts/mark_stranded_jobs.py`](scripts/mark_stranded_jobs.py) | Close the five jobs the 3.5-LIVE gate stranded in `running` to `failed`, with an error payload naming the gate. Idempotent, targeted by id, guarded on status. **Marks, never deletes** — the rows are the evidence |
+| [`scripts/check_diagrams.py`](scripts/check_diagrams.py) | Parse every README mermaid block under Mermaid 10 **and** 11, because "it renders in my editor" proves nothing about GitHub |
 
 ---
 
@@ -197,7 +217,7 @@ flowchart TB
     end
 
     subgraph runner_b["JobRunner port"]
-        runner["JobRunner<br/>[Port]<br/>Accepted work becomes<br/>running work"]
+        runner["JobRunner<br/>[Port]<br/>Accepted work becomes<br/>running work, and a job<br/>whose worker was killed is<br/>reclaimed on lease expiry"]
         runner_a["in-process pool - local<br/>cron sweep - Vercel<br/>Distributed Map - AWS"]
     end
 
@@ -397,7 +417,7 @@ goes stale.
 | `GET` | `/documents`, `/documents/{id}` | public | provenance |
 | `GET` | `/reviews` | public | everything the pipeline refused to guess; filters `status`, `document_id`; **cursor** pagination |
 | `GET` | `/reviews/{id}` | public | one item with its adjudication audit trail |
-| `POST` | `/internal/sweep` | `CRON_SECRET` bearer | the cron / queue-subscriber path |
+| `POST` `GET` | `/internal/sweep` | `CRON_SECRET` bearer | the sweep path, registered under both methods with distinct operation ids: `POST` for the self-kick, `GET` because that is what a Vercel cron issues. `?limit=` bounds the batch, and the batch runs **sequentially in one invocation** — which is why `limit` is coupled to `maxDuration` ([ADR 009](docs/decisions/009-cron-sweep-jobrunner.md)) |
 
 `GET /records?tax_year=2026` returns active 2026 records and excludes
 superseded ones. That is a test, not a claim.
@@ -1038,31 +1058,78 @@ complete run's `$0.0626` — and then stopped exactly when the functions died.
 
 **Two defects this exposed, stated plainly because neither is cosmetic:**
 
-1. **`maxDuration` is undersized against its own written rule.** The project's
-   own instruction is to size it to "the slowest single-document pipeline run
-   plus margin". The slowest local run was **346 s**; `maxDuration` was set to
-   **300 s**. That was already wrong before concurrency made it worse, and it
-   was wrong because the number was set once and never re-derived after the
-   wall-clock column existed.
+1. **`maxDuration` was undersized against its own written rule.** The
+   project's own instruction is to size it to "the slowest single-document
+   pipeline run plus margin". The slowest local run was **346 s**;
+   `maxDuration` was set to **300 s**. That was already wrong before
+   concurrency made it worse, and it was wrong for a reason worth naming: the
+   number was chosen once, before the wall-clock column existed, and never
+   re-derived when it did.
 
 2. **A killed job is stranded, not retried.** `process_job` marks a job
-   `running` when it claims it, but `sweep_pending` selects
+   `running` when it claims it, but `sweep_pending` selected
    `WHERE status = 'queued'`. When the platform kills the invocation, nothing
    rewrites the row — so the cron backstop, which exists precisely to make a
-   lost notification harmless, **cannot see the job it most needs to see**. The
-   five seeded jobs sat in `running` indefinitely, and because the SHA-256
+   lost notification harmless, **could not see the job it most needed to see**.
+   The five seeded jobs sat in `running` indefinitely, and because the SHA-256
    idempotency key treats a `running` job as live, re-uploading the same PDF
-   returns the stranded job instead of starting a new one. The design note in
+   returned the stranded job instead of starting a new one. The design note in
    `vercel_runner.py` — "a lost notification delays work, it never loses it" —
-   holds for a *dropped kick* and does not hold for a *killed worker*.
+   holds for a *dropped kick* and did not hold for a *killed worker*.
 
-The fix for (2) is a visible-timeout lease: claim with a deadline, and have
-the sweep also select `running` jobs whose lease has expired, incrementing
-`attempt`. That is the standard shape and the schema already carries `attempt`
-and `started_at` to support it. **Neither fix is applied here** — the gate
-that found this is a measurement gate, and changing the runtime to make its
-own result look better is the one move this project has refused at every
-previous gate.
+**Neither was fixed while the gate was open.** Editing the runtime so a
+measurement gate's own result reads better is the move this project has
+refused at every prior gate. Both were fixed immediately after it closed, and
+the repair is reported here with the same care as the failure.
+
+#### The repair — a lease, and two numbers that were wrong
+
+**A visibility timeout, which is what the AWS target gets for free.**
+`sweep_pending` now claims a job that is `queued` **or** `running` past its
+lease, so a worker the platform killed no longer takes its job down with it.
+The schema already carried `attempt` and `started_at`; nothing migrated. Step
+Functions gives the AWS adapter exactly this semantics as a platform
+guarantee, and the Vercel adapter now buys it with one predicate — which is
+the ports-and-adapters claim doing real work rather than decorating a diagram.
+
+The invariant that makes it safe is written into the constant, not into a
+comment somewhere else:
+
+```
+JOB_LEASE_SECONDS (default 1860)  MUST BE  >=  maxDuration (1800)
+```
+
+A *longer* lease only delays a rescue. A *shorter* one is the dangerous
+direction: the sweep would reclaim a job whose worker is still alive, two
+workers would map the same document, and the run would be billed twice.
+`JOB_MAX_ATTEMPTS` (default 3) then abandons a job that reliably kills its
+worker — recorded as `failed` with `error.type == "lease_expired_max_attempts"`
+— because every reclaim spends model credit, and an unbounded retry loop over
+a poisonous document is a way to convert a bug into an invoice.
+
+**Two configuration numbers were corrected as conformance with the sizing rule
+this project already wrote down, not as new policy:**
+
+| Setting | Was | Now | Why |
+|---|---|---|---|
+| `maxDuration` | 300 s | **1800 s** | The slowest measured single-document run is 346 s, so 300 violated "slowest run plus margin" *before* concurrency made it worse. 1800 is the verified Pro ceiling (Vercel's limits table: Hobby 300, Pro 800 GA / 1800 extended). |
+| cron sweep `limit` | 5 | **3** | `sweep_pending` processes its batch **sequentially in one invocation**, so `limit` and `maxDuration` are coupled. At `limit=5` the batch needs 96% of the budget with nothing left for the `429` backoff measured above. |
+
+Both couplings are now **pinned by tests that read `vercel.json`**
+(`TestLeaseInvariant` in `tests/api/test_jobs.py`), because a coupling nobody
+checks is a coupling that drifts. The reclaim behaviour has its own four tests,
+including `test_live_worker_is_never_stolen` — the one that would catch a lease
+shortened below `maxDuration` by someone who had not read this section.
+
+**What the repair does not yet claim.** It has never run on production. The
+promotion that would deploy it is a human action and has not been taken, so as
+of 2026-08-27 the live URL still runs the 300 s build and the five jobs above
+are still `running`. `scripts/mark_stranded_jobs.py` closes those rows to
+`failed` with an error payload naming the gate — **mark, never delete: the rows
+are the evidence** — and it too has not been run. Re-seeding the corpus is
+blocked until it is, since a `running` job reads as live to the SHA-256 key.
+The honest status is: *the defect is understood, the fix is tested, the
+deployment is pending a human.*
 
 ### A cost line is a measurement with an expiry date
 
@@ -1244,7 +1311,7 @@ nowhere near deploy-correct. See [`docs/audit/`](docs/audit/) for the full
 > — public, no SSO gate, every `GET` serving. The API works. **The pipeline
 > does not: the production seed put all five fixtures into a `maxDuration`
 > timeout and persisted zero records.** That result is measured, diagnosed,
-> and unfixed, in
+> and repaired-but-not-deployed, in
 > [Parallel processing and bottlenecks](#parallel-processing-and-bottlenecks);
 > it is the headline finding of this phase and it is a failure, so it is
 > reported before the things that worked.
@@ -1259,6 +1326,14 @@ nowhere near deploy-correct. See [`docs/audit/`](docs/audit/) for the full
 > | Five-fixture seed: **records persisted** | **0 of 128 — all five jobs killed at `maxDuration`** |
 > | Model spend for the killed seed | **`$0.0222`** of the free allowance |
 > | Total project spend to date | **`$0.5205`** of a `$5.00` allowance |
+>
+> **Re-verified 2026-08-27, after the fix was committed:** the deployment
+> above still predates it. All five seeded jobs read `running` at `attempt = 1`
+> on `GET /jobs/{id}`, and `GET /records` returns an empty page. The lease, the
+> 1800 s `maxDuration` and the `limit=3` cron live in this tree and in its
+> tests; they do not yet live on the URL. Deploying them is a promotion, and a
+> promotion is a human action ([Human-in-the-loop operations, by
+> design](#human-in-the-loop-operations-by-design)).
 >
 > **The cold chain is no longer observable on production, by construction.**
 > `vercel.json` registers a one-minute cron on `/internal/sweep`; that request
@@ -1326,6 +1401,25 @@ nowhere near deploy-correct. See [`docs/audit/`](docs/audit/) for the full
 > [009](docs/decisions/009-cron-sweep-jobrunner.md),
 > [010](docs/decisions/010-vision-ocr-vercel-extractor.md), and
 > [011](docs/decisions/011-blob-in-postgres-vs-vercel-blob.md).
+
+#### Reproducing the seed against a deployment
+
+`scripts/seed_remote.sh` POSTs the five fixtures to a deployed URL with the
+API key and then polls each job to a terminal state. Its exit status is the
+point: non-zero if any upload was rejected or any job ended `failed`, and a
+job still `queued`/`running` when the budget runs out is reported as a
+**timeout**, never quietly counted as a success.
+
+```bash
+BASE_URL=https://<deployment> API_KEY=... POLL_SECONDS=1800 scripts/seed_remote.sh
+```
+
+`POLL_SECONDS` defaults to 180, which is **below the slowest measured
+single-document run (346 s)** — a leftover from before that column existed.
+Set it from the deployment you are seeding rather than accepting the default,
+or a slow run reports as a timeout. The default is documented rather than
+silently raised, for the same reason the stranded rows are marked rather than
+deleted: the number is evidence of when it was chosen.
 
 ### 3. docker-compose — the evaluator's one-command reproduction
 
@@ -1424,11 +1518,26 @@ Consolidated, and deliberately specific. If something is unproven, it says so.
    rather than a regression. Document 05 is extracted today by Tesseract in
    `docker compose`, or by Textract in the AWS design.
 
+6. **The production pipeline has never carried a document end to end, and
+   the repair for that is written but not deployed.** The 3.5-LIVE seed put
+   all five fixtures into a `maxDuration` kill and persisted zero records; the
+   lease/visibility timeout, the re-derived 1800 s `maxDuration` and the
+   `limit=3` cron that answer it are implemented and covered by tests
+   (`TestKilledWorkerReclaim`, `TestLeaseInvariant`), and **none of it has run
+   on the live URL.** Re-checked 2026-08-27: production serves every `GET`,
+   its five jobs are still `running`, and its record count is still zero.
+   Three things therefore remain unproven rather than proven-and-reported —
+   that a reclaimed job completes on the platform that killed it, that 1800 s
+   is enough clock for a five-way fan-out against a free-tier allowance, and
+   what document 05's vision branch actually does (item 5). Closing this needs
+   a promotion, `scripts/mark_stranded_jobs.py` against the stranded rows, and
+   one more seed — in that order, each by a human.
+
 ### The AWS stack
 
-6. **It synthesizes and validates but was never deployed.** No template here
+7. **It synthesizes and validates but was never deployed.** No template here
    has met a real control plane.
-7. **The Lambda deploy artifact is incomplete by design.** The functions ship
+8. **The Lambda deploy artifact is incomplete by design.** The functions ship
    the real `src/` tree and the handlers are real, unit-tested code — but the
    runtime dependency layer (psycopg, pydantic, anthropic, boto3, mangum,
    aws-lambda-powertools) is a
@@ -1436,11 +1545,11 @@ Consolidated, and deliberately specific. If something is unproven, it says so.
    `app_ingest` database role the Lambdas IAM-auth into is created by a
    deploy-time migration, not by the stack, and `API_KEY` / `CRON_SECRET` are
    deploy-time provisioning.
-8. **Step Functions inter-step payloads are not offloaded.** Each document's
+9. **Step Functions inter-step payloads are not offloaded.** Each document's
    extracted grid and mapped records ride the 256 KB per-state payload quota.
    The Map Run's *aggregate* output is exported to S3; the inter-step payload
    is not. Document 03 is the one that approaches the limit.
-9. **The documented 10 MB upload cap is a per-target number, and only one
+10. **The documented 10 MB upload cap is a per-target number, and only one
    target's real ceiling is known.** The application-level cap
    (`MAX_UPLOAD_BYTES`, default 10 MB) is enforced before a byte reaches the
    pipeline, but each platform imposes its own body limit underneath it, and
@@ -1457,13 +1566,13 @@ Consolidated, and deliberately specific. If something is unproven, it says so.
    fires first, and on neither does the caller receive the app's own message.
    Uploads above a platform ceiling would need a presigned-upload ingest
    path, which is designed-for but not built.
-10. **The VPC endpoint policies are account-scoped, not action-scoped.** All
+11. **The VPC endpoint policies are account-scoped, not action-scoped.** All
    seven endpoints require `aws:PrincipalAccount` to be this account, which
    closes the cross-account exfiltration path an unrestricted S3 gateway
    endpoint otherwise opens. They deliberately do not enumerate actions: an
    over-tight endpoint policy is a deploy-time failure this project cannot
    test.
-11. **Two runtime AWS calls have no endpoint, deliberately.** The VPC has no
+12. **Two runtime AWS calls have no endpoint, deliberately.** The VPC has no
    NAT and no internet path, so every runtime AWS API call must traverse a VPC
    endpoint. All 33 enumerated calls resolve to one of the seven endpoints (S3
    gateway; interface: Secrets Manager, Textract, Bedrock runtime, CloudWatch
@@ -1476,7 +1585,7 @@ Consolidated, and deliberately specific. If something is unproven, it says so.
    | `bedrock:GetInferenceProfile` / profile-routed invocation | no endpoint, not granted | The stack pins foundation-model IDs. Adopting cross-region inference profiles would require both the IAM grant on the profile ARN and routing this VPC cannot express today. |
    | `cloudwatch:PutMetricData` | no endpoint | No code emits custom metrics. Enabling them requires the `monitoring` interface endpoint first. Note this does **not** affect the failure alarms above: those read `AWS/States` metrics the service publishes itself. |
 
-12. **One accepted IAM over-grant, stated rather than hidden.** The Lambda
+13. **One accepted IAM over-grant, stated rather than hidden.** The Lambda
    execution roles carry `AWSLambdaBasicExecutionRole` and
    `AWSLambdaVPCAccessExecutionRole`, both of which grant on `Resource "*"`.
    The ENI half genuinely cannot be narrowed (the `ec2:Describe*` calls
@@ -1492,7 +1601,7 @@ Consolidated, and deliberately specific. If something is unproven, it says so.
 
 ### The service
 
-13. **The review queue is readable over HTTP but not writable, on purpose.**
+14. **The review queue is readable over HTTP but not writable, on purpose.**
     `GET /reviews` and `GET /reviews/{id}` expose every queued item with its
     provenance and its full adjudication audit trail — including the
     below-threshold *proposals* the adjudicator stores on items that stay
@@ -1505,22 +1614,22 @@ Consolidated, and deliberately specific. If something is unproven, it says so.
     closed item without its `resolved_by` / `resolved_at` unrepresentable
     whichever route closed it. The omission is asserted by a contract test,
     not merely intended.
-14. **`GET` endpoints are unauthenticated by design**, being read-only tax
+15. **`GET` endpoints are unauthenticated by design**, being read-only tax
     data. The write path enforces `X-API-Key` with a constant-time compare,
     and per-IP rate limiting is an edge rule (WAF on AWS; a Vercel Firewall
     rule when Phase 3.5 lands), not application code.
-15. **The Textract fixture is hand-constructed.** No AWS credentials ever
+16. **The Textract fixture is hand-constructed.** No AWS credentials ever
     existed, so `fixtures/textract/05_response.json` was built from the
     documented `BLOCK` / `CELL` / `RELATIONSHIPS` shape and is labelled as
     such in the JSON itself, in its generator, and in the tests. Its content
     was transcribed from the real scanned fixture via the local OCR; the
     oracle was never opened. Deviations are recorded in the generator
     docstring.
-16. **Bedrock structured-output acceptance is unverified.** The Bedrock
+17. **Bedrock structured-output acceptance is unverified.** The Bedrock
     adapters are real and fixture-tested, but whether a live Bedrock runtime
     accepts the exact structured-output request shape is a deploy-time
     verification item. The parsers fail closed, so the failure would be loud.
-17. **The mechanical citation check validates figures, not derivations —
+18. **The mechanical citation check validates figures, not derivations —
     and cannot be made to.** Before an adjudication may auto-close a review
     item, `resolution_is_supported` requires every number the resolution
     asserts to appear in a cited cell, or to be reachable from one by a

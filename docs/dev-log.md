@@ -3170,3 +3170,130 @@ names only.
 
 The point is not process hygiene. It is that a gate is only worth something if
 the agent running it cannot also close it.
+
+---
+
+## 2026-08-27 — The stranded-job fix, written after the gate closed
+
+The 3.5-LIVE gate above ended with two named defects and an explicit refusal
+to fix either while the gate was open. It is closed; this is the repair, and
+the ordering is the point. A measurement gate whose runtime is edited
+mid-measurement produces a number about a system that no longer exists.
+
+### What was actually broken
+
+`process_job` writes `status = 'running'` when it claims a job. `sweep_pending`
+selected `WHERE status = 'queued'`. Between those two facts sits the whole
+defect: when the platform kills a worker at `maxDuration`, **no process
+survives to write a terminal state**, so the row stays `running` forever and
+the cron backstop — the component whose entire job is to make a lost
+notification harmless — cannot see it.
+
+The second-order effect is worse than the first. A `running` job reads as
+*live* to the enqueue path, so the SHA-256 natural key hands back the stranded
+job instead of creating a fresh one. The five seeded documents could not be
+re-ingested at all. The failure closed its own retry path.
+
+### Test-first, and the tests that mattered
+
+Four tests were written before the fix. Three failed against the old code —
+reclaim of an expired lease, the max-attempts ceiling, and re-upload after a
+reclaimed job reaches `failed`. The fourth,
+`test_live_worker_is_never_stolen`, **passed before and after**, which is the
+one worth keeping: it is the regression test for the dangerous direction of
+this change rather than for the change itself.
+
+### The fix, and the invariant it rests on
+
+`sweep_pending` now claims `queued` **or** `running` past its lease. That is a
+visibility timeout, and noticing what it is worth noticing: Step Functions
+hands the AWS adapter the same guarantee for free. The `JobRunner` port's
+contract — *accepted work becomes running work, and a lost notification leaves
+the job recoverable rather than lost* — was **true** of the Distributed Map
+adapter and merely **asserted** of the cron adapter. A port's contract is only
+as strong as the weakest adapter behind it, and the weakest one is always the
+one you deployed.
+
+```
+JOB_LEASE_SECONDS (default 1860)  >=  maxDuration (1800)
+```
+
+Longer only delays a rescue; shorter lets the sweep steal a live worker's job,
+map the document twice, and pay twice. `JOB_MAX_ATTEMPTS` (3) bounds the other
+end — a document that reliably kills its worker is abandoned as `failed` with
+`lease_expired_max_attempts` rather than reclaimed forever, because every
+reclaim spends model credit. No migration: `jobs` already carried `attempt`
+and `started_at`.
+
+### Two config numbers were wrong, and they were wrong together
+
+Corrected as conformance with the sizing rule already written in CLAUDE.md,
+not as new policy:
+
+- **`maxDuration` 300 → 1800.** The slowest measured single-document run is
+  346 s. 300 violated "slowest run plus margin" *before* concurrency made it
+  worse. 1800 is the verified Pro ceiling (Vercel's limits table: Hobby 300
+  max, Pro/Enterprise 800 GA and 1800 extended, `python3.12` supported).
+- **Cron `limit` 5 → 3.** `sweep_pending` processes its batch **sequentially
+  in one invocation**, so `limit` and `maxDuration` are one setting spread
+  across two files. At `limit=5` the batch needs 96% of the budget with
+  nothing left for the `429` backoff that the gate measured.
+
+Both couplings are now pinned by tests that read `vercel.json`. A coupling
+nobody checks is a coupling that drifts, and this one had already drifted once
+without anyone noticing — which is how a 300 s ceiling survived next to a
+346 s measurement.
+
+### What was deliberately *not* done
+
+- **The five stranded rows are still `running` on production.**
+  `scripts/mark_stranded_jobs.py` closes them to `failed` with an error
+  payload naming the gate. It is idempotent, targets five literal ids, and
+  touches a row only while it is still `running`. **Mark, never delete:** the
+  rows are the only evidence the work was lost. It has not been run.
+- **Nothing was deployed.** Promotion is a human action, denied to the agent
+  by `.claude/settings.json`. The live URL still runs the 300 s build.
+
+`make check`: **675 passed, 1 skipped.**
+
+---
+
+## 2026-08-27 — Documentation pass: the docs now say what the repo does
+
+A full read of the tree against every document that makes a claim about it.
+The trigger was ordinary drift — the lease fix shipped as code and tests, and
+five documents still described the world before it. Everything here is a
+correction of record, not new work:
+
+- **README.** The status block, the bottleneck section, the Vercel target
+  block and a new `Honest limitations` item now separate three states that had
+  collapsed into one word ("unfixed"): *found*, *fixed in the tree*, and
+  *running in production*. The repair is described in full — the lease, the
+  invariant, the two corrected numbers, the tests that pin them — and so is
+  the fact that **none of it has run on the live URL**. Test count 540 → 675.
+- **ADR 009** gains the amendment that matters more than its original text:
+  claimable is not the same as queued, why the AWS adapter never needed the
+  fix, and the `limit` × `maxDuration` coupling.
+- **ADR 008** said "not yet built — there is no `vercel.json`, no vision-OCR
+  adapter, and no live URL". All three exist and the URL is in production. It
+  now says that, *and* says the pipeline has not completed a document there.
+- **ADR 010** records that 3.5-LIVE was supposed to settle the vision path and
+  did not: document 05's job was killed with the rest, so neither branch has
+  been observed. The status line said "pending 3.5-LIVE"; 3.5-LIVE happened.
+- **`docs/decisions/README.md`** statuses for 008/009/010/014 were all stale,
+  three of them claiming pending implementations that had shipped.
+- **`.env.example`** now documents `JOB_LEASE_SECONDS` and `JOB_MAX_ATTEMPTS`
+  with the invariant, plus `MAX_UPLOAD_BYTES` / `MAX_PAGES`, which had never
+  been listed at all.
+
+**Verified rather than assumed, this session:** the live production URL was
+re-probed read-only — `GET /documents` 200, `GET /records` returns
+`{"items": [], "next_cursor": null}`, and each of the five stranded job ids
+still reads `status: "running", attempt: 1`. Every number quoted above comes
+from a command run today, not from the previous entry.
+
+The general lesson, since this project keeps producing them: **a document that
+described a fix as "not applied" becomes false the moment it is applied, and
+nothing fails when it does.** Code has tests; prose has a reader who may not
+notice. The nearest thing to a test here is a pass like this one, run on a
+schedule rather than on a hunch.

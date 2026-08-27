@@ -1,7 +1,8 @@
 # ADR 010 — Vision-OCR as the Vercel `TableExtractor` for scanned input
 
 **Status:** accepted; adapter **built and unit-tested**; a vision model is
-**access-probed and wired** as of 2026-08-27; end-to-end use pending 3.5-LIVE ·
+**access-probed and wired** as of 2026-08-27; **still no end-to-end run — the
+3.5-LIVE seed was meant to settle it and did not** ·
 **Date:** 2026-08-25 (addendum 2026-08-27) · **Phase:** 3.5
 
 > Document 05 is extracted by Tesseract in the docker-compose target and by the
@@ -144,3 +145,15 @@ than a hole to be reported.** The pre-registered fail-closed fallback — docume
 05 landing in the review queue with its provenance — remains the behaviour if
 extraction disappoints, which is anti-goal #8 working as designed rather than a
 regression.
+
+### The 3.5-LIVE measurement did not happen (2026-08-27)
+
+Document 05 was uploaded to production on the vision path and its job was
+killed at the function's `maxDuration` along with the other four, before any
+extraction result was written. So the sentence above still stands exactly as
+written: **nothing end-to-end has run.** Neither branch — clean vision
+extraction, or a fail-closed landing in the review queue — has been observed,
+and neither is being reported as though it had been. The measurement is
+blocked behind the same promotion as everything else in
+[ADR 009's amendment](009-cron-sweep-jobrunner.md); the vision path itself is
+not implicated in the failure, which was a clock, not a model.

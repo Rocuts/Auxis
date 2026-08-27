@@ -1,11 +1,19 @@
 # ADR 009 — A cron-sweep `JobRunner` on request-scoped compute
 
-**Status:** accepted; **implementation pending Phase 3.5 (gate open)** · **Date:** 2026-08-25 · **Phase:** 3.5
+**Status:** accepted; implemented and deployed · **Date:** 2026-08-25,
+amended 2026-08-27 · **Phase:** 3.5
 
-> The sweep itself is **built and tested** — `POST /internal/sweep`,
-> `CRON_SECRET` bearer auth, `sweep_pending()` with `FOR UPDATE SKIP LOCKED`.
-> What is pending is the `vercel.json` cron entry that calls it on the
-> deployed target.
+> The sweep is built, tested, and live: `POST /internal/sweep` with
+> `CRON_SECRET` bearer auth, `sweep_pending()` with `FOR UPDATE SKIP LOCKED`,
+> and a one-minute `vercel.json` cron calling it on the deployed target.
+>
+> **The 2026-08-27 amendment below is the important part of this ADR.** The
+> original design was wrong in a way only production could show: it claimed
+> `queued` jobs and nothing else, so a worker the platform killed took its job
+> down with it and the backstop could not see the failure it exists to cover.
+> A lease/visibility timeout fixes it. That fix is written and tested; **it has
+> not been deployed** (promotion is a human action), so the live URL still runs
+> the queued-only sweep.
 
 ## Context
 
@@ -45,6 +53,57 @@ than quietly absorbed.
   jobs sequentially up to `maxDuration`. Concurrency comes from overlapping
   sweeps rather than from a broker, which is why `SKIP LOCKED` is load-bearing
   rather than defensive.
+- **`limit` and `maxDuration` are therefore one setting in two files.**
+  Because the batch is sequential, `limit x (slowest document)` must fit
+  inside `maxDuration` with room for provider backoff. Measured, the slowest
+  document is 346 s: at `maxDuration=1800` that puts the honest ceiling at
+  three, which is what the cron now requests (`/internal/sweep?limit=3`). A
+  test reads `vercel.json` and asserts the arithmetic, because a coupling
+  spread across two files and nobody's checklist is a coupling that drifts.
+
+## Amendment, 2026-08-27 — claimable is not the same as queued
+
+**What happened.** The Phase 3.5-LIVE seed pushed five fixtures at production.
+Every upload was accepted, every job was claimed within a second, and every
+worker was then killed by the platform at the 300 s `maxDuration`. A killed
+process writes nothing, so five rows stayed `running` forever — and
+`sweep_pending` selected `WHERE status = 'queued'`, which made the cron
+backstop **blind to precisely the failure it exists to cover**. Worse, a
+`running` job reads as live to the SHA-256 idempotency key, so the five
+documents could not be re-ingested at all: the retry path was closed by the
+same row that recorded the loss.
+
+**The correction.** A job is claimable when it is `queued` **or** when it is
+`running` and its lease has expired. That is a visibility timeout, and it is
+worth noticing that the AWS adapter never needed one: Step Functions provides
+the same guarantee as a platform property. The port's contract — *accepted
+work becomes running work, and a lost notification leaves the job recoverable
+rather than lost* — was true of the Step Functions adapter and merely asserted
+of the cron adapter. The lease is what makes it true of both.
+
+**The invariant, written into the constant rather than into folklore:**
+
+```
+JOB_LEASE_SECONDS (default 1860)  >=  maxDuration (1800)
+```
+
+A longer lease only delays a rescue. A shorter one is the dangerous
+direction — the sweep reclaims a job whose worker is still alive, two workers
+map the same document, and the run is billed twice. `JOB_MAX_ATTEMPTS`
+(default 3) bounds the other end: a document that reliably kills its worker is
+abandoned as `failed` with `error.type == "lease_expired_max_attempts"` rather
+than reclaimed forever, because every reclaim spends model credit.
+
+**No migration was needed.** `jobs` already carried `attempt` and `started_at`;
+the lease is a predicate over columns that were there for this.
+
+**What is not claimed.** The lease has four tests, including one that fails if
+a live worker's job is ever stolen, and it has never run on production. The
+five stranded rows are still `running` on the live URL as of 2026-08-27;
+`scripts/mark_stranded_jobs.py` closes them to `failed` with an error payload
+naming the gate — marking, never deleting, because the rows are the evidence —
+and it has not been run either. Both wait on a promotion, which is a human
+action.
 
 ## Why `FOR UPDATE SKIP LOCKED` is the whole design
 
@@ -79,6 +138,12 @@ interface whose entire contract is "accepted work becomes running work, and a
 lost notification leaves the job recoverable rather than lost." That contract
 is what let the AWS adapter's `notify()` be written to never raise past the
 202 the client already earned.
+
+The amendment above is the contract being *audited* rather than assumed: the
+cron adapter satisfied it for a dropped kick and not for a killed worker, and
+the gap was invisible until a platform killed one. A port's contract is only
+as good as the weakest adapter behind it, and the weakest adapter is the one
+running on the target you actually deployed.
 
 If Queues becomes available, it is a fourth adapter and a `vercel.json`
 change. Nothing in the pipeline moves.
