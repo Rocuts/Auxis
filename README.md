@@ -144,13 +144,17 @@ make api                      # http://localhost:8000/docs
 Run everything the project can verify without credentials:
 
 ```bash
-make check       # ruff + mypy --strict + pytest (675 passed, 1 skipped)
+make check       # ruff + mypy --strict + pytest (689 passed, 1 skipped)
 make synth-check # cdk synth with NO AWS credentials, then cfn-lint
 make diagrams    # every README mermaid block, under two Mermaid majors
 ```
 
-`make accuracy` runs the end-to-end accuracy gate; it needs a funded
-`ANTHROPIC_API_KEY` and is the one skipped test above.
+`make accuracy` runs the end-to-end accuracy gate against real models and is
+the one skipped test above. It reads `.env` and needs a funded key on
+whichever route you configure: `SCHEMA_MAPPER_API_KEY` with
+`SCHEMA_MAPPER_BASE_URL` for the Vercel AI Gateway (what every measured run
+here used), or `ANTHROPIC_API_KEY` alone to go direct to `api.anthropic.com`.
+The gateway route is the one `.env.example` documents as shipped.
 
 The four scripts, since each answers a question the test suite cannot:
 
@@ -1200,6 +1204,39 @@ blocked until it is, since a `running` job reads as live to the SHA-256 key.
 The honest status is: *the defect is understood, the fix is tested, the
 deployment is pending a human.*
 
+### Retries are safe, not free — the last measurement of the phase
+
+The repairs above make a retry *correct*: a killed worker's job is reclaimed,
+and re-ingesting replaces rather than duplicates, which is why the live record
+count held at exactly `113` with zero duplicates through every reclaim. They do
+not make a retry *cheap*.
+
+**Measured, and it is the closing number of this phase: `~$0.09` of model spend
+with nobody watching.** A five-document concurrent burst — my own operator
+error during the re-seed, not a platform behaviour — left three jobs cycling
+through their bounded retries. Each reclaim re-ran extraction, mapping and
+verification from the top, and each one billed. The loop is bounded (`attempt`
+is capped and the job is then abandoned as `failed`) and the data never moved,
+so nothing was lost and nothing was wrong. It simply cost `~$0.09` to be
+right, silently, over roughly an hour.
+
+Three things follow, and they are the practical shape of retry economics at
+10,000 documents/day:
+
+1. **A retry ceiling is a spend ceiling.** `JOB_MAX_ATTEMPTS` is the only thing
+   standing between a poison document and an unbounded bill; it is configuration
+   for that reason, not a constant.
+2. **Idempotent-and-expensive is a real category.** Correctness at the data
+   layer says nothing about cost at the API layer, and the two need separate
+   budgets. This system has both — the record replace, and the per-role token
+   accounting — but only because the second was built for the accuracy harness
+   and happened to fit.
+3. **The cheapest retry is the one that never starts.** Reclaiming from the
+   *last completed stage* rather than from the top would have made these three
+   cycles nearly free. The pipeline does not checkpoint between extraction,
+   mapping and verification, and on this corpus that is the single largest
+   remaining efficiency left on the table.
+
 ### A cost line is a measurement with an expiry date
 
 One more live finding, smaller but transferable. `zai/glm-5.3-flash` was
@@ -1375,41 +1412,70 @@ nowhere near deploy-correct. See [`docs/audit/`](docs/audit/) for the full
 > the production alias. Pass `--target=preview` explicitly on an empty
 > project. (Hit and recorded during Phase 3.5; see the dev-log.)
 
-> **Promoted to production 2026-08-27:**
+> **Live in production since 2026-08-27:**
 > **https://auxis-johan-rocuts-projects.vercel.app**
-> — public, no SSO gate, every `GET` serving. The API works. **The pipeline
-> does not: the production seed put all five fixtures into a `maxDuration`
-> timeout and persisted zero records.** That result is measured, diagnosed,
-> and repaired-but-not-deployed, in
-> [Parallel processing and bottlenecks](#parallel-processing-and-bottlenecks);
-> it is the headline finding of this phase and it is a failure, so it is
-> reported before the things that worked.
+> — public, no SSO gate, every `GET` serving, **113 of 128 records
+> persisted with zero duplicates.**
 >
 > | Production, measured 2026-08-27 | Result |
 > |---|---|
 > | `GET` endpoints (`/records`, `/documents`, `/reviews`, filtered) | **200**, correct shapes |
+> | **Records persisted** | **113 / 128**, **0 duplicates**, all `active` |
+> | — by document | `01` 32/32 · `02` 8/8 · `03` 51/51 · `04` 19/18 · `05` **3/19** |
+> | Open review-queue items | **37** — every value the pipeline would not guess |
 > | Warm latency, data path, median of 3 | **272 ms** (`/documents` 278 ms, `/records/resolve` 283 ms) |
+> | True first click, cold function **+ Neon resume** | **6.76 s** — *measured on preview*, see below |
 > | `POST /documents`, no key / wrong key | **401 / 401** |
 > | `POST /internal/sweep`, no bearer / wrong bearer / cron bearer | **401 / 401 / 200** |
-> | Five-fixture seed: uploads accepted | **5 × 202**, distinct jobs, `duplicate=false` |
-> | Five-fixture seed: **records persisted** | **0 of 128 — all five jobs killed at `maxDuration`** |
-> | Model spend for the killed seed | **`$0.0222`** of the free allowance |
-> | Total project spend to date | **`$0.5205`** of a `$5.00` allowance |
+> | **Total project spend, all six gate runs and every live seed** | **`$0.71`** of a `$5.00` free allowance |
 >
-> **Re-verified 2026-08-27, after the fix was committed:** the deployment
-> above still predates it. All five seeded jobs read `running` at `attempt = 1`
-> on `GET /jobs/{id}`, and `GET /records` returns an empty page. The lease, the
-> 1800 s `maxDuration` and the `limit=3` cron live in this tree and in its
-> tests; they do not yet live on the URL. Deploying them is a promotion, and a
-> promotion is a human action ([Human-in-the-loop operations, by
-> design](#human-in-the-loop-operations-by-design)).
+> **Copy-paste the headline query.** It proves the range index and the
+> bracket-integrity constraint deliver something real, over the live URL:
+>
+> ```bash
+> curl -s "https://auxis-johan-rocuts-projects.vercel.app/records/resolve\
+> ?amount=150000&filing_status=single&taxpayer_class=individual&tax_year=2026"
+> # -> the 106151-202650 bracket at 0.24, active, with its page and table
+> ```
+>
+> Two honest caveats on that table. **Document 05 is 3 of 19** — the scanned
+> one, on Vercel's vision path, against 19/19 on the local Tesseract path; it
+> is a measured [per-target limitation](#cost), fail-visible via 13 of those
+> 37 review items. And **document 04 is 19 against an expected 18**: a sixth
+> `surtax_threshold` with a null `filing_status`, which the model declined to
+> emit at the gates and emitted here — the same stochasticity ADR 014
+> measured, admitted legitimately by the natural key rather than smuggled past
+> it. Both are dissected in [`docs/dev-log.md`](docs/dev-log.md).
+>
+> ### What deploying for real taught the system
+>
+> Everything above works because three defects were found **on the live URL
+> and nowhere else** — not by the 689-test suite, not by the six gate runs,
+> not by the adversarial audit. Each was fixed test-first, after the gate that
+> found it had closed:
+>
+> | Defect | How it showed up | Fix |
+> |---|---|---|
+> | **A killed worker stranded its job forever** | The platform killed a worker at `maxDuration`; nothing rewrote the row, and the cron sweep claimed only `queued`, so it was blind to exactly the failure it exists to cover. Five jobs sat in `running` permanently. | Lease / visibility timeout, the semantics Step Functions gives the AWS target for free |
+> | **A retry duplicated records** | 60 rows for a 32-record document. The natural-key upsert assumes a *deterministic* producer; [ADR 014 §8](docs/decisions/014-semantic-layer-model-selection.md) measured that ours is not, and two runs wrote two valid keys for one bracket. | Re-ingest became a document-scoped atomic **replace** — idempotence moved to the level that owns the invariant |
+> | **Adjudication outran its own budget** | The wall-clock check sat *between* items while one call could spend `300 s × 4` SDK attempts. One document overran a 1800 s invocation three times with its records already correct. | Per-item ceiling bounded to `90 s × 2`, so the budget actually binds |
+>
+> None of these are exotic. They are the ordinary failure modes of
+> request-scoped compute meeting a nondeterministic producer, and the useful
+> observation is that **a green test suite and a passing accuracy gate proved
+> neither of them.** The second one is the most interesting: it is a *data
+> integrity* consequence of a *model behaviour* finding, and the two were
+> measured six weeks and three phases apart.
+>
+> The repairs landed **after** each gate closed, never during — a measurement
+> gate whose subject is edited mid-measurement is not a measurement.
 >
 > **The cold chain is no longer observable on production, by construction.**
 > `vercel.json` registers a one-minute cron on `/internal/sweep`; that request
 > touches the jobs table every 60 s, so Neon never reaches its 5-minute
 > autosuspend and the function never goes cold. An evaluator's first click is
 > therefore always a warm click — good for a demo URL, and the reason the
-> cold-chain numbers below come from the **preview**, which has no cron.
+> cold-chain number above comes from the **preview**, which has no cron.
 > Preview and production share one Neon database, so the resume cost measured
 > there is the same resume cost production would pay if its cron were removed.
 >
