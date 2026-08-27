@@ -36,6 +36,7 @@ The semantic-layer amendment (ADR 012) adds two bounded roles:
 
 from __future__ import annotations
 
+import time
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from decimal import Decimal
@@ -89,10 +90,16 @@ class AdjudicationOutcome:
     still open. ``error``: the adjudication
     call failed, or the write found the item no longer open (a human or a
     concurrent run got there first); this pass left the item untouched.
+    ``deadline_exceeded``: the pass ran out of its wall-clock budget before
+    reaching this item. The item is untouched and still open, which is the
+    documented fallback (an item the adjudicator cannot settle waits for a
+    human) — but it is REPORTED rather than silently skipped, because a
+    queue item that quietly vanished from the report would be exactly the
+    invisible loss anti-goal #8 forbids.
     """
 
     item_id: UUID
-    disposition: Literal["auto_resolved", "proposal_stored", "error"]
+    disposition: Literal["auto_resolved", "proposal_stored", "error", "deadline_exceeded"]
     adjudication: Adjudication | None
     error: str | None = None
     #: Spend the failed call still incurred (a paid-for truncated or
@@ -233,9 +240,41 @@ def adjudicate_open_items(
     document_id: UUID,
     extracted: ExtractedDocument,
     threshold: Decimal,
+    budget_seconds: float | None = None,
 ) -> list[AdjudicationOutcome]:
+    """Adjudicate this document's open queue items, within a wall-clock budget.
+
+    **Why there is a budget at all.** This pass runs after records are already
+    persisted, and it is optional by design: an item it cannot settle waits
+    for a human. But its cost is unbounded in TIME — one call may spend the
+    adapter's request timeout, and the SDK retries it — so on request-scoped
+    compute a slow queue can consume the whole function budget and the job
+    never reaches a terminal state at all. Measured on production 2026-08-27:
+    document 01 persisted its records at ~360 s and then spent the rest of a
+    1800 s invocation in adjudication without finishing, twice.
+
+    Trading a *resolved queue item* for a *finished job* is the right trade
+    every time: the item was always allowed to wait for a human, whereas an
+    unfinished job loses the whole run's bookkeeping.
+    """
     outcomes: list[AdjudicationOutcome] = []
-    for item in repository.list_open_reviews(document_id):
+    started = time.monotonic()
+    items = repository.list_open_reviews(document_id)
+    for index, item in enumerate(items):
+        if budget_seconds is not None and time.monotonic() - started >= budget_seconds:
+            outcomes.extend(
+                AdjudicationOutcome(
+                    item_id=remaining.id,
+                    disposition="deadline_exceeded",
+                    adjudication=None,
+                    error=(
+                        f"adjudication budget of {budget_seconds:.0f}s exhausted before "
+                        f"this item; {len(items) - index} item(s) left open for a human"
+                    ),
+                )
+                for remaining in items[index:]
+            )
+            break
         try:
             adjudication = adjudicator.adjudicate(item, extracted)
         except Exception as exc:
@@ -308,6 +347,7 @@ def run_document(
     adjudicator: Adjudicator | None = None,
     confidence_floor: Decimal = DEFAULT_CONFIDENCE_FLOOR,
     auto_resolve_threshold: Decimal = DEFAULT_AUTO_RESOLVE_THRESHOLD,
+    adjudication_budget_seconds: float | None = None,
 ) -> PipelineResult:
     extracted = router.extract(pdf_bytes, filename=filename)
     mapping = mapper.map_document(extracted)
@@ -376,7 +416,12 @@ def run_document(
     adjudications: list[AdjudicationOutcome] = []
     if adjudicator is not None:
         adjudications = adjudicate_open_items(
-            repository, adjudicator, handle.id, extracted, auto_resolve_threshold
+            repository,
+            adjudicator,
+            handle.id,
+            extracted,
+            auto_resolve_threshold,
+            budget_seconds=adjudication_budget_seconds,
         )
 
     return PipelineResult(

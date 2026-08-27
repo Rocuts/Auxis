@@ -1,7 +1,10 @@
 CREATE TABLE documents (
     id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     -- SHA-256 of the raw bytes is the document's natural key: re-uploading
-    -- the same PDF is a no-op (idempotency level 1 of 2).
+    -- the same PDF is a no-op (idempotency level 1 of 2). Level 2 moved on
+    -- 2026-08-27 from the records natural key to a document-scoped replace;
+    -- see the annotation in 0003_records.sql. This level is unaffected: the
+    -- bytes hash deterministically, unlike anything a model produces.
     sha256       text NOT NULL UNIQUE CHECK (sha256 ~ '^[0-9a-f]{64}$'),
     filename     text NOT NULL,
     content_type text NOT NULL DEFAULT 'application/pdf',

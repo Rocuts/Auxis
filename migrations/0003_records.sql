@@ -82,6 +82,31 @@ CREATE TABLE records (
     -- Idempotency level 2 of 2: re-ingesting a document upserts on this
     -- natural key instead of duplicating records. NULLS NOT DISTINCT makes
     -- two NULLs equal, so scalar records (bracket IS NULL) collide correctly.
+    --
+    -- ANNOTATION 2026-08-27 (gate 3.5-LIVE). The sentence above is true of
+    -- the CONSTRAINT and false as a description of the SYSTEM, and the
+    -- difference cost a production run. An upsert deduplicates a re-ingest
+    -- only while the producer emits the SAME natural key each time. Ours
+    -- does not: ADR 014 section 8 measured the mapper varying convention
+    -- fields between runs, and taxpayer_class -- a key column right here --
+    -- came back NULL on one run of document 01 and 'individual' on the next.
+    -- Two distinct keys for one real bracket, so nothing collided, nothing
+    -- was refused, and the document ended with 60 rows where 32 are right.
+    --
+    -- The failure mode was already known here in one place and missed in
+    -- another: adapters/anthropic_mapper.py closed attribute_key to a fixed
+    -- vocabulary precisely because a free-form slug "drifted between runs of
+    -- the same document ... which breaks natural-key matching and idempotency
+    -- alike". taxpayer_class carried the identical exposure and no such
+    -- guard. Closing a vocabulary per field does not generalise.
+    --
+    -- Idempotence therefore no longer rests on this key alone. It is
+    -- enforced where the invariant actually lives -- one document, one record
+    -- set -- by a document-scoped delete-then-insert in ONE transaction
+    -- (adapters/postgres.py, PostgresRecordRepository.ingest). This
+    -- constraint keeps its other jobs: cross-document conflict detection and
+    -- the shape of the chain. It is simply no longer the thing standing
+    -- between a retry and duplicated data.
     CONSTRAINT records_natural_key UNIQUE NULLS NOT DISTINCT (
         jurisdiction, record_type, attribute_key, tax_year,
         filing_status, taxpayer_class, lifecycle_status, bracket

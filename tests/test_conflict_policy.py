@@ -1,7 +1,12 @@
 """Conflict policy and order-independence, via the repository adapter.
 
-Policy under test (decided at DDL review):
-- same document re-ingested -> upsert (idempotent, updated_at moves)
+Policy under test (decided at DDL review; first bullet amended 2026-08-27):
+- same document re-ingested -> the document's record set is REPLACED, in one
+  transaction. This bullet used to read "upsert (idempotent, updated_at
+  moves)", which assumed the producer emits the same natural key each run.
+  ADR 014 §8 measured that ours does not, and production duplicated 28 of
+  document 01's brackets on a single retry. Idempotence now belongs to the
+  document, not to a row key the mapper can vary.
 - same natural key from a DIFFERENT document -> review queue, never a silent
   overwrite
 - lifecycle_status comes from document content, so ingesting document sets in
@@ -90,11 +95,20 @@ def test_same_document_reingest_upserts(db: psycopg.Connection) -> None:
     assert outcome1.persisted == 1 and outcome2.persisted == 1
     assert outcome2.cross_document_conflicts == 0
 
-    row = db.execute("SELECT amount, updated_at > created_at FROM records").fetchall()
+    row = db.execute("SELECT amount FROM records").fetchall()
     assert len(row) == 1
-    amount, was_updated = row[0]
-    assert amount == Decimal("15500.00")  # refreshed, not duplicated
-    assert was_updated is True
+    assert row[0][0] == Decimal("15500.00")  # refreshed, not duplicated
+
+    # This assertion changed on 2026-08-27 and the reason is worth keeping.
+    # It used to read `updated_at > created_at`, pinning re-ingest as a
+    # row-level UPSERT. Re-ingest is now a document-scoped REPLACE, so the
+    # surviving row is a new row and its timestamps are equal. The observable
+    # contract this test exists for — one document, one record set, latest
+    # values win, nothing duplicated — is unchanged and still asserted above.
+    # Only the mechanism moved, because the upsert relied on the mapper
+    # emitting the same natural key twice and it does not (ADR 014 §8).
+    fresh = db.execute("SELECT updated_at = created_at FROM records").fetchone()
+    assert fresh is not None and fresh[0] is True
 
     review = db.execute("SELECT count(*) FROM review_queue").fetchone()
     assert review is not None and review[0] == 0

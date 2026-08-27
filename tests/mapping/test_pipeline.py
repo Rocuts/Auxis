@@ -533,6 +533,11 @@ class _MemoryRepository:
         return DocumentHandle(id=self.document_id, created=True)
 
     def ingest(self, document_id: UUID, records: Sequence[CanonicalRecord]) -> IngestOutcome:
+        # The port contract is REPLACE, not merge: this document's previous
+        # set goes before the new one lands. The fake honours it so it cannot
+        # quietly diverge from the real adapter (this fake holds one
+        # document, so clearing `stored` is the faithful analogue).
+        self.stored.clear()
         persisted = 0
         refused = 0
         for record in records:
@@ -898,3 +903,78 @@ class TestAdjudicatorContainment:
         )
         assert outcome.disposition == "error"
         assert outcome.error_cost == spent
+
+
+class TestAdjudicationBudget:
+    """The adjudication pass is bounded in wall clock.
+
+    Production, 2026-08-27: document 01 persisted its records at ~360 s and
+    then spent the rest of a 1800 s invocation in adjudication without
+    terminating — twice. The pass is optional by design (an item it cannot
+    settle waits for a human), so an unbounded one trades a *finished job*
+    for a *resolved queue item*, which is the wrong way round.
+    """
+
+    @staticmethod
+    def _repo_with(n_items: int) -> tuple[_MemoryRepository, UUID]:
+        repository = _MemoryRepository()
+        handle = repository.register_document(sha256="ef" * 32, filename="x.pdf", byte_size=1)
+        repository.queue_review(
+            handle.id,
+            [
+                {"reason": f"mapping: cell {i}", "source_page": 1, "raw_value": "?"}
+                for i in range(n_items)
+            ],
+        )
+        return repository, handle.id
+
+    def test_exhausted_budget_stops_the_pass(self) -> None:
+        from tax_tables.pipeline import adjudicate_open_items
+
+        repository, document_id = self._repo_with(3)
+        outcomes = adjudicate_open_items(
+            repository,
+            _ConfidentAdjudicator(),
+            document_id,
+            _stamped_scan_extracted(),
+            Decimal("0.9"),
+            budget_seconds=0,  # already exhausted on entry
+        )
+        assert [o.disposition for o in outcomes] == ["deadline_exceeded"] * 3
+
+    def test_skipped_items_are_reported_not_dropped(self) -> None:
+        """Anti-goal #8: an item the pass did not reach must still appear in
+        the report, with a reason. A queue item that silently vanished from
+        the run's output is invisible loss."""
+        from tax_tables.pipeline import adjudicate_open_items
+
+        repository, document_id = self._repo_with(2)
+        outcomes = adjudicate_open_items(
+            repository,
+            _ConfidentAdjudicator(),
+            document_id,
+            _stamped_scan_extracted(),
+            Decimal("0.9"),
+            budget_seconds=0,
+        )
+        assert len(outcomes) == 2
+        for outcome in outcomes:
+            assert outcome.error is not None
+            assert "budget" in outcome.error
+        # Untouched: every item is still open and waiting for its human.
+        assert all(status == "open" for status in repository.status.values())
+
+    def test_no_budget_means_every_item_is_adjudicated(self) -> None:
+        """The budget is opt-in; omitting it preserves the previous
+        behaviour exactly, so local and harness runs are unaffected."""
+        from tax_tables.pipeline import adjudicate_open_items
+
+        repository, document_id = self._repo_with(2)
+        outcomes = adjudicate_open_items(
+            repository,
+            _ConfidentAdjudicator(),
+            document_id,
+            _stamped_scan_extracted(),
+            Decimal("0.9"),
+        )
+        assert [o.disposition for o in outcomes] == ["proposal_stored"] * 2

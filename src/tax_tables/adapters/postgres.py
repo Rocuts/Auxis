@@ -91,6 +91,23 @@ VALUES (%(document_id)s, %(source_page)s, %(table_id)s, %(raw_value)s, %(reason)
 #: scalar record would read as absent and its queue row would never close.
 #: The bracket is rebuilt exactly as _INSERT_RECORD builds it, inclusive on
 #: both ends, so an open top (upper NULL) matches an open top.
+#: Idempotence is document-scoped: a re-ingest replaces this document's set
+#: rather than trusting a row-level key whose columns a stochastic mapper is
+#: free to vary between runs. See PostgresRecordRepository.ingest.
+_DELETE_DOCUMENT_RECORDS = """
+    DELETE FROM records WHERE document_id = %(document_id)s
+"""
+
+#: Only the superseded run's untouched work items. A row that carries a
+#: resolution or a stored adjudicator proposal, or that a human already
+#: resolved or dismissed, is audit history — it is never deleted.
+_DELETE_DOCUMENT_OPEN_REVIEWS = """
+    DELETE FROM review_queue
+    WHERE document_id = %(document_id)s
+      AND status = 'open'
+      AND resolution IS NULL
+"""
+
 _SELECT_RECORD_PRESENT = """
 SELECT 1 FROM records
 WHERE document_id = %(document_id)s
@@ -185,10 +202,37 @@ class PostgresRecordRepository:
             return DocumentHandle(id=existing[0], created=False)
 
     def ingest(self, document_id: UUID, records: Sequence[CanonicalRecord]) -> IngestOutcome:
+        """Replace this document's records with ``records``, atomically.
+
+        **Why a delete and not only an upsert.** The natural key upsert makes
+        a re-ingest idempotent *for a deterministic producer*. Ours is not one
+        (ADR 014 §8): the mapper varies convention fields like
+        ``taxpayer_class`` between runs, and two runs of one document then
+        write two genuinely distinct natural keys for the same real bracket.
+        Nothing collides, nothing is refused, and the document quietly holds
+        both. Production did exactly this on 2026-08-27 — 60 rows for a
+        32-record document after one lease reclaim.
+
+        So idempotence is enforced at the level that actually owns the
+        invariant: **one document, one record set.** The delete and the
+        inserts share a single transaction, because a worker killed between
+        them would leave the document with no records at all — duplicated
+        data traded for lost data, which is the worse failure (anti-goal #8).
+
+        Scope is exactly this ``document_id``. Cross-document supersession and
+        the cross-document natural-key conflict policy are a different
+        mechanism and are untouched.
+        """
         persisted = 0
         conflicts = 0
         overlaps = 0
         with self._conn.transaction():
+            self._conn.execute(_DELETE_DOCUMENT_RECORDS, {"document_id": document_id})
+            # Open, un-adjudicated review items for this document belong to
+            # the superseded run and would accumulate in the same way. Rows
+            # carrying a resolution, a stored proposal, or a terminal status
+            # are audit history and are never deleted.
+            self._conn.execute(_DELETE_DOCUMENT_OPEN_REVIEWS, {"document_id": document_id})
             for record in records:
                 params = _record_params(document_id, record)
                 try:

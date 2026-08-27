@@ -232,6 +232,9 @@ def process_job(
                     verifier=AnthropicRecordVerifier(VerifierConfig.from_env(source)),
                     repository=repository,
                     adjudicator=AnthropicAdjudicator(AdjudicatorConfig.from_env(source)),
+                    adjudication_budget_seconds=_float_setting(
+                        source, "ADJUDICATION_BUDGET_SECONDS", DEFAULT_ADJUDICATION_BUDGET_SECONDS
+                    ),
                 )
             except (MapperError, VerifierError) as exc:
                 return finish("failed", error=_safe_error("semantic_layer_failed", exc))
@@ -262,6 +265,30 @@ DEFAULT_LEASE_SECONDS = 1860
 #: Without a ceiling, a document that reliably kills its worker is reclaimed
 #: forever and every reclaim spends model credit.
 DEFAULT_MAX_ATTEMPTS = 3
+
+
+#: Wall-clock ceiling on the post-persistence adjudication pass.
+#:
+#: Adjudication is optional by design — an item it cannot settle waits for a
+#: human — but its duration is unbounded: one call can spend the adapter's
+#: request timeout and the SDK retries it. On request-scoped compute that lets
+#: a slow queue eat the whole function budget so the job never finishes,
+#: which is strictly worse than leaving a queue item for its human. Measured
+#: on production 2026-08-27: document 01 persisted at ~360 s and then spent
+#: the remainder of a 1800 s invocation adjudicating, twice, terminating
+#: neither time.
+DEFAULT_ADJUDICATION_BUDGET_SECONDS = 420.0
+
+
+def _float_setting(source: Mapping[str, str], name: str, default: float) -> float:
+    raw = source.get(name)
+    if not raw:
+        return default
+    try:
+        value = float(raw)
+    except ValueError:
+        return default
+    return value if value > 0 else default
 
 
 def _int_setting(source: Mapping[str, str], name: str, default: int) -> int:

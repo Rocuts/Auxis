@@ -48,7 +48,27 @@ class RecordRepository(Protocol):
         source_kind: str | None = None,
     ) -> DocumentHandle: ...
 
-    def ingest(self, document_id: UUID, records: Sequence[CanonicalRecord]) -> IngestOutcome: ...
+    def ingest(self, document_id: UUID, records: Sequence[CanonicalRecord]) -> IngestOutcome:
+        """Make ``records`` this document's complete record set.
+
+        **Replace, not merge.** After a successful call the document holds
+        exactly ``records`` — anything a previous run left behind is gone,
+        and the whole thing is atomic so a killed worker never leaves a
+        half-written document.
+
+        This is a port-level contract, not a Postgres detail, and it is
+        stated because the obvious implementation is wrong. Deduplicating a
+        re-ingest by row-level key only works if the producer is
+        deterministic; the mapper is not (ADR 014 section 8), so two runs of
+        one document can emit two different keys for the same fact and both
+        survive. Any adapter that merges instead of replacing will duplicate
+        data on every retry.
+
+        Records refused by the target's own integrity rules (bracket overlap,
+        a natural key held by another document) are reported in the outcome
+        and routed to review — never dropped silently (anti-goal #8).
+        """
+        ...
 
     def record_present(self, document_id: UUID, record: CanonicalRecord) -> bool:
         """Is this exact record in the fact table, under THIS document?
