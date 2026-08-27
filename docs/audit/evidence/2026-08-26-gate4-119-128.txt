@@ -1,0 +1,289 @@
+uv run --env-file .env pytest -p tax_tables.observability.pytest_plugin \
+		tests/accuracy/test_harness.py::test_end_to_end_accuracy -s -v
+============================= test session starts ==============================
+platform darwin -- Python 3.12.13, pytest-9.1.1, pluggy-1.6.0
+rootdir: /Users/rocuts/Documents/GitHub/Auxis
+configfile: pyproject.toml
+plugins: anyio-4.14.2, typeguard-2.13.3
+collected 1 item
+
+tests/accuracy/test_harness.py 
+01_federal_income_tax_rate_schedules_TY2026.pdf: 1 verifier dispute(s):
+  record 19: cell p1_t0 r6,c4 reads '$202,651 – $257,250', so upper_bound must be 257250, not 257300 as claimed
+
+02_standard_deduction_schedule_TY2026.pdf: 2 mapping issue(s):
+  p1 None: Stacking rule — the additional standard deduction is allowed once for age 65 and once for blindness (twice the stated amount when both conditions are met) — has no slot in the closed attribute dictionary for additional_standard_deduction. Surfaced here rather than force-fit onto an invented key.
+  p1 None: Indexing statement — 'Amounts in Section 3 are indexed and are restated each year in the annual inflation adjustment bulletin' — has no matching record type or listed attribute key in the closed dictionary; recorded as an issue for visibility.
+
+03_state_local_sales_tax_rates_2026.pdf: 2 mapping issue(s):
+  p1 p1_t0: Data column 'Rank' (header row 0, values in rows 1-27: 5, 47, 12, 3, 8, 16, 33, 48, 38, 24, 19, 46, 37, 7, 25, 29, 9, 39, 1, 44, 40, 35, 41, 15, 22, 11, 49). The closed sales_tax_rate extra-attribute dictionary contains no key for a ranking value, so these 27 cells cannot be emitted as attrs without inventing a key; they are accounted for here instead of being silently dropped.
+  p1 p2_t0: Data column 'Rank' (header row 0, values in rows 1-24: 28, 13, 50, 30, 17, 10, 27, 23, 21, 6, 51, 34, 26, 18, 36, 2, 14, 20, 32, 42, 4, 31, 43, 45). The closed sales_tax_rate extra-attribute dictionary contains no key for a ranking value, so these 24 cells cannot be emitted as attrs without inventing a key; they are accounted for here instead of being silently dropped.
+
+04_employment_tax_rates_and_thresholds_2026.pdf: 3 mapping issue(s):
+  p1 None: Prose states employers must begin Additional Medicare Tax withholding in the pay period in which cumulative calendar-year wages exceed $200,000, without regard to filing status or wages paid by other employers. No record type or closed-dictionary extra attr captures this employer-withholding-duty fact; it is partially reflected by the $200,000 single/head_of_household surtax_threshold records but the filing-status-independent employer trigger itself has no canonical slot.
+  p1 None: Prose qualifies all Table 4 withholding allowances as applying only to employees whose most recent withholding certificate was filed prior to 2020. The closed extra-attr dictionary for withholding_allowance (payroll_period, periods_per_year, allowance) provides no key for this applicability restriction; flagged rather than carried under an invented key.
+  p1 None: Prior-year FUTA effective rate (2025 column, 0.60%) is carried as extra attr 'prior_year_rate' per the mandatory two-tax-years-in-one-row rule, but that key is not among the listed employment_tax_rate extra attrs; retained to avoid dropping the comparison column.
+
+04_employment_tax_rates_and_thresholds_2026.pdf: 8 verifier dispute(s):
+  record 3: prose index 4 states the Additional Medicare Tax applies to wages in excess of the threshold, but the record cites p1_t1 row 1 (Married filing jointly) which prints '$250,000', meaning the threshold is $250,000, not 'in excess of' it; the prose does not state the threshold amount, only the tax application
+  record 4: prose index 4 states the Additional Medicare Tax applies to wages in excess of the threshold, but the record cites p1_t1 row 2 (Married filing separately) which prints '$125,000', meaning the threshold is $125,000, not 'in excess of' it; the prose does not state the threshold amount
+  record 5: prose index 4 states the Additional Medicare Tax applies to wages in excess of the threshold, but the record cites p1_t1 row 3 (Single) which prints '$200,000', meaning the threshold is $200,000, not 'in excess of' it; the prose does not state the threshold amount
+  record 6: prose index 4 states the Additional Medicare Tax applies to wages in excess of the threshold, but the record cites p1_t1 row 4 (Head of household) which prints '$200,000', meaning the threshold is $200,000, not 'in excess of' it; the prose does not state the threshold amount
+  record 7: prose index 4 states the Additional Medicare Tax applies to wages in excess of the threshold, but the record cites p1_t1 row 5 (Qualifying surviving spouse) which prints '$200,000', meaning the threshold is $200,000, not 'in excess of' it; the prose does not state the threshold amount
+  record 13: cell p1_t3 r2,c2 reads '$192.30', but the record claims amount 192.3 and allowance 192.3, losing the trailing zero which is significant for currency precision
+  record 16: cell p1_t3 r5,c2 reads '$1,250.00', but the record claims amount 1250.0 and allowance 1250.0, losing the cents precision
+  record 17: cell p1_t3 r6,c2 reads '$5,000.00', but the record claims amount 5000.0 and allowance 5000.0, losing the cents precision
+
+05_capital_gains_preferential_rates_TY2025.pdf: 2 mapping issue(s):
+  p1 p1_t0: Extraction cell confidence flagged at 0.60 (all neighboring cells >= 0.94). Cell was read as '$0 to $48,350' for Single 0% band and mapped accordingly; interpretation is corroborated by internal consistency (the 15% Single band directly below begins at $48,351, and Married Filing Separately shows the identical '$0 to $48,350' band at 0.96 confidence). Record emitted with lowered confidence 0.8 rather than raising an unreadability block.
+  p1 p1_t1: Maximum-rate cell for 'Short-term capital gain' prints 'Ordinary rates', a cross-reference to another schedule rather than a figure. Per schema it is encoded as null in both the rate slot and max_rate attr, not converted to a number.
+
+accuracy by document
+document                                         exp   ok  diff  miss  extra  disagree
+--------------------------------------------------------------------------------------
+01_federal_income_tax_rate_schedules_TY2026.pdf   32   32     0     0      0         1
+02_standard_deduction_schedule_TY2026.pdf          8    8     0     0      0         0
+03_state_local_sales_tax_rates_2026.pdf           51   51     0     0      0         0
+04_employment_tax_rates_and_thresholds_2026.pdf   18    9     9     0      0         8
+05_capital_gains_preferential_rates_TY2025.pdf    19   19     0     0      0         0
+TOTAL                                            128  119     9     0      0         9
+
+field-level accuracy: 119/128
+fields compared: 1614, differing: 11
+
+failing records (9):
+  [field mismatch] 04_employment_tax_rates_and_thresholds_2026.pdf | wage_base | US-FED | 2026 | - | - | social_security_wage_base | -
+      unlimited: expected False, actual <absent>
+  [field mismatch] 04_employment_tax_rates_and_thresholds_2026.pdf | wage_base | US-FED | 2026 | - | - | medicare_wage_base | -
+      prior_year_amount: expected null, actual <absent>
+  [field mismatch] 04_employment_tax_rates_and_thresholds_2026.pdf | wage_base | US-FED | 2026 | - | - | futa_wage_base | -
+      unlimited: expected False, actual <absent>
+  [field mismatch] 04_employment_tax_rates_and_thresholds_2026.pdf | employment_tax_rate | US-FED | 2026 | - | - | futa_effective | -
+      employee_rate: expected null, actual <absent>
+      employer_rate: expected 0.006, actual <absent>
+      self_employed_rate: expected null, actual <absent>
+  [field mismatch] 04_employment_tax_rates_and_thresholds_2026.pdf | surtax_threshold | US-FED | 2026 | married_filing_jointly | - | additional_medicare | -
+      threshold: expected 250000, actual <absent>
+  [field mismatch] 04_employment_tax_rates_and_thresholds_2026.pdf | surtax_threshold | US-FED | 2026 | married_filing_separately | - | additional_medicare | -
+      threshold: expected 125000, actual <absent>
+  [field mismatch] 04_employment_tax_rates_and_thresholds_2026.pdf | surtax_threshold | US-FED | 2026 | single | - | additional_medicare | -
+      threshold: expected 200000, actual <absent>
+  [field mismatch] 04_employment_tax_rates_and_thresholds_2026.pdf | surtax_threshold | US-FED | 2026 | head_of_household | - | additional_medicare | -
+      threshold: expected 200000, actual <absent>
+  [field mismatch] 04_employment_tax_rates_and_thresholds_2026.pdf | surtax_threshold | US-FED | 2026 | qualifying_surviving_spouse | - | additional_medicare | -
+      threshold: expected 200000, actual <absent>
+
+accuracy by record_type
+group                          exp   ok  diff  miss  extra
+----------------------------------------------------------
+additional_standard_deduction    2    2     0     0      0
+dependent_deduction_rule         1    1     0     0      0
+employment_tax_rate              4    3     1     0      0
+ordinary_income_bracket         32   32     0     0      0
+preferential_gain_bracket       12   12     0     0      0
+sales_tax_rate                  51   51     0     0      0
+special_gain_rate                3    3     0     0      0
+standard_deduction               5    5     0     0      0
+surtax_threshold                 9    4     5     0      0
+wage_base                        3    0     3     0      0
+withholding_allowance            6    6     0     0      0
+TOTAL                          128  119     9     0      0
+
+field-level accuracy: 119/128
+fields compared: 1614, differing: 11
+
+failing records (9):
+  [field mismatch] 04_employment_tax_rates_and_thresholds_2026.pdf | wage_base | US-FED | 2026 | - | - | social_security_wage_base | -
+      unlimited: expected False, actual <absent>
+  [field mismatch] 04_employment_tax_rates_and_thresholds_2026.pdf | wage_base | US-FED | 2026 | - | - | medicare_wage_base | -
+      prior_year_amount: expected null, actual <absent>
+  [field mismatch] 04_employment_tax_rates_and_thresholds_2026.pdf | wage_base | US-FED | 2026 | - | - | futa_wage_base | -
+      unlimited: expected False, actual <absent>
+  [field mismatch] 04_employment_tax_rates_and_thresholds_2026.pdf | employment_tax_rate | US-FED | 2026 | - | - | futa_effective | -
+      employee_rate: expected null, actual <absent>
+      employer_rate: expected 0.006, actual <absent>
+      self_employed_rate: expected null, actual <absent>
+  [field mismatch] 04_employment_tax_rates_and_thresholds_2026.pdf | surtax_threshold | US-FED | 2026 | married_filing_jointly | - | additional_medicare | -
+      threshold: expected 250000, actual <absent>
+  [field mismatch] 04_employment_tax_rates_and_thresholds_2026.pdf | surtax_threshold | US-FED | 2026 | married_filing_separately | - | additional_medicare | -
+      threshold: expected 125000, actual <absent>
+  [field mismatch] 04_employment_tax_rates_and_thresholds_2026.pdf | surtax_threshold | US-FED | 2026 | single | - | additional_medicare | -
+      threshold: expected 200000, actual <absent>
+  [field mismatch] 04_employment_tax_rates_and_thresholds_2026.pdf | surtax_threshold | US-FED | 2026 | head_of_household | - | additional_medicare | -
+      threshold: expected 200000, actual <absent>
+  [field mismatch] 04_employment_tax_rates_and_thresholds_2026.pdf | surtax_threshold | US-FED | 2026 | qualifying_surviving_spouse | - | additional_medicare | -
+      threshold: expected 200000, actual <absent>
+
+semantic-layer cost by document and role
+document                                         role      engine               tok_in  tok_out  cache_w  cache_r  usd     wall_s
+-----------------------------------------------  --------  -------------------  ------  -------  -------  -------  ------  ------
+01_federal_income_tax_rate_schedules_TY2026.pdf  mapper    zai/glm-5.3-flash    5809    14186    0        0        0.0040  220.2
+01_federal_income_tax_rate_schedules_TY2026.pdf  verifier  alibaba/qwen-3-235b  15970   722      0        4        0.0041  10.8
+02_standard_deduction_schedule_TY2026.pdf        mapper    zai/glm-5.3-flash    5600    10182    0        0        0.0030  174.0
+02_standard_deduction_schedule_TY2026.pdf        verifier  alibaba/qwen-3-235b  8826    168      0        0        0.0021  11.0
+03_state_local_sales_tax_rates_2026.pdf          mapper    zai/glm-5.3-flash    7009    34195    0        0        0.0091  473.2
+03_state_local_sales_tax_rates_2026.pdf          verifier  alibaba/qwen-3-235b  29686   1069     0        0        0.0075  715.6
+04_employment_tax_rates_and_thresholds_2026.pdf  mapper    zai/glm-5.3-flash    5873    11025    0        0        0.0032  154.8
+04_employment_tax_rates_and_thresholds_2026.pdf  verifier  alibaba/qwen-3-235b  11933   905      0        0        0.0034  151.3
+05_capital_gains_preferential_rates_TY2025.pdf   mapper    zai/glm-5.3-flash    6379    11317    0        64       0.0033  149.9
+05_capital_gains_preferential_rates_TY2025.pdf   verifier  alibaba/qwen-3-235b  13107   302      0        0        0.0031  6.0
+F
+
+=================================== FAILURES ===================================
+___________________________ test_end_to_end_accuracy ___________________________
+
+    def test_end_to_end_accuracy() -> None:
+        """The Phase 2 gate: PDFs -> router -> real SchemaMapper -> independent
+        RecordVerifier -> comparison.
+    
+        Accuracy is judged on the mapper's raw output (triage never mutates its
+        inputs, and persistence is not part of field accuracy); the verifier's
+        disputes are reported in the per-document ``disagree`` column, and every
+        disputed record is named with the verifier's reason. Cost is itemized by
+        role (mapper / verifier), per document. A verifier failure fails the gate
+        like a mapper failure: the gate result is "128/128 through the two-agent
+        layer", not "128/128 while the second agent was down". Skips only when no
+        mapping credential is configured: the accuracy table only ever comes from
+        a run against the real APIs, never from stubs (anti-goals #1/#8).
+        """
+        from tax_tables.adapters.anthropic_mapper import (
+            AnthropicSchemaMapper,
+            MapperConfig,
+            MapperConfigError,
+            MapperError,
+        )
+        from tax_tables.adapters.anthropic_verifier import (
+            AnthropicRecordVerifier,
+            VerifierConfig,
+            VerifierError,
+        )
+        from tax_tables.adapters.pdfplumber_extractor import PdfplumberExtractor
+        from tax_tables.adapters.tesseract_extractor import TesseractExtractor
+        from tax_tables.extraction.router import ExtractionRouter
+        from tax_tables.pipeline import run_document
+    
+        try:
+            config = MapperConfig.from_env()
+        except MapperConfigError:
+            pytest.skip(
+                reason=(
+                    "no mapping credential (SCHEMA_MAPPER_API_KEY / ANTHROPIC_API_KEY): "
+                    "the accuracy table only ever comes from a run against the real "
+                    "mapping API — never from stubs (anti-goals #1/#8)."
+                )
+            )
+    
+        truth = load_ground_truth()
+        router = ExtractionRouter(digital=PdfplumberExtractor(), ocr=TesseractExtractor())
+        mapper = AnthropicSchemaMapper(config)
+        verifier_config = VerifierConfig.from_env()  # falls back to the mapper credential
+        verifier = AnthropicRecordVerifier(verifier_config)
+    
+        actuals: list[ActualRecord] = []
+        disagreements: dict[str, int] = {}
+        cost_rows: list[tuple[str, ...]] = [
+            ("document", "role", "engine", "tok_in", "tok_out", "cache_w", "cache_r", "usd", "wall_s")
+        ]
+    
+        def cost_row(document: str, role: str, cost: Any) -> tuple[str, ...]:
+            if cost is None:
+                return (document, role, "!", "!", "!", "!", "!", "!", "!")
+            return (
+                document,
+                role,
+                cost.engine,
+                str(cost.input_tokens),
+                str(cost.output_tokens),
+                str(cost.cache_write_tokens),
+                str(cost.cache_read_tokens),
+                f"{cost.usd:.4f}",
+                f"{cost.wall_seconds:.1f}",
+            )
+    
+        failures: list[str] = []
+        for path in iter_source_documents(truth):
+            try:
+                result = run_document(
+                    path.read_bytes(),
+                    filename=path.name,
+                    router=router,
+                    mapper=mapper,
+                    verifier=verifier,
+                )
+            except MapperError as exc:
+                # One document's failure must not discard the report for the
+                # other four; it is named and fails the gate below.
+                failures.append(f"{path.name}: mapper: {exc}")
+                cost_rows.append(cost_row(path.name, "mapper", None))
+                continue
+            except VerifierError as exc:
+                failures.append(f"{path.name}: verifier: {exc}")
+                cost_rows.append(cost_row(path.name, "verifier", None))
+                continue
+            actuals.extend((path.name, record) for record in result.mapping.records)
+            assert result.mapping.cost is not None  # the real adapters report spend
+            cost_rows.append(cost_row(path.name, "mapper", result.mapping.cost))
+            verification = result.verification
+            assert verification is not None
+            cost_rows.append(cost_row(path.name, "verifier", verification.cost))
+            disagreements[path.name] = len(verification.disputed)
+            if result.mapping.issues:
+                print(f"\n{path.name}: {len(result.mapping.issues)} mapping issue(s):")
+                for issue in result.mapping.issues:
+                    print(f"  p{issue.source_page} {issue.table_id}: {issue.reason}")
+            if verification.disputed:
+                print(f"\n{path.name}: {len(verification.disputed)} verifier dispute(s):")
+                for verdict in verification.disputed:
+                    print(f"  record {verdict.record_index}: {verdict.reason}")
+            for note in verification.notes:
+                print(f"  verifier note: {note}")
+    
+        comparison = compare(truth.expected_records, actuals)
+        print()
+        print(format_report(comparison, by="document", disagreements=disagreements))
+        print()
+        print(format_report(comparison, by="record_type"))
+        widths = [max(len(row[i]) for row in cost_rows) for i in range(len(cost_rows[0]))]
+        print("\nsemantic-layer cost by document and role")
+        for index, row in enumerate(cost_rows):
+            print("  ".join(cell.ljust(widths[i]) for i, cell in enumerate(row)).rstrip())
+            if index == 0:
+                print("  ".join("-" * width for width in widths))
+    
+        assert not failures, "semantic layer failed for: " + "; ".join(failures)
+>       assert comparison.is_perfect, (
+            f"accuracy {len(comparison.matched)}/{comparison.expected_count} with "
+            f"{len(comparison.spurious)} spurious — every failing record is named above"
+        )
+E       AssertionError: accuracy 119/128 with 0 spurious — every failing record is named above
+E       assert False
+E        +  where False = ComparisonResult(matched=(NaturalKey(source_document='01_federal_income_tax_rate_schedules_TY2026.pdf', record_type='o...00, actual=<absent>),))), missing=(), spurious=(), fields_compared=1614, fields_differing=11, duplicate_actual_keys=()).is_perfect
+
+tests/accuracy/test_harness.py:563: AssertionError
+
+semantic-layer conformance (measured on this run)
+role      calls  items  schema_fail  malformed  residue  adapted  transport  http_att  retryable  call_ok  item_ok  residue%
+--------  -----  -----  -----------  ---------  -------  -------  ---------  --------  ---------  -------  -------  --------
+mapper    5      128    0            0          2        0        0          5         0          100.0%   100.0%   40.0%
+verifier  5      128    0            0          0        0        0          5         0          100.0%   100.0%   0.0%
+  call_ok = calls returning a contract-shaped body; item_ok = proposed items that were well formed.
+  rates are over calls that RETURNED a body: transport failures (throttling, timeouts) are excluded,
+  never counted as successes - a call the model never answered is no evidence about the model.
+  retryable counts 408/409/429/5xx responses the SDK absorbed - throughput, not conformance.
+  residue = complete JSON that arrived inside markdown fence framing, stripped at the transport
+  boundary (ADR 014): reported, never an escalation trigger - the contract was met, the presentation was not.
+  adapted = closed-list shape repairs (extra_attrs object -> pairs, stringified numeric -> Decimal);
+  like residue these are repairs, NOT compliance - they are reported so the accommodation is visible.
+  records produced by document (pipeline side, 128 total):
+    01_federal_income_tax_rate_schedules_TY2026.pdf: 32
+    02_standard_deduction_schedule_TY2026.pdf: 8
+    03_state_local_sales_tax_rates_2026.pdf: 51
+    04_employment_tax_rates_and_thresholds_2026.pdf: 18
+    05_capital_gains_preferential_rates_TY2025.pdf: 19
+  records reaching triage: 128 independently verified, 0 flagged verifier-unavailable (never asserted as verified).
+  mapper: fence framing by position - leading 0, trailing 2
+  mapper: fence framing stripped (trailing)
+=========================== short test summary info ============================
+FAILED tests/accuracy/test_harness.py::test_end_to_end_accuracy - AssertionEr...
+======================== 1 failed in 2070.47s (0:34:30) ========================
+make: *** [accuracy] Error 1

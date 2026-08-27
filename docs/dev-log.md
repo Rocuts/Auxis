@@ -2262,3 +2262,162 @@ result was exactly the predicted failure: two actors, one shared mutable
 resource, no protocol, and a write that silently absorbed another's
 in-flight state. The coordination hazard the architecture designs against,
 experienced operationally rather than argued theoretically.
+
+## 2026-08-26 — The fourth gate: 119/128, and all nine failures are one document
+
+Conventions corrected on both rulings — the `Over $X` bound rule and the
+closed attribute dictionary — plus one repair the run itself forced. **Four
+of the five documents are now perfect.**
+
+### Accuracy
+
+```
+document                                         exp   ok  diff  miss  extra  disagree
+--------------------------------------------------------------------------------------
+01_federal_income_tax_rate_schedules_TY2026.pdf   32   32     0     0      0         1
+02_standard_deduction_schedule_TY2026.pdf          8    8     0     0      0         0
+03_state_local_sales_tax_rates_2026.pdf           51   51     0     0      0         0
+04_employment_tax_rates_and_thresholds_2026.pdf   18    9     9     0      0         8
+05_capital_gains_preferential_rates_TY2025.pdf    19   19     0     0      0         0
+TOTAL                                            128  119     9     0      0         9
+
+field-level accuracy: 119/128
+fields compared: 1614, differing: 11
+```
+
+```
+group                          exp   ok  diff  miss  extra
+----------------------------------------------------------
+additional_standard_deduction    2    2     0     0      0
+dependent_deduction_rule         1    1     0     0      0
+employment_tax_rate              4    3     1     0      0
+ordinary_income_bracket         32   32     0     0      0
+preferential_gain_bracket       12   12     0     0      0
+sales_tax_rate                  51   51     0     0      0
+special_gain_rate                3    3     0     0      0
+standard_deduction               5    5     0     0      0
+surtax_threshold                 9    4     5     0      0
+wage_base                        3    0     3     0      0
+withholding_allowance            6    6     0     0      0
+TOTAL                          128  119     9     0      0
+```
+
+`miss` and `extra` are **0 for the first time**: every one of the 128 natural
+keys matched. Nine of eleven record types are perfect, including all 51
+sales-tax rows and all 19 of document 05.
+
+### Every failing record, named
+
+All nine are document 04, and **every single difference is `actual
+<absent>`** — a dictionary key not emitted. Not one is a wrong value.
+
+| Record | Missing field(s) |
+|---|---|
+| `wage_base` / `social_security_wage_base` | `unlimited` (expected False) |
+| `wage_base` / `medicare_wage_base` | `prior_year_amount` (expected null) |
+| `wage_base` / `futa_wage_base` | `unlimited` (expected False) |
+| `employment_tax_rate` / `futa_effective` | `employee_rate` (null), `employer_rate` (0.006), `self_employed_rate` (null) |
+| `surtax_threshold` / `additional_medicare` × 5 filing statuses | `threshold` (250000 / 125000 / 200000 / 200000 / 200000) |
+
+### The cause is mine, and it is one internal contradiction
+
+The record-shapes section and the new attribute dictionary disagree, and the
+model followed the older, more specific text:
+
+- shapes says *"surtax_threshold: … amount = the threshold"*; the dictionary
+  says `threshold` is an attr. The model wrote `amount` and omitted the attr.
+- shapes says *"wage_base: … amount = the wage base. 'No limit' means amount
+  null"* and never mentions `unlimited` or `prior_year_amount`.
+- shapes says *"A single-rate row puts the fraction in `rate`"*; the FUTA
+  effective rate IS a single-rate row, so no payer-side attrs were emitted.
+
+The proof it is a conflict rather than a capability limit: `surtax_threshold`
+scores **4/9**, and the four that pass are document 05's, whose thresholds
+appear in a footnote with no amount column to divert them. Same key, same
+model, same run — the value goes to the attr when the page offers no
+alternative slot, and to `amount` when it does.
+
+I added the dictionary as a new section without reconciling the per-type
+bullets above it. That is a spec defect, and it is **not** fixed here: the
+attribute dictionary was declared closed by operator ruling, and reconciling
+it is a further spec pass, not a repair I take unilaterally at a gate.
+
+### One repair the run did force
+
+The first attempt lost **all 51** of document 03's records to
+`unmappable record: 'confidence'`. The mapper emitted textbook records —
+`US-AL`, rate `0.0929`, all seven sales-tax attrs including
+`imposes_state_sales_tax: true` on its positive norm — and dropped one key.
+The gateway does not enforce `output_config`, so `required` in the schema is
+a claim nobody checks, and the prompt had never enumerated the required keys.
+It now names all fifteen and says the list does not shorten at the fifty-first
+record. Nothing is defaulted: a record still missing a key is still refused.
+Defaulting `confidence` would have invented the model's own certainty.
+
+This is ADR 014 §8d a second time, on a different role. Both instances have
+the identical shape — **the pipeline knew something it never told the model,
+and a non-enforcing transport made the silence expensive.**
+
+### Conformance — clean on every axis
+
+```
+role      calls  items  schema_fail  malformed  residue  adapted  transport  http_att  retryable  call_ok  item_ok  residue%
+mapper    5      128    0            0          2        0        0          5         0          100.0%   100.0%   40.0%
+verifier  5      128    0            0          0        0        0          5         0          100.0%   100.0%   0.0%
+  records reaching triage: 128 independently verified, 0 flagged verifier-unavailable.
+```
+
+**The verifier answered on all five documents.** Against the previous run's
+6 of 9 calls failing and 50 records flagged unverified, the envelope fix
+(§8d) took verifier `schema_fail` to **0** and `verifier_unavailable` to
+**0**. Documents 04 and 05, which had lost verification entirely across
+several runs, both returned full verdict sets.
+
+### What the verifier caught, and what it cried wolf about
+
+Nine disputes, and they are worth scoring honestly against the harness:
+
+- **Five true positives.** All five `additional_medicare` disputes name
+  exactly the records that failed, and name the right reason — the threshold
+  belongs to the cited cell. The independent re-derivation found 5 of the 9
+  real defects before the oracle was consulted.
+- **Four false positives.** Three withholding disputes object to `192.30`
+  being stored as `192.3` — a display concern, not a value one; the harness
+  compares numerically and those three records pass. The fourth is document
+  01 record 19, claiming the record holds `257300` when it holds `257250` —
+  the *same* false dispute recorded against this model in the ADR 012 diff
+  review. It is reproducible, and it is wrong.
+
+Not one dispute was settled by the models talking. All nine went to the
+review queue as FLAGs, which is the design.
+
+### Cost
+
+Ten calls, **$0.0428**; mapper $0.0226, verifier $0.0202. Four gate runs and
+three full fan-outs remain under $0.40 of the $5 monthly allowance.
+
+### The progression, four runs
+
+| | Baseline | Hardened | Gapped | Final |
+|---|---|---|---|---|
+| Records delivered | 0 | 128 | 128 | 128 |
+| mapper `item_ok` | 27.1% | 100% | 100% | 100% |
+| verifier `call_ok` | 0% (1 call) | 100% | 33.3% | **100%** |
+| Records flagged unverified | 128 | 0 | 50 | **0** |
+| Natural keys matching | 0 | 0 | 124 | **128** |
+| Fields compared | 0 | 0 | 1,562 | **1,614** |
+| **Field-level accuracy** | **0/128** | **0/128** | **39/128** | **119/128** |
+
+Each run moved the failure one layer outward, and each layer was a defect in
+this repository's specification rather than in the model: the transport could
+not deliver records; then records arrived under the wrong identity
+vocabulary; then with the wrong bound semantics and an unnamed attribute
+tail; now with the attribute tail named but contradicted in one document by
+an older paragraph I failed to reconcile.
+
+**Across all four runs, at no point was a mapped value wrong.** The single
+value error in the entire exercise was document 05's `566751`, which no
+subsequent run reproduced. Every other failure has been a field the schema
+asked for and did not describe well enough to get.
+
+Gate 2b remains **OPEN** at 119/128.

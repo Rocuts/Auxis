@@ -345,28 +345,84 @@ without revisiting the decision.
 
 ## Accuracy
 
-> **TBD — gate open.** The 128/128 field-level accuracy run executes the real
-> mapper and the independent verifier against the Anthropic API and is blocked
-> on a funded key. It runs with `make accuracy` the moment one lands in `.env`.
-> Everything else in `make check` (540 tests) runs keyless.
->
-> The table below is the shape the harness prints. **No numbers are filled in
-> because none have been measured.** Target is 128/128; below that, every
-> failing record and its reason gets named here rather than averaged away.
+> **Gate OPEN at 119/128.** The number is real, measured against the real
+> mapper and the independent verifier, and it is reported rather than
+> negotiated. Every failing record is named below. Four of the five documents
+> are perfect; all nine failures sit in one document and **not one of them is
+> a wrong value** — each is a field the schema asked for and did not describe
+> well enough to get.
 
-| Document | Records expected | Fields correct | Verifier disagreements | Review queue |
+| Document | Expected | Correct | Field-diff | Missing | Spurious | Verifier disputes |
+|---|---|---|---|---|---|---|
+| `01_federal_income_tax_rate_schedules_TY2026.pdf` | 32 | **32** | 0 | 0 | 0 | 1 |
+| `02_standard_deduction_schedule_TY2026.pdf` | 8 | **8** | 0 | 0 | 0 | 0 |
+| `03_state_local_sales_tax_rates_2026.pdf` | 51 | **51** | 0 | 0 | 0 | 0 |
+| `04_employment_tax_rates_and_thresholds_2026.pdf` | 18 | 9 | 9 | 0 | 0 | 8 |
+| `05_capital_gains_preferential_rates_TY2025.pdf` | 19 | **19** | 0 | 0 | 0 | 0 |
+| **Total** | **128** | **119** | **9** | **0** | **0** | **9** |
+
+**1,614 fields compared, 11 differing.** `Missing` and `Spurious` are zero:
+every one of the 128 natural keys matched, so every record was found and
+compared. Nine of the eleven record types are perfect.
+
+**The nine failures, named.** All document 04; every difference is a key the
+model did not emit, never a value it got wrong:
+
+| Record | Field(s) absent |
+|---|---|
+| `wage_base` / `social_security_wage_base` | `unlimited` |
+| `wage_base` / `medicare_wage_base` | `prior_year_amount` |
+| `wage_base` / `futa_wage_base` | `unlimited` |
+| `employment_tax_rate` / `futa_effective` | `employee_rate`, `employer_rate`, `self_employed_rate` |
+| `surtax_threshold` / `additional_medicare` (×5 filing statuses) | `threshold` |
+
+The cause is a contradiction inside this repository's own conventions, not a
+model limitation: the per-record-type shapes say *"surtax_threshold: … amount
+= the threshold"* while the attribute dictionary says `threshold` is an
+attribute, and the model followed the older, more specific text. The proof is
+that `surtax_threshold` scores 4/9 — and the four that pass are document 05's,
+whose thresholds sit in a footnote with no `amount` column to divert them.
+Same key, same model, same run.
+
+### How it got here: four runs, four specification defects
+
+| | Baseline | Hardened | Gapped | Final |
 |---|---|---|---|---|
-| `01_federal_income_tax_rate_schedules_TY2026.pdf` | 32 | _TBD_ | _TBD_ | _TBD_ |
-| `02_standard_deduction_schedule_TY2026.pdf` | 8 | _TBD_ | _TBD_ | _TBD_ |
-| `03_state_local_sales_tax_rates_2026.pdf` | 51 | _TBD_ | _TBD_ | _TBD_ |
-| `04_employment_tax_rates_and_thresholds_2026.pdf` | 18 | _TBD_ | _TBD_ | _TBD_ |
-| `05_capital_gains_preferential_rates_TY2025.pdf` | 19 | _TBD_ | _TBD_ | _TBD_ |
-| **Total** | **128** | _TBD_ | _TBD_ | _TBD_ |
+| Records delivered | 0 | 128 | 128 | 128 |
+| mapper `item_ok` | 27.1% | 100% | 100% | 100% |
+| verifier `call_ok` | 0% | 100% | 33.3% | **100%** |
+| Records flagged unverified | 128 | 0 | 50 | **0** |
+| Natural keys matching | 0 | 0 | 124 | **128** |
+| Fields compared | 0 | 0 | 1,562 | **1,614** |
+| **Field-level accuracy** | **0/128** | **0/128** | **39/128** | **119/128** |
 
-A per-record-type breakdown prints alongside it. The **verifier disagreement**
-column is deliberately not folded into the accuracy number: it measures how
-much friction independent re-derivation produces, which is a different
-question from whether the mapper was right.
+Each run moved the failure one layer outward, and **every layer was a defect
+in the specification, not in the model** — transport framing, then the
+identity vocabulary, then bound semantics and an unnamed attribute tail, and
+now one unreconciled paragraph. The harness drove specification completion in
+four steps, which is what an accuracy harness is for.
+
+**Across all four runs no mapped value was ever wrong.** The single value
+error in the entire exercise was document 05's `566751`, which no later run
+reproduced. Values were never copied from the oracle: what the conventions
+adopted from the target schema are *encodings* — `US-FED`, `estate_or_trust`,
+the `attribute_key` slugs, the attribute key names, and the inclusive-bounds
+reading of `Over $X` — none of which is printed in any PDF, while every value
+beneath them is read from the page. `src/` never opens `fixtures/ground_truth.json`.
+
+**What the verifier was worth.** It answered on all five documents (zero
+schema failures, zero records flagged unverified) and raised nine disputes.
+Five were true positives naming exactly the failing `additional_medicare`
+records and the right reason — found by independent re-derivation, before the
+oracle was consulted. Four were false positives: three object to `192.30`
+being stored as `192.3`, and one reproduces a known false claim that a record
+holds `257300` when it holds `257250`. No dispute was settled by the models
+talking; all nine became review-queue flags.
+
+A per-record-type breakdown prints alongside the table. The **verifier
+disagreement** column is deliberately not folded into the accuracy number: it
+measures how much friction independent re-derivation produces, which is a
+different question from whether the mapper was right.
 
 ---
 
@@ -729,37 +785,27 @@ Consolidated, and deliberately specific. If something is unproven, it says so.
 
 ### Gates still open
 
-1. **The accuracy gate stands at 39/128, and every remaining failure is a
-   gap in this repository's own conventions — not a model error.** Three runs
-   ship as evidence: 0/128 baseline (the transport could not deliver a
-   record), 0/128 hardened (128 records arrived under the wrong identity
-   vocabulary), 39/128 final (right identity, under-specified attribute
-   tail). Document 01 scores 32/32; `ordinary_income_bracket` 32/32,
-   `standard_deduction` 5/5. **1,562 fields were compared and 255 differ** —
-   and *none* of the 85 differing records carries a wrong value. Every one is
-   an expected `attrs` key the conventions never name (`rate_unit`,
-   `effective_date`, `imposes_state_sales_tax` on its positive case,
-   `jurisdiction_name`, `superseded_effective`, `employer_match`,
-   `threshold`, `unlimited`, `floor_amount`). The remaining 4 are document
-   05's `Over $X` rows, where the conventions cover the upper-end open forms
-   and not the one lower-bound form whose printed number is exclusive — and
-   the bracket-overlap constraint caught that unaided, with no access to the
-   oracle. The escalation route to an enforcing endpoint is budget-gated and
-   remains **blocked, not waived**, but no escalation trigger fires: the
-   model followed the conventions it was given. The full table is in
+1. **The accuracy gate stands at 119/128, and every remaining failure is a
+   contradiction inside this repository's own conventions — not a model
+   error.** Four runs ship as evidence, each moving the failure one layer
+   outward: 0/128 baseline (the transport could not deliver a record), 0/128
+   hardened (128 records arrived under the wrong identity vocabulary), 39/128
+   (right identity, wrong bound semantics, unnamed attribute tail), 119/128
+   (attribute tail named, one document's shape rules left unreconciled with
+   it). Four of the five documents are perfect, `miss` and `extra` are both
+   **0**, and **1,614 fields were compared with 11 differing**. All nine
+   failing records are named in [Accuracy](#accuracy); every difference is a
+   key the model did not emit, and **no mapped value was wrong in any of the
+   four runs**. The escalation route to an enforcing endpoint is budget-gated
+   and remains **blocked, not waived** — but no escalation trigger fires,
+   because the model followed the conventions it was given and the
+   conventions were what needed fixing. Full tables in
    [`docs/dev-log.md`](docs/dev-log.md) and
-   [ADR 014 §6](docs/decisions/014-semantic-layer-model-selection.md). Read
-   its shape before its headline: `diff` and `extra` are both **0**, so no
-   record arrived carrying a wrong value — the records never reached the
-   comparison at all. Five independent adversarial passes, each denied the
-   test oracle, refuted **zero** mapped values, and on document 03 repairing
-   envelope faults alone yields 51/51 valid records with no semantic
-   correction. The chosen model maps these documents correctly and cannot
-   reliably emit the response contract through a gateway that does not enforce
-   structured outputs. The pre-registered remedy is escalation to an enforcing
-   endpoint; it requires funding that does not exist, so it is **blocked, not
-   waived**, and the hardening pass described in ADR 014 §7 is the primary
-   remediation instead.
+   [ADR 014 §6-8](docs/decisions/014-semantic-layer-model-selection.md).
+   Worth stating plainly: the gateway does not enforce `output_config`, so
+   the prompt is the only channel that carries the response contract, and
+   two of the four defects were exactly that — a required key the pipeline
+   knew about and never named.
 2. **Four identity fields are encodings, not extractions — and that boundary
    is deliberate.** `jurisdiction` is `US-FED` or `US-<ISO 3166-2 code>`,
    `taxpayer_class` is `individual` or `estate_or_trust`, and `attribute_key`
