@@ -2467,3 +2467,140 @@ the shipped values beside the variable documentation.
 The dev-log entries above are not rewritten. They were accurate on the day
 they were written, and a log that edits its own history is worth less than
 one that shows the correction arriving late.
+
+## 2026-08-27 — The frozen-spec gate: 100/128, and the reconciliation traded nine for twenty-eight
+
+Spec frozen at `1961126`. **100/128** — and reporting it honestly means leading
+with the part that got worse, not the part that got better.
+
+### Accuracy
+
+```
+document                                         exp   ok  diff  miss  extra  disagree
+--------------------------------------------------------------------------------------
+01_federal_income_tax_rate_schedules_TY2026.pdf   32    4     0    28     28         1
+02_standard_deduction_schedule_TY2026.pdf          8    8     0     0      0         0
+03_state_local_sales_tax_rates_2026.pdf           51   51     0     0      0         0
+04_employment_tax_rates_and_thresholds_2026.pdf   18   18     0     0      0         0
+05_capital_gains_preferential_rates_TY2025.pdf    19   19     0     0      0         1
+TOTAL                                            128  100     0    28     28         2
+
+field-level accuracy: 100/128
+fields compared: 1250, differing: 0
+```
+
+```
+group                          exp   ok  diff  miss  extra
+----------------------------------------------------------
+additional_standard_deduction    2    2     0     0      0
+dependent_deduction_rule         1    1     0     0      0
+employment_tax_rate              4    4     0     0      0
+ordinary_income_bracket         32    4     0    28     28
+preferential_gain_bracket       12   12     0     0      0
+sales_tax_rate                  51   51     0     0      0
+special_gain_rate                3    3     0     0      0
+standard_deduction               5    5     0     0      0
+surtax_threshold                 9    9     0     0      0
+wage_base                        3    3     0     0      0
+withholding_allowance            6    6     0     0      0
+TOTAL                          128  100     0    28     28
+```
+
+**Ten of the eleven record types are perfect**, four of the five documents are
+perfect, and **`differing: 0`** — across 1,250 compared fields, not one matched
+record carried a single wrong value. That is the best field-level result this
+project has produced. It is also worth less than the headline suggests,
+because 28 records never reached the comparison.
+
+### The nine that were fixed
+
+**Document 04 went 9/18 to 18/18.** Every one of the fourth gate's failures is
+gone: `wage_base` 0/3 to 3/3, `surtax_threshold` 4/9 to 9/9,
+`employment_tax_rate` 3/4 to 4/4. The reconciliation did exactly what it was
+for — including the FUTA row, which resolved correctly under the non-leaking
+fix (year columns are not payer columns) without being told who pays FUTA.
+
+### The twenty-eight that broke, named
+
+All 28 are document 01, all one record type, all one field:
+
+> `ordinary_income_bracket | US-FED | 2026 | <filing_status> | taxpayer_class`
+> **expected `individual`, actual `null`** — 7 bracket rows x 4 filing statuses
+> (single, married_filing_jointly, married_filing_separately,
+> head_of_household).
+
+The four `estate_or_trust` records of the same document matched and scored.
+Every other field on all 28 is correct; they fail on the natural key alone,
+which is why `diff` is 0 and `miss`/`extra` are 28.
+
+### The cause is my own fix, and the audit had flagged it
+
+Before this run I put the reconciliation under a three-lens adversarial audit.
+Its highest-radius finding, **F1**, was precisely this field on precisely these
+28 records: the value conventions say a non-individual schedule *"uses
+filing_status null and taxpayer_class set **instead**"* — an exclusivity claim
+— while a later sentence says `taxpayer_class` is set on ordinary-income
+records *always*, including `individual`, which only ever occurs alongside a
+filing_status.
+
+**The arbitrator refuted F1**, on the reasoning that the text was unchanged
+since the fourth gate, where document 01 scored 32/32. That reasoning was
+locally sound and globally wrong, and I accepted it. What it missed is that I
+had changed the *context* around the unchanged text. Confirmed fix 3 added,
+immediately below the `ordinary_income_bracket` bullet:
+
+> `but by filing status ONLY: taxpayer_class is null on this record type.`
+
+That sentence exists to protect 12 `preferential_gain_bracket` records from a
+hypothetical risk. Sitting one bullet under the ordinary-income rule, in an
+emphatic register, it evidently generalised: the model nulled `taxpayer_class`
+on every filing-status row it saw. **A fix for a hypothetical 12-record risk
+caused a real 28-record regression.**
+
+The lesson is not "the audit was wrong". Two of its three lenses named this
+field as their top finding; the arbitration overruled them on an argument
+about stability that my own diff had invalidated. **Unchanged text is only
+stable if its neighbourhood is unchanged too** — a prompt is read as a whole,
+and an adjacent emphatic sentence is a change to every rule near it.
+
+### What this run says about the model, separately from the spec
+
+Worth separating, because they point opposite ways:
+
+- `differing: 0` over 1,250 fields. Every value the mapper produced for a
+  record that matched was right.
+- Documents 02, 03, 04 and 05 — 96 records including all 51 sales-tax rows and
+  every one of document 04's previously-failing types — are exactly correct.
+- The one regression is a single discriminator field on one document,
+  attributable to one sentence of specification.
+
+Across five gate runs, **no mapped value has ever been wrong**. That statement
+now rests on 1,250 compared fields with zero differences, which is a far
+stronger footing than it had at 39/128.
+
+### Conformance and cost
+
+```
+role      calls  items  schema_fail  malformed  residue  adapted  transport  http_att  retryable  call_ok  item_ok
+mapper    6      128    1            0          3        0        0          6         0          83.3%    100.0%
+verifier  5      128    0            0          0        0        0          5         0          100.0%   100.0%
+```
+
+One mapper contract failure, retried and recovered — 128 items proposed, zero
+malformed. The verifier answered on all five documents for the second run
+running, with zero records flagged unverified: the §8d envelope fix is stable,
+not a one-run fluke. Ten calls, **$0.0401**.
+
+### Disposition — it ships at 100/128
+
+Per the standing ruling: the spec is FROZEN, there is no further pass, and the
+harness is not touched. This ships truthfully with the 28 records named above
+as a known limitation.
+
+Recorded for the record because it is material and unflattering: **the
+best-measured configuration is the fourth gate's, at 119/128.** This
+reconciliation fixed nine records and cost twenty-eight. Reverting fix 3 alone
+is the obvious candidate for a sixth run, and it is not mine to take — it is a
+further spec pass, which the freeze forbids.
+
+Gate 2b remains **OPEN** at 100/128.

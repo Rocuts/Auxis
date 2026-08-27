@@ -361,69 +361,79 @@ without revisiting the decision.
 
 ## Accuracy
 
-> **Gate OPEN at 119/128.** The number is real, measured against the real
-> mapper and the independent verifier, and it is reported rather than
-> negotiated. Every failing record is named below. Four of the five documents
-> are perfect; all nine failures sit in one document and **not one of them is
-> a wrong value** — each is a field the schema asked for and did not describe
-> well enough to get.
+> **Gate OPEN at 100/128, and the honest headline is that the last change made
+> it worse.** Ten of the eleven record types are perfect, four of the five
+> documents are perfect, and across **1,250 compared fields not one differs**.
+> All 28 failures are one record type, on one document, on one field. Every
+> failing record is named below.
 
 | Document | Expected | Correct | Field-diff | Missing | Spurious | Verifier disputes |
 |---|---|---|---|---|---|---|
-| `01_federal_income_tax_rate_schedules_TY2026.pdf` | 32 | **32** | 0 | 0 | 0 | 1 |
+| `01_federal_income_tax_rate_schedules_TY2026.pdf` | 32 | 4 | 0 | 28 | 28 | 1 |
 | `02_standard_deduction_schedule_TY2026.pdf` | 8 | **8** | 0 | 0 | 0 | 0 |
 | `03_state_local_sales_tax_rates_2026.pdf` | 51 | **51** | 0 | 0 | 0 | 0 |
-| `04_employment_tax_rates_and_thresholds_2026.pdf` | 18 | 9 | 9 | 0 | 0 | 8 |
-| `05_capital_gains_preferential_rates_TY2025.pdf` | 19 | **19** | 0 | 0 | 0 | 0 |
-| **Total** | **128** | **119** | **9** | **0** | **0** | **9** |
+| `04_employment_tax_rates_and_thresholds_2026.pdf` | 18 | **18** | 0 | 0 | 0 | 0 |
+| `05_capital_gains_preferential_rates_TY2025.pdf` | 19 | **19** | 0 | 0 | 0 | 1 |
+| **Total** | **128** | **100** | **0** | **28** | **28** | **2** |
 
-**1,614 fields compared, 11 differing.** `Missing` and `Spurious` are zero:
-every one of the 128 natural keys matched, so every record was found and
-compared. Nine of the eleven record types are perfect.
+**The 28 failures, named.** All document 01, all `ordinary_income_bracket`,
+all the same field:
 
-**The nine failures, named.** All document 04; every difference is a key the
-model did not emit, never a value it got wrong:
+> `US-FED | 2026 | <filing_status> | taxpayer_class` — **expected `individual`,
+> got `null`**, across 7 bracket rows x 4 filing statuses. The same document's
+> 4 `estate_or_trust` records matched and scored. Every other field on all 28
+> is correct; they fail on the natural key alone, which is why `Field-diff` is
+> 0 while `Missing` and `Spurious` are 28.
 
-| Record | Field(s) absent |
-|---|---|
-| `wage_base` / `social_security_wage_base` | `unlimited` |
-| `wage_base` / `medicare_wage_base` | `prior_year_amount` |
-| `wage_base` / `futa_wage_base` | `unlimited` |
-| `employment_tax_rate` / `futa_effective` | `employee_rate`, `employer_rate`, `self_employed_rate` |
-| `surtax_threshold` / `additional_medicare` (×5 filing statuses) | `threshold` |
+**The cause was a fix, and it is worth being blunt about.** The previous run
+scored 119/128 with nine failures in document 04. Reconciling the conventions
+repaired all nine — document 04 went 9/18 to **18/18** — and one of the same
+edits added an emphatic *"taxpayer_class is null on this record type"* to the
+bullet directly below the ordinary-income rule, to protect 12 records from a
+risk that never materialised. It generalised: the model nulled the field on
+every filing-status row. **A fix for a hypothetical 12-record risk cost 28 real
+ones.**
 
-The cause is a contradiction inside this repository's own conventions, not a
-model limitation: the per-record-type shapes say *"surtax_threshold: … amount
-= the threshold"* while the attribute dictionary says `threshold` is an
-attribute, and the model followed the older, more specific text. The proof is
-that `surtax_threshold` scores 4/9 — and the four that pass are document 05's,
-whose thresholds sit in a footnote with no `amount` column to divert them.
-Same key, same model, same run.
+That edit came out of an adversarial audit whose two other reviewers had named
+this exact field as their top finding, and whose arbitrator overruled them
+because the relevant text was unchanged since the passing run. The reasoning
+was locally sound and globally wrong: **unchanged text is only stable if its
+neighbourhood is unchanged too.** A prompt is read as a whole, and an adjacent
+emphatic sentence is a change to every rule near it.
 
-### How it got here: four runs, four specification defects
+It ships at 100/128 under a frozen spec rather than being tuned further — the
+best-measured configuration is the previous run's 119/128, and that is recorded
+rather than quietly replaced.
 
-| | Baseline | Hardened | Gapped | Final |
-|---|---|---|---|---|
-| Records delivered | 0 | 128 | 128 | 128 |
-| mapper `item_ok` | 27.1% | 100% | 100% | 100% |
-| verifier `call_ok` | 0% | 100% | 33.3% | **100%** |
-| Records flagged unverified | 128 | 0 | 50 | **0** |
-| Natural keys matching | 0 | 0 | 124 | **128** |
-| Fields compared | 0 | 0 | 1,562 | **1,614** |
-| **Field-level accuracy** | **0/128** | **0/128** | **39/128** | **119/128** |
+### How it got here: five runs, and what each one measured
 
-Each run moved the failure one layer outward, and **every layer was a defect
-in the specification, not in the model** — transport framing, then the
-identity vocabulary, then bound semantics and an unnamed attribute tail, and
-now one unreconciled paragraph. The harness drove specification completion in
-four steps, which is what an accuracy harness is for.
+| | Baseline | Hardened | Gapped | Reconciled-1 | Frozen |
+|---|---|---|---|---|---|
+| Records delivered | 0 | 128 | 128 | 128 | 128 |
+| mapper `item_ok` | 27.1% | 100% | 100% | 100% | 100% |
+| verifier `call_ok` | 0% | 100% | 33.3% | 100% | **100%** |
+| Records flagged unverified | 128 | 0 | 50 | 0 | **0** |
+| Natural keys matching | 0 | 0 | 124 | **128** | 100 |
+| Fields compared | 0 | 0 | 1,562 | 1,614 | 1,250 |
+| Fields **differing** | — | — | 255 | 11 | **0** |
+| **Field-level accuracy** | **0/128** | **0/128** | **39/128** | **119/128** | **100/128** |
 
-> **The closing fact of the progression: across all four runs, no mapped
-> value was ever wrong.** Every failure at every stage was a field the schema
+Each run moved the failure one layer outward, and **every layer was a defect in
+the specification, not in the model** — transport framing, then the identity
+vocabulary, then bound semantics and an unnamed attribute tail, then one
+unreconciled paragraph, and finally one over-eager sentence in the fix for
+that paragraph. The harness drove specification completion in five steps, and
+the fifth is the one that shows the method has teeth: it caught a regression
+that a three-agent adversarial review had talked itself out of.
+
+> **The closing fact of the progression: across all five runs, no mapped
+> value was ever wrong** — and the final run puts that on its firmest footing,
+> with **1,250 fields compared and zero differing.** Every failure at every stage was a field the schema
 > asked for and did not describe well enough to get — a framing convention, an
 > identity vocabulary, a bound semantics, an attribute name, a contradiction
-> between two paragraphs. The single value error in the entire exercise was
-> document 05's `566751`, which no later run reproduced.
+> between two paragraphs, a discriminator nulled by an adjacent sentence. The
+> single value error in the entire exercise was document 05's `566751`, which
+> no later run reproduced.
 >
 > That is the honest summary of what an LLM did well here and what it did not.
 > It read these documents correctly and consistently. What it could not do was
@@ -843,27 +853,25 @@ Consolidated, and deliberately specific. If something is unproven, it says so.
 
 ### Gates still open
 
-1. **The accuracy gate stands at 119/128, and every remaining failure is a
-   contradiction inside this repository's own conventions — not a model
-   error.** Four runs ship as evidence, each moving the failure one layer
-   outward: 0/128 baseline (the transport could not deliver a record), 0/128
-   hardened (128 records arrived under the wrong identity vocabulary), 39/128
-   (right identity, wrong bound semantics, unnamed attribute tail), 119/128
-   (attribute tail named, one document's shape rules left unreconciled with
-   it). Four of the five documents are perfect, `miss` and `extra` are both
-   **0**, and **1,614 fields were compared with 11 differing**. All nine
-   failing records are named in [Accuracy](#accuracy); every difference is a
-   key the model did not emit, and **no mapped value was wrong in any of the
-   four runs**. The escalation route to an enforcing endpoint is budget-gated
-   and remains **blocked, not waived** — but no escalation trigger fires,
-   because the model followed the conventions it was given and the
+1. **The accuracy gate stands at 100/128, every failing record is named, and
+   the previous run scored higher.** Five runs ship as evidence: 0/128
+   baseline (transport), 0/128 hardened (identity vocabulary), 39/128 (bound
+   semantics and an unnamed attribute tail), 119/128 (one unreconciled
+   paragraph), 100/128 (the fix for that paragraph over-generalised). Ten of
+   eleven record types and four of five documents are perfect, and **1,250
+   fields were compared with zero differing** — no matched record carries a
+   wrong value anywhere. All 28 failures are one field on one record type:
+   `ordinary_income_bracket.taxpayer_class`, expected `individual`, got
+   `null`, on document 01. See [Accuracy](#accuracy) for the naming and the
+   cause. It ships at 100/128 under a frozen specification rather than being
+   tuned further, and the higher previous score is recorded rather than
+   quietly replaced — a spec tuned run-by-run against a scoring harness stops
+   being a specification. The escalation route to an enforcing endpoint is
+   budget-gated and remains **blocked, not waived**; no escalation trigger
+   fires, because the model followed the conventions it was given and the
    conventions were what needed fixing. Full tables in
    [`docs/dev-log.md`](docs/dev-log.md) and
    [ADR 014 §6-8](docs/decisions/014-semantic-layer-model-selection.md).
-   Worth stating plainly: the gateway does not enforce `output_config`, so
-   the prompt is the only channel that carries the response contract, and
-   two of the four defects were exactly that — a required key the pipeline
-   knew about and never named.
 2. **Four identity fields are encodings, not extractions — and that boundary
    is deliberate.** `jurisdiction` is `US-FED` or `US-<ISO 3166-2 code>`,
    `taxpayer_class` is `individual` or `estate_or_trust`, and `attribute_key`
