@@ -895,6 +895,116 @@ attempts that both made the number worse are evidence about the method — and
 suppressing them would make the remaining number worth less, not more.
 
 
+### 8i. The enforcement arm — escalation unblocked, and why it is not a spec change
+
+**Status:** operator decision, 2026-08-27. The reopening clause is exercised:
+the direct Anthropic route is **funded**, and §3's pre-registered escalation
+executes as a second arm. **The GLM arm's gate record stays closed at 81/128
+and is not re-run, re-scored, or re-opened.**
+
+#### What this arm is testing
+
+§2 recorded the exposure in one sentence: *the gateway forwards the adapters'
+`output_config` json_schema request without enforcing it for a non-Anthropic
+model — the contract is honoured by the model's instruction-following, not by
+the transport.* Six runs were measured under that condition. The direct
+Messages API enforces `output_config.format` server-side, so this arm isolates
+one variable: **what the same prompts and the same schemas do when the
+contract is enforced rather than requested.**
+
+That is a different question from "is a bigger model better", and the arms are
+labelled accordingly: **flash arm** (unenforced, `zai/glm-5.3-flash`) and
+**enforcement arm** (enforced, direct Anthropic).
+
+#### The spec does not change — proof, not assurance
+
+**SPEC FREEZE v2 holds byte-identically.** `CANONICAL_CONVENTIONS` at this
+commit hashes to the same `sha256` prefix `88b9ca03eaafcf05` it had at
+`fda868a`, where the freeze was declared. Route, model id, prices and cache
+ratios are **configuration** — environment variables resolved at construction
+— and the distinction is load-bearing enough to state as a rule:
+
+> **Spec is what the model reads. Config is where it reads it from.** Changing
+> the endpoint or the model id changes neither the instructions nor the
+> schema, so it cannot be tuning against the harness. Changing one word of
+> `CANONICAL_CONVENTIONS` would be, and that text is frozen and hashed.
+
+This is the same boundary §8 drew between adoptable *encodings* and
+un-adoptable *extracted values*, applied one layer down.
+
+#### The topology, and the trap in it
+
+| Role | Route | Model | Why |
+|---|---|---|---|
+| `SchemaMapper` | **direct Anthropic** | `claude-haiku-4-5` | the enforced contract is the thing under test |
+| `Adjudicator` | **direct Anthropic** | inherits the mapper | same task family, same enforcement |
+| `RecordVerifier` | **AI Gateway** | `alibaba/qwen-3-235b` | **unchanged.** ADR 012's conformity mitigation only exists if the verifier is a different family; moving it to Anthropic would collapse the cross-family check into an echo at the exact moment the mapper's family changes |
+
+Each role resolves its config through `<ROLE>_<VAR>` → `SCHEMA_MAPPER_<VAR>` →
+`ANTHROPIC_<VAR>`. That chain is a convenience for one endpoint and a **trap**
+for two, and reading it before the run rather than after found a defect that
+would have cost the entire run:
+
+> Move the mapper to the direct route and leave the verifier's routing
+> variables unset, and the verifier's `BASE_URL` and `API_KEY` fall through to
+> the mapper's. The pipeline then posts `{"model": "alibaba/qwen-3-235b"}` to
+> `api.anthropic.com` with an `sk-ant` key. **Every verifier call fails**, and
+> the harness fails the gate on a verifier failure exactly as on a mapper
+> failure — by design, since the gate claims "128/128 through the two-agent
+> layer", not "while the second agent was down".
+
+`RECORD_VERIFIER_BASE_URL` and `RECORD_VERIFIER_API_KEY` are therefore both
+**required**, and neither is redundant: dropping either alone already breaks
+the topology, in a different way each time. `tests/test_enforcement_arm_routing.py`
+pins all of it — the intended topology, the hazard demonstrated rather than
+described, and the independent necessity of each variable. Keyless, offline,
+no ambient environment, eleven assertions, milliseconds.
+
+#### Prices, confirmed against a live catalogue rather than recalled
+
+Read 2026-08-27 from `GET https://ai-gateway.vercel.sh/v1/models`, the
+`anthropic/claude-haiku-4.5` entry: input `$1.00`/Mtok, output `$5.00`/Mtok,
+cache read `$0.10` (**0.1×**), cache write `$1.25` (**1.25×**). Those are
+exactly the figures §3 pre-registered before the escalation was funded, which
+is the pre-registration doing its job. `adapters/pricing.py` resolves them from
+the model id with no extra environment, because a bare id with no provider
+namespace *is* the Anthropic route.
+
+#### The one thing not yet confirmed, stated as such
+
+§3 named the escalation target as *"the gateway's claude-haiku-class id,
+`anthropic/claude-haiku-4.5`"*, while §5 rules that escalation goes **direct,
+never through the gateway**. §5 governs — it is the later ruling and it is
+specifically about venue — so the id in use is the direct-route form, which is
+not the gateway's.
+
+**That direct id has not been confirmed against `api.anthropic.com/v1/models`,
+because doing so requires the credential this arm is waiting for.** No local
+`ant` profile exists on this machine. Rather than write a recalled string into
+config and hope, the sequence is pre-registered:
+
+1. Key lands.
+2. **`GET /v1/models` on the direct route** — the live endpoint — and confirm
+   the haiku-class id resolves exactly as configured. A metadata call: no
+   generation, no meaningful spend.
+3. **If it does not resolve, stop.** Report the catalogue's actual ids and ask.
+   Do not substitute a neighbouring id and do not start the gate.
+4. Only then the credential smoke test, then the run.
+
+#### Pre-registration for the enforcement-arm run
+
+- **Exclusive conditions:** nothing else on the gateway or the direct API, the
+  isolation sentinel armed, **zero edits while it is in flight**.
+- **One run.** Whatever it lands, it ships. 128/128 makes the direct-route
+  configuration the production default, with the flash arm recorded beside it
+  as the measured cost/variance alternative; short of 128/128 it closes
+  truthfully with every failing record named.
+- **The one result that gets its own analysis:** if any miss is a **wrong
+  value** rather than an absent key, it is the first in seven runs and is
+  written up on its own terms. Six runs have produced exactly zero.
+- No further runs either way, on either arm.
+
+
 ## Consequences
 
 - The model choice is now falsifiable: a rule, two thresholds, and two tables.
