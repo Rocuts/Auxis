@@ -3297,3 +3297,179 @@ described a fix as "not applied" becomes false the moment it is applied, and
 nothing fails when it does.** Code has tests; prose has a reader who may not
 notice. The nearest thing to a test here is a pass like this one, run on a
 schedule rather than on a hunch.
+
+---
+
+## 2026-08-27 — Gate 3.5-LIVE CLOSES: 113 records live, and three bugs the live URL found
+
+The gate closes on a working live URL: **113 records, zero duplicates, the
+idempotent replace proven five times, and `/records/resolve` answering a real
+bracket in production.** It also cost three defects that only a real
+deployment could have surfaced, and one of them was mine twice over.
+
+### Doc 01: the fix remediated itself
+
+Ruling: cleanup happens BY the fix, not by hand. It did.
+
+| | before | after |
+|---|---|---|
+| records | **60** | **32** |
+| `taxpayer_class` split | 28 null / 28 individual / 4 estate | 28 individual / 4 estate |
+| duplicate value-tuples | 28 | **0** |
+
+Re-upload created a fresh job (terminal job -> fresh job, as the new test
+pins), the document-scoped delete cleared the 60 rows, one clean set of 32
+persisted. **218 s, `$0.0057`, attempt 1, succeeded** — against the >1800 s it
+had taken to fail. No record was deleted by hand at any point.
+
+### Per-document counts
+
+| Doc | Persisted | Expected | Conditions |
+|---|---|---|---|
+| 01 federal rate schedules | **32** | 32 | sequential |
+| 02 standard deduction | **8** | 8 | sequential |
+| 03 state/local sales tax | **51** | 51 | **concurrent — not gate-comparable** |
+| 04 employment tax | **19** | 18 | **concurrent — not gate-comparable** |
+| 05 capital gains (scanned) | **3** | 19 | **concurrent — not gate-comparable** |
+| **Total** | **113** | **128** | |
+
+**Zero true duplicates anywhere.** An earlier count of 3 was my own analysis
+error: I grouped document 03 without `jurisdiction`, which is the only thing
+distinguishing 51 states. The data was right and the query was wrong.
+
+### Doc 05's vision branch: a third outcome nobody pre-registered
+
+It was pre-registered as *clean extraction* or *fail-closed to the review
+queue*. It did **neither**. Vision-OCR read the page and the mapper produced
+**3 records of 19** — all `special_gain_rate`, rates 0.25 / null / 0.28, with
+`tax_year` null — plus **13 review-queue items**. The 16 bracket records never
+materialised.
+
+So the honest label is **partial extraction, fail-visible**: nothing was
+silently dropped (13 queue items say so), but the page did not come through.
+This is the vision path's first end-to-end measurement and it is a documented
+**per-target limitation**, not a hidden failure: the same document extracts
+19/19 through Tesseract on the local target, gate-measured.
+
+### The two open checks
+
+**`/records/resolve` on a real bracket: PASSES.** `amount=150000`,
+`filing_status=single`, `tax_year=2026`, `taxpayer_class=individual`,
+`jurisdiction=US-FED` returns `106151-202650 @ 24%`, active, with page and
+table provenance. The range index and the bracket-integrity constraint deliver
+something real over the live URL.
+
+Getting there cost two findings, both now fixed:
+
+- **`jurisdiction` defaulted to `"US"`, which can never match a federal
+  record** — the canonical vocabulary spells it `US-FED` (ADR 015). The first
+  call any evaluator makes by hand would have 404'd over a database holding
+  the exact bracket asked for. Default corrected, and the OpenAPI description
+  now carries the vocabulary and a worked example.
+- **`taxpayer_class` had to be passed as `individual`** because *this* run's
+  mapper emitted it, where an earlier run emitted null. **ADR 014's
+  stochasticity is now visible in the API contract itself**, not just in the
+  accuracy table: which query answers depends on which draw persisted.
+
+**`tax_year=2026` excludes superseded: VACUOUSLY OPEN.** All 113 live records
+are `active`; there is no superseded record to exclude, because document 05 —
+the superseded one — is the document that under-extracted. The query returns
+59 records and `include_superseded=true` returns the same 59. The *property*
+is held by the test suite, which seeds a superseded record and proves it is
+filtered; the *live demonstration* is blocked by the vision limitation above.
+Recorded as open rather than passed.
+
+### Clarification 1 — document 04's extra record, named
+
+19 against an expected 18. The extra is a **sixth `surtax_threshold`**:
+
+```
+record_type=surtax_threshold  attribute_key=additional_medicare
+filing_status=NULL  taxpayer_class=NULL  tax_year=2026
+amount=200000  rate=0.009
+```
+
+The other five carry the five filing statuses (`single`, `head_of_household`,
+`qualifying_surviving_spouse` at 200000; `married_filing_jointly` at 250000;
+`married_filing_separately` at 125000). This one carries **no filing status**,
+and it comes from document 04's prose: the employer begins withholding once
+cumulative wages exceed $200,000 *regardless of filing status*.
+
+**At the gates the model declined to emit it.** Gate 6's evidence file records
+the same fact reaching the review queue instead, with the model's own reason:
+the $200,000 figure "is already captured on the single/head_of_household/
+qualifying_surviving_spouse surtax_threshold records with this prose as
+provenance; the no-duplication rule bars a standalone record". On this draw,
+the same model on the same frozen spec made the opposite call and emitted it.
+
+**Why the database admitted it, legitimately.** `filing_status` is a
+natural-key column and `NULLS NOT DISTINCT` makes NULL equal only to NULL.
+No other `surtax_threshold` row had a NULL filing status, so the key is
+genuinely unused. The constraint did its job; there was nothing to refuse.
+
+So this is a **stochasticity exhibit, not an integrity violation** — and a
+sharper one than the `taxpayer_class` case, because the variance is not in a
+spelling but in a *judgment the specification delegates*: whether the
+no-duplication rule bars a filing-status-agnostic restatement. Two draws,
+two defensible answers.
+
+### Clarification 2 — why `tax_year=2026` returns 59 of 113
+
+| Document | Record types | `tax_year` |
+|---|---|---|
+| 01 | `ordinary_income_bracket` (32) | **2026** |
+| 02 | `standard_deduction` (5), `additional_standard_deduction` (2), `dependent_deduction_rule` (1) | **2026** |
+| 04 | `surtax_threshold` (6), `withholding_allowance` (6), `employment_tax_rate` (4), `wage_base` (3) | **2026** |
+| 03 | `sales_tax_rate` (51) | **null** |
+| 05 | `special_gain_rate` (3) | **null** |
+
+59 carry 2026; 54 carry null. Both null groups are **mapping shortfalls, not
+design**: document 03 is titled for 2026 and its rows should carry it, and
+document 05 should carry 2025 with `lifecycle_status=superseded`. This is the
+same failure shape the 81/128 gate measured — fields the model did not emit,
+never values it got wrong — and it is the direct cause of the superseded
+check being undemonstrable. The README's example query says `tax_year=2026`
+and returns 59, which is why that number appears there rather than 113.
+
+### Three defects, and the two that were mine
+
+**1. The adjudication budget did not bind (platform-facing).** A wall-clock
+budget was added between items, but a single `adjudicate()` call could spend
+300 s once per SDK attempt — `300 x (1 + 3 retries) = 1200 s` — so the first
+item blew a 420 s budget before the loop looked at the clock again. Document
+02 persisted its 8 records correctly and then overran a 1800 s invocation
+**three times**. Fixed: 90 s timeout, 1 retry, so one item costs at most
+180 s and the budget is meaningful. Pinned by
+`tests/mapping/test_adjudicator_budget_bound.py`, which asserts
+`timeout x (1 + max_retries) <= budget` rather than any literal. The Bedrock
+target imports both halves now — it already imported the timeout, and
+importing only half of a product would have left AWS on a quarter of the
+intended ceiling.
+
+**2. I used `POST /documents` as a job-id lookup.** It is not a read. For
+documents 04 and 05, whose prior jobs were terminal, it created fresh jobs
+and kicked them — putting four documents in flight at once and destroying the
+sequential conditions the gate asked for. The data still landed correctly per
+document (the replace held), but documents 03-05's wall-clock and cost
+figures are **not gate-comparable** and are labelled so wherever they appear.
+
+**3. I mis-grouped document 03 and reported 3 duplicates that did not exist**
+(above). Corrected in the same session, before it reached the README.
+
+### The operator's two halts
+
+Both irreversible, both executed by hand, both recorded on the row rather
+than only in this log.
+
+- The five concurrent-seed jobs, marked `worker_killed_maxduration`.
+- Document 02 at attempt 3, marked `halted_before_attempt_reroll`. The
+  rationale is worth keeping: its records were **already correct at 8/8**, and
+  another reclaim would only have re-rolled the mapper's draw over correct
+  data. **The document-scoped replace makes a retry safe; it does not make it
+  free.** `max_attempts` would have abandoned the job anyway one cycle later;
+  the halt bought stopping the re-roll, not the termination.
+
+### Spend
+
+`$0.0749` this step. **`$0.6175` of the `$5.00` allowance.** No purchase, no
+new provider, nothing escalated.

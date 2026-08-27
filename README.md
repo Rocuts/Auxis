@@ -11,36 +11,45 @@ that touches a platform is a port with three adapters behind it.
 
 > **Status (2026-08-27, after production promotion).** The service is live at
 > **https://auxis-johan-rocuts-projects.vercel.app** and every `GET` serves.
-> Two results dominate this README and both are failures reported at full
-> weight:
+> Two results dominate this README, and both are reported at full weight
+> including the parts that did not work:
 >
 > 1. **Accuracy is 81/128**, closed under a frozen specification after six
 >    measured gate runs. The best run scored 119/128; it is recorded *beside*
 >    the shipped number rather than replacing it, because two pre-registered
 >    repair attempts both made the score worse and suppressing that would
 >    turn a specification into a curve fit.
-> 2. **The production pipeline does not complete.** All five fixtures upload
->    (`202`) and all five jobs were then killed at the function's 300 s
->    `maxDuration`, persisting **zero** records. The cause is measured, not
->    guessed — provider rate limits under a five-way fan-out — and the two
->    defects it exposed are named in
->    [Parallel processing and bottlenecks](#parallel-processing-and-bottlenecks).
+> 2. **The live database holds 113 of 128 records.** The 15 missing are one
+>    document: `05`, the scanned one. It extracts **19 of 19 on the local
+>    Tesseract path** (gate-measured) and **3 of 19 on Vercel's vision path**
+>    (live-measured once, 2026-08-27) — a documented
+>    [per-target limitation](#cost), fail-visible via 13 review-queue items
+>    rather than a silent loss.
 >
-> **Both defects are now fixed in this tree, and neither fix has been
-> deployed.** The gate that found them was a measurement gate, so nothing was
-> changed while it was open; the repair landed after it closed, written
-> test-first — a lease/visibility timeout so a killed worker's job is
-> *reclaimed* instead of stranded, `maxDuration` re-derived from the measured
-> wall-clock (300 s → 1800 s), and the cron batch size cut to match. Promotion
-> is a human action and has not been taken, so **production still runs the
-> pre-fix build.** Re-checked on 2026-08-27 against the live URL: all five
-> seeded jobs still read `running` at `attempt = 1`, and `GET /records` still
-> returns `{"items": [], "next_cursor": null}`. The fix is proven by tests, not
-> by production, and that line is held everywhere below.
+> **Getting there took three deployment defects that only a real deployment
+> could surface**, and all three are fixed, test-first, and deployed:
 >
-> So the live URL serves the API surface, and its database is empty. Nothing
-> in this document is estimated and then presented as measured; where
-> something was measured, the raw figures and the date are given.
+> - a killed worker **stranded its job forever**, because the cron sweep
+>   claimed only `queued` rows and nothing rewrote a row whose process was
+>   gone — fixed with a lease/visibility timeout;
+> - a retry then **duplicated records** (60 rows for a 32-record document),
+>   because natural-key upsert assumes a deterministic producer and
+>   [ADR 014 §8](docs/decisions/014-semantic-layer-model-selection.md)
+>   measured that ours is not — fixed by making re-ingest a document-scoped
+>   atomic *replace*;
+> - the adjudication pass could **outrun its own budget**, because the
+>   wall-clock check sat between items while one call could spend
+>   `300 s × 4` SDK attempts — fixed by bounding the per-item ceiling.
+>
+> `maxDuration` was also re-derived from measured wall-clock (300 s → 1800 s)
+> and the cron batch resized to match, both as conformance with this
+> project's own sizing rule rather than new policy.
+>
+> The repairs landed **after** the gate that found them closed, never during
+> it: a measurement gate whose subject is edited mid-measurement is not a
+> measurement. Nothing in this document is estimated and then presented as
+> measured; where something was measured, the raw figures and the date are
+> given.
 
 ---
 
@@ -110,12 +119,14 @@ production seed was pre-declared as **one more declared draw of the frozen
 specification** — the same prompts, the same models, the same `sha256`-pinned
 conventions — not a fresh result and not a better one.
 
-**It never became a draw at all.** The seed ran on 2026-08-27 and produced no
-accuracy sample, because all five jobs were killed by the platform before any
-of them reached the comparison: an infrastructure failure, not a semantic one.
-The distinction matters and is kept throughout — 81/128 is what this pipeline
-scores, and `0 of 128 persisted` is what this *deployment* currently does with
-it. Details in
+**The first attempt never became a draw at all** — all five jobs were killed
+by the platform before reaching the comparison, an infrastructure failure
+rather than a semantic one. After the fixes, the re-seed landed **113 of 128
+records with zero duplicates**, and the distinction is worth keeping: 81/128
+is what this pipeline *scores* against the oracle, 113/128 is what this
+*deployment* currently *holds*, and they are not the same measurement. The
+15-record gap is document 05's vision extraction, not a mapping failure.
+Details in
 [Parallel processing and bottlenecks](#parallel-processing-and-bottlenecks).
 
 ---
@@ -420,11 +431,50 @@ goes stale.
 | `POST` `GET` | `/internal/sweep` | `CRON_SECRET` bearer | the sweep path, registered under both methods with distinct operation ids: `POST` for the self-kick, `GET` because that is what a Vercel cron issues. `?limit=` bounds the batch, and the batch runs **sequentially in one invocation** — which is why `limit` is coupled to `maxDuration` ([ADR 009](docs/decisions/009-cron-sweep-jobrunner.md)) |
 
 `GET /records?tax_year=2026` returns active 2026 records and excludes
-superseded ones. That is a test, not a claim.
+superseded ones. That is a test, not a claim — and the distinction between
+the test and the live URL is worth one paragraph, because they do not
+currently agree.
+
+> **The superseded filter is proven by the suite and NOT yet demonstrable
+> live.** The test seeds a `superseded` record and proves it is filtered; that
+> is where the property is held. Over the live URL the query is *vacuously*
+> satisfied: all 113 live records are `active`, so there is nothing to
+> exclude. The reason is document 05 — the superseded document — under-
+> extracting on Vercel's vision path, so it never contributed the superseded
+> rows the check needs. **Recorded as open, not as passed.** It closes when
+> the vision path does.
+>
+> The same query returns **59 of the 113 live records**, and the shortfall is
+> the identical failure shape: every `ordinary_income_bracket`,
+> `standard_deduction`, `surtax_threshold`, `wage_base`,
+> `withholding_allowance` and `employment_tax_rate` record carries
+> `tax_year = 2026`, while all 51 `sales_tax_rate` rows (document 03) and all
+> 3 `special_gain_rate` rows (document 05) carry **null** — a field the model
+> did not emit, never a value it got wrong.
 
 `GET /records/resolve` returns the applicable bracket **record**. It is a data
 lookup, and the response deliberately does not read as a computed tax
-liability.
+liability. Live example against the deployed URL:
+
+```
+GET /records/resolve?amount=150000&filing_status=single
+      &taxpayer_class=individual&tax_year=2026&jurisdiction=US-FED
+-> the 106151-202650 bracket at 0.24, active, with its page and table
+```
+
+**`taxpayer_class=individual` is not decoration, and that is a finding.** An
+earlier run of the same document under the same frozen spec emitted those
+records with `taxpayer_class` null, and this one emitted `individual`. Both
+are in the natural key, so *which query answers depends on which draw
+persisted*. [ADR 014 §8](docs/decisions/014-semantic-layer-model-selection.md)
+measured that stochasticity in the accuracy table; here it is **visible in the
+API contract itself**, which is a more expensive place for it to live.
+
+(`jurisdiction` defaults to `US-FED`. It shipped as `US`, which the canonical
+vocabulary never produces — so the default could not match a federal record,
+and the first hand-written call against production 404'd over a database
+holding exactly the bracket it asked for. Found live, fixed, and pinned by a
+test that reads the published schema.)
 
 The review surface is **read-only, and the schema pins it that way** — a
 contract test asserts that `/reviews` and `/reviews/{id}` expose `get` and
@@ -938,6 +988,25 @@ document with nonzero extraction cost anywhere.
 |---|---|---|---|
 | Extraction, documents 01–04 | `$0.00` | `$0.00` | `$0.00` |
 | Extraction, document 05 | Tesseract, `$0.00` (CPU) | vision-OCR, per-token | Textract, `$0.015`/page (list) |
+
+**Extraction fidelity is not equal across targets, and document 05 is where
+they part.** This is a measured per-target limitation, stated because a
+cost table that hid it would be selling the cheap column:
+
+| Document 05 (scanned, no text layer) | Records | Measured |
+|---|---|---|
+| **local** — Tesseract | **19 / 19** | gate-measured, six runs |
+| **Vercel** — vision-OCR (`zai/glm-5.3-flash`) | **3 / 19** | live-measured once, 2026-08-27 |
+| **AWS** — Textract | — | never deployed; no measurement exists |
+
+The Vercel figure is the vision path's **first end-to-end run**, and it
+under-extracts: 3 `special_gain_rate` records arrived and the 16 bracket
+records did not. It is **fail-visible, not silent** — the same run queued
+**13 review items** naming what it could not place, which is anti-goal #8
+working rather than a regression. No system binary can exist in a Vercel
+function ([ADR 010](docs/decisions/010-vision-ocr-vercel-extractor.md)), so
+this is the trade that target makes, and the honest reading is that **the
+scanned path is production-ready on the local target and not yet on Vercel.**
 | `SchemaMapper` | per-token | per-token | per-token |
 | `RecordVerifier` | per-token | per-token | per-token |
 | `Adjudicator` | per open queue item | per open queue item | per open queue item |

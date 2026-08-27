@@ -126,3 +126,72 @@ class TestResolve:
 
     def test_missing_both_discriminators_is_422(self, client: TestClient) -> None:
         assert _resolve(client, amount=5000).status_code == 422
+
+
+class TestJurisdictionDefault:
+    """The shipped default could never match a federal record.
+
+    Found live on 2026-08-27 while exercising the endpoint against
+    production: ``/records/resolve?amount=150000&filing_status=single&
+    tax_year=2026`` returned 404 over a database that held exactly the
+    bracket asked for. The endpoint defaulted ``jurisdiction`` to ``"US"``
+    while the canonical vocabulary — fixed in ADR 015 and frozen in
+    ``CANONICAL_CONVENTIONS`` — spells the federal jurisdiction ``"US-FED"``.
+    A default that cannot match the corpus's most common chain is a trap for
+    the first caller, and this endpoint exists to be called by hand.
+    """
+
+    def test_default_jurisdiction_resolves_a_federal_bracket(self, client: TestClient) -> None:
+        """The whole regression: no explicit jurisdiction, federal answer.
+
+        The bounds mirror the production bracket the live 404 was asked for
+        (single, 106151-202650 at 24%, TY2026), so this test fails in exactly
+        the shape the endpoint failed in.
+        """
+        seed_records(
+            [
+                record(
+                    jurisdiction="US-FED",
+                    taxpayer_class="individual",
+                    lower_bound=106_151,
+                    upper_bound=202_650,
+                    rate=Decimal("0.24"),
+                )
+            ],
+            sha_prefix="fe",
+        )
+        response = client.get(
+            "/records/resolve",
+            params={
+                "amount": 150_000,
+                "filing_status": "single",
+                "tax_year": 2026,
+                "taxpayer_class": "individual",
+            },
+        )
+        assert response.status_code == 200
+        assert response.json()["record"]["jurisdiction"] == "US-FED"
+
+    def test_the_default_is_the_canonical_spelling(self, client: TestClient) -> None:
+        """Pinned against the schema rather than the handler, so the default
+        shows up in the published contract a caller actually reads."""
+        schema = client.get("/openapi.json").json()
+        params = schema["paths"]["/records/resolve"]["get"]["parameters"]
+        (jurisdiction,) = [p for p in params if p["name"] == "jurisdiction"]
+        assert jurisdiction["schema"]["default"] == "US-FED"
+
+    def test_a_state_jurisdiction_is_still_reachable(self, client: TestClient) -> None:
+        """Changing a default must not close a door: state chains are the
+        reason the parameter exists at all (document 03 is 51 of them)."""
+        _seed_chains()  # seeds the ZZ-API chain
+        response = client.get(
+            "/records/resolve",
+            params={
+                "amount": 50_000,
+                "filing_status": "single",
+                "tax_year": 2026,
+                "jurisdiction": "ZZ-API",
+            },
+        )
+        assert response.status_code == 200
+        assert response.json()["record"]["jurisdiction"] == "ZZ-API"

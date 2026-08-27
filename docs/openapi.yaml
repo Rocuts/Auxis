@@ -197,6 +197,45 @@ paths:
   /records/resolve:
     get:
       summary: The bracket containing an amount (a data lookup, not tax advice)
+      description: 'Returns the single active bracket record whose range contains
+        `amount`, for the chain named by the other parameters. This is a **data lookup**:
+        the response is the stored record with its provenance, never a computed tax
+        liability.
+
+
+        At most one row can match, and that is a database guarantee rather than a
+        promise — the query mirrors the `EXCLUDE USING gist` constraint''s own expressions,
+        so overlapping brackets are unrepresentable for a chain.
+
+
+        **The identity fields use a fixed vocabulary** (ADR 015). Values outside it
+        match nothing:
+
+
+        - `jurisdiction` — `US-FED` for federal, or `US-<ISO 3166-2>` for a state
+        (`US-CA`, `US-NY`, …). Defaults to `US-FED`.
+
+        - `taxpayer_class` — `individual` or `estate_or_trust`. Omit it only if the
+        records you want carry no taxpayer class; it is part of the chain''s identity,
+        so an omitted value matches NULL and nothing else.
+
+        - `filing_status` — `single`, `married_filing_jointly`, `married_filing_separately`,
+        `head_of_household`, `qualifying_surviving_spouse`. Supply this **or** `taxpayer_class`;
+        a chain with neither is not identifiable.
+
+
+        A worked example that answers over the seeded federal corpus:
+
+
+        ```
+
+        GET /records/resolve?amount=150000&filing_status=single&taxpayer_class=individual&tax_year=2026&jurisdiction=US-FED
+
+        ```
+
+
+        -> the `106151-202650` bracket at `0.24`, with the page and table it was extracted
+        from.'
       operationId: resolve_records_resolve_get
       parameters:
       - name: amount
@@ -235,7 +274,7 @@ paths:
         required: false
         schema:
           type: string
-          default: US
+          default: US-FED
           title: Jurisdiction
       - name: record_type
         in: query

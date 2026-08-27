@@ -61,7 +61,28 @@ _MTOK = Decimal(1_000_000)
 #: turns a runaway generation into a fast, loud failure instead of a slow
 #: expensive one.
 _MAX_OUTPUT_TOKENS = 8_000
-_REQUEST_TIMEOUT_SECONDS = 300.0
+
+#: Per-request ceiling, deliberately far below the mapper's.
+#:
+#: This is one item and one short disposition — a call that has not answered
+#: in a minute and a half is not going to. The number is small because of what
+#: sits above it: the pass has a wall-clock budget
+#: (``service.jobs.DEFAULT_ADJUDICATION_BUDGET_SECONDS``) checked BETWEEN
+#: items, so a single item that can run longer than that budget makes the
+#: budget decorative. Production proved that on 2026-08-27: at 300 s x 4 SDK
+#: attempts one item could spend 1200 s against a 420 s budget, and document
+#: 02 overran a 1800 s invocation three times with its records already
+#: correct. ``tests/mapping/test_adjudicator_budget_bound.py`` pins the
+#: relationship so it cannot drift back.
+_REQUEST_TIMEOUT_SECONDS = 90.0
+
+#: One retry, not three. Bounded rather than removed: a single transport blip
+#: should still be absorbed, but each extra attempt multiplies the timeout
+#: above and this role is the one that runs AFTER the records are safely
+#: persisted. A queue item that misses its proposal waits for a human, which
+#: is the documented fallback; a job that never terminates loses the whole
+#: run's bookkeeping.
+_MAX_RETRIES = 1
 
 
 class AdjudicatorConfigError(RuntimeError):
@@ -408,7 +429,7 @@ class AnthropicAdjudicator:
             api_key=config.api_key,
             base_url=config.base_url,
             timeout=_REQUEST_TIMEOUT_SECONDS,
-            max_retries=3,
+            max_retries=_MAX_RETRIES,
             http_client=conformance.instrumented_http_client(
                 conformance.ADJUDICATOR, timeout=_REQUEST_TIMEOUT_SECONDS
             ),

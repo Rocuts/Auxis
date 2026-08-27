@@ -210,6 +210,35 @@ def create_app(settings: ApiSettings, *, runner: JobRunner | None = None) -> Fas
         "/records/resolve",
         response_model=ResolveOut,
         summary="The bracket containing an amount (a data lookup, not tax advice)",
+        description=(
+            "Returns the single active bracket record whose range contains "
+            "`amount`, for the chain named by the other parameters. This is a "
+            "**data lookup**: the response is the stored record with its "
+            "provenance, never a computed tax liability.\n\n"
+            "At most one row can match, and that is a database guarantee "
+            "rather than a promise — the query mirrors the `EXCLUDE USING "
+            "gist` constraint's own expressions, so overlapping brackets are "
+            "unrepresentable for a chain.\n\n"
+            "**The identity fields use a fixed vocabulary** (ADR 015). Values "
+            "outside it match nothing:\n\n"
+            "- `jurisdiction` — `US-FED` for federal, or `US-<ISO 3166-2>` "
+            "for a state (`US-CA`, `US-NY`, …). Defaults to `US-FED`.\n"
+            "- `taxpayer_class` — `individual` or `estate_or_trust`. Omit it "
+            "only if the records you want carry no taxpayer class; it is part "
+            "of the chain's identity, so an omitted value matches NULL and "
+            "nothing else.\n"
+            "- `filing_status` — `single`, `married_filing_jointly`, "
+            "`married_filing_separately`, `head_of_household`, "
+            "`qualifying_surviving_spouse`. Supply this **or** "
+            "`taxpayer_class`; a chain with neither is not identifiable.\n\n"
+            "A worked example that answers over the seeded federal corpus:\n\n"
+            "```\n"
+            "GET /records/resolve?amount=150000&filing_status=single"
+            "&taxpayer_class=individual&tax_year=2026&jurisdiction=US-FED\n"
+            "```\n\n"
+            "-> the `106151-202650` bracket at `0.24`, with the page and table "
+            "it was extracted from."
+        ),
     )
     def resolve(
         conn: Conn,
@@ -217,7 +246,11 @@ def create_app(settings: ApiSettings, *, runner: JobRunner | None = None) -> Fas
         tax_year: Annotated[int, Query(ge=1900, le=2999)],
         filing_status: FilingStatus | None = None,
         taxpayer_class: str | None = None,
-        jurisdiction: str = "US",
+        # `US-FED`, not `US`: the canonical vocabulary spells the federal
+        # jurisdiction that way (ADR 015), so a `US` default could never match
+        # a federal record — found by a live 404 over a database that held the
+        # very bracket being asked for (gate 3.5-LIVE, 2026-08-27).
+        jurisdiction: str = "US-FED",
         record_type: RecordType = RecordType.ORDINARY_INCOME_BRACKET,
     ) -> ResolveOut:
         if filing_status is None and taxpayer_class is None:

@@ -57,6 +57,9 @@ import anthropic
 # retuned. Private by name because they are that module's business — this
 # module is the one caller with a legitimate need to mirror them exactly.
 from tax_tables.adapters.anthropic_adjudicator import (
+    _MAX_RETRIES as _ADJUDICATOR_MAX_RETRIES,
+)
+from tax_tables.adapters.anthropic_adjudicator import (
     _REQUEST_TIMEOUT_SECONDS as _ADJUDICATOR_TIMEOUT_SECONDS,
 )
 from tax_tables.adapters.anthropic_adjudicator import AdjudicatorConfig, AnthropicAdjudicator
@@ -136,6 +139,7 @@ def _client(
     env: Mapping[str, str] | None = None,
     *,
     timeout: float = _MAPPER_TIMEOUT_SECONDS,
+    max_retries: int = _MAX_RETRIES,
 ) -> anthropic.AnthropicBedrock:
     """A Bedrock-signing client with the calling role's timeout budget.
 
@@ -145,11 +149,16 @@ def _client(
     All three values are *imported* from the direct-API adapters rather than
     copied, so a retune there cannot silently leave AWS on a stale budget —
     and a rename fails loudly at import instead of drifting.
+
+    ``max_retries`` travels the same way, and for the same reason: the
+    adjudicator's retry count was cut with its timeout (gate 3.5-LIVE), and a
+    per-item budget is the product of the two. Importing only one of them
+    would have left this target with a quarter of the intended ceiling.
     """
     return anthropic.AnthropicBedrock(
         aws_region=_region(env),
         timeout=timeout,
-        max_retries=_MAX_RETRIES,
+        max_retries=max_retries,
     )
 
 
@@ -196,5 +205,9 @@ def bedrock_adjudicator(
     """The Adjudicator as it runs on AWS (one call per open queue item)."""
     resolved = _bedrock_env(env)
     if client is None:
-        client = _client(resolved, timeout=_ADJUDICATOR_TIMEOUT_SECONDS)
+        client = _client(
+            resolved,
+            timeout=_ADJUDICATOR_TIMEOUT_SECONDS,
+            max_retries=_ADJUDICATOR_MAX_RETRIES,
+        )
     return AnthropicAdjudicator(AdjudicatorConfig.from_env(resolved), client=client)

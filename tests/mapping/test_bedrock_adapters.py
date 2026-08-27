@@ -34,6 +34,7 @@ from uuid import uuid4
 import anthropic
 import pytest
 
+from tax_tables.adapters import anthropic_adjudicator, anthropic_mapper
 from tax_tables.adapters.anthropic_adjudicator import AdjudicatorConfig, AnthropicAdjudicator
 from tax_tables.adapters.anthropic_mapper import AnthropicSchemaMapper, MapperConfig
 from tax_tables.adapters.anthropic_verifier import AnthropicRecordVerifier, VerifierConfig
@@ -488,12 +489,21 @@ class TestClientConstruction:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Per-item adjudication has its own, smaller budget upstream; the
-        Bedrock client must carry that one, not the mapper's."""
+        Bedrock client must carry that one, not the mapper's.
+
+        Asserted against the direct adapter's constants rather than literals.
+        A per-item ceiling is `timeout x (1 + max_retries)`, so pinning the
+        numbers here would let a retune upstream pass while this target
+        silently kept the old budget — which is the exact drift the imports
+        in `adapters/bedrock.py` exist to prevent. Both halves must travel.
+        """
         calls = _recording_bedrock(monkeypatch)
         bedrock_adjudicator({"AWS_REGION": "us-east-1"})
         (kwargs,) = calls
-        assert kwargs["timeout"] == 300.0
-        assert kwargs["max_retries"] == 3
+        assert kwargs["timeout"] == anthropic_adjudicator._REQUEST_TIMEOUT_SECONDS
+        assert kwargs["max_retries"] == anthropic_adjudicator._MAX_RETRIES
+        # ...and it is genuinely the SHORTER budget, not the mapper's.
+        assert kwargs["timeout"] < anthropic_mapper._REQUEST_TIMEOUT_SECONDS
 
     def test_no_client_is_built_when_one_is_injected(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """An injected client means no region is needed and no AWS client is
