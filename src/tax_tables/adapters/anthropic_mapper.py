@@ -405,12 +405,20 @@ CANONICAL_CONVENTIONS = """\
   married_filing_jointly, married_filing_separately, head_of_household,
   qualifying_surviving_spouse. A schedule that applies to a non-individual
   taxpayer class uses filing_status null and taxpayer_class set instead.
-- taxpayer_class: ALWAYS set, never left null. It is a closed vocabulary,
-  not a slug of the printed label: "individual" for any schedule applying
-  to individual taxpayers (that is, every record carrying a filing_status),
-  and "estate_or_trust" — singular — for an estates-and-trusts schedule
-  however the page spells it ("Estates and Trusts" is still
-  "estate_or_trust").
+- taxpayer_class: a closed vocabulary — "individual" or "estate_or_trust"
+  (singular, however the page spells it: "Estates and Trusts" is still
+  "estate_or_trust") — and it is set on ORDINARY_INCOME_BRACKET RECORDS
+  ONLY. It exists to separate the two parallel ordinary-income chains a
+  jurisdiction can publish for the same year: one for individuals by filing
+  status, one for estates and trusts. No other record type has a second
+  parallel form, so no other record type uses the discriminator: on every
+  other record_type — including preferential_gain_bracket, which does carry
+  a filing_status — taxpayer_class is null.
+- tax_year: the year the schedule is assessed for, from document text
+  (rule 5). Leave it NULL for a record whose rates are in force from a date
+  rather than assessed against a tax year — a sales_tax_rate is levied at
+  the till, not returned for a year, so sales_tax_rate records carry
+  tax_year null even when the document is titled with a year.
 - lifecycle_status: "superseded" ONLY when the document itself states it
   has been superseded or replaced; otherwise "active". Every record of a
   superseded document is superseded.
@@ -473,12 +481,11 @@ below. (A free-form slug drifted between runs of the same document:
 which breaks natural-key matching and idempotency alike.)
 
 - additional_standard_deduction (condition):
-    unmarried, married_per_qualifying_spouse
+    unmarried, married_per_spouse
 - employment_tax_rate (component):
-    social_security_oasdi, medicare_hi, total, futa_effective_rate
+    social_security_oasdi, medicare_hi, total, futa_effective
 - special_gain_rate (category):
-    unrecaptured_section_1250_gain,
-    collectibles_and_certain_small_business_stock, short_term_capital_gain
+    unrecaptured_section_1250_gain, collectibles_and_qsbs, short_term_capital_gain
 - surtax_threshold (surtax):
     additional_medicare, net_investment_income
 - wage_base (item):
