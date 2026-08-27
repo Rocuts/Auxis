@@ -270,7 +270,11 @@ _RECORD_SCHEMA: dict[str, Any] = {
         "amount": _nullable({"type": "number"}),
         "currency": _nullable({"type": "string"}),
         "confidence": {"type": "number"},
-        "source_table_label": {"type": "string"},
+        # Nullable: a record read from a body paragraph has no printed
+        # designator, and a non-nullable field with no legal value is how the
+        # literal string "None" reached a provenance field on document 04 —
+        # a manufactured value, which is exactly what anti-goal #8 forbids.
+        "source_table_label": _nullable({"type": "string"}),
         "extra_attrs": {"type": "array", "items": _ATTR_SCHEMA},
         "convention_derived": {"type": "array", "items": {"type": "string"}},
         "provenance": {"type": "array", "items": PROVENANCE_SCHEMA},
@@ -543,7 +547,9 @@ not be dressed as a citation to a cell that does not say it.
   section the record came from, lowercased with non-alphanumeric runs
   collapsed to "_": "Table 1" -> "table_1", "Section 3." -> "section_3",
   "Table A. Rates (continued)" -> "table_a". Records read from a footnote
-  use "footnote". If a table has no printed designator, slug its caption.
+  use "footnote". If a table has no printed designator, slug its caption. A
+  record read from a body paragraph that carries no designator at all uses
+  null — never the string "None", and never an invented label.
 
 ## Extra attrs
 
@@ -709,7 +715,8 @@ def _build_record(raw: Mapping[str, Any], extracted: ExtractedDocument) -> Canon
     attrs: dict[str, Any] = {}
     for pair in adapt_extra_attrs(raw.get("extra_attrs"), role=conformance.MAPPER):
         attrs[str(pair["key"])] = pair["value"]
-    attrs["source_table_label"] = str(raw["source_table_label"])
+    label = raw.get("source_table_label")
+    attrs["source_table_label"] = None if label is None else str(label)
     attrs["provenance"] = provenance
     # Fields asserted from the conventions rather than from anything printed
     # (most often `jurisdiction` on a document that names none). Declared, so

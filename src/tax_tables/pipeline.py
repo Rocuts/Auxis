@@ -282,7 +282,14 @@ def run_document(
             # contract failure (after its bounded retries) flags this
             # document's records instead of losing them or blessing them.
             reason = "verifier unavailable: " + " ".join(str(exc).split())[:160]
-            verification = VerificationResult(verdicts=[], notes=[reason], cost=None)
+            # A body that arrived and broke the contract was paid for; only a
+            # transport failure that never answered is free.
+            spent = getattr(exc, "cost", None)
+            verification = VerificationResult(
+                verdicts=[],
+                notes=[reason],
+                cost=spent if isinstance(spent, MappingCost) else None,
+            )
             disputes = unverified_findings(mapping.records, reason)
             conformance.LEDGER.record_verification_outcome(
                 verified=0, unverified=len(mapping.records)

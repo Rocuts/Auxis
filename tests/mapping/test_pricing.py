@@ -294,3 +294,56 @@ class TestBilledArithmetic:
         assert cost is not None
         # 1000/1M*0.075 + 100000/1M*0.075*1.0 + 1000/1M*0.25
         assert cost.usd == Decimal("0.007825")
+
+
+class TestSourceTableLabelIsNullableNotStringified:
+    """Document 04 persisted the literal string "None" into a provenance
+    field, because the schema made `source_table_label` non-nullable and the
+    builder did `str(raw[...])` unguarded. A record read from a body
+    paragraph has no printed designator; inventing one is a manufactured
+    value, which is the class anti-goal #8 exists to prevent."""
+
+    def test_a_missing_label_becomes_null_not_the_string_none(self) -> None:
+        from tax_tables.adapters.anthropic_mapper import _build_record
+
+        raw = {
+            "record_type": "sales_tax_rate",
+            "jurisdiction": "US-AL",
+            "attribute_key": None,
+            "filing_status": None,
+            "taxpayer_class": None,
+            "tax_year": None,
+            "lifecycle_status": "active",
+            "lower_bound": None,
+            "upper_bound": None,
+            "rate": Decimal("0.0929"),
+            "amount": None,
+            "currency": None,
+            "confidence": Decimal("0.99"),
+            "source_table_label": None,
+            "provenance": [{"kind": "cell", "table_id": "p1_t0", "row": 1, "col": 1, "page": 1}],
+        }
+        record = _build_record(raw, _document())
+        assert record.attrs["source_table_label"] is None
+
+    def test_a_present_label_still_survives(self) -> None:
+        from tax_tables.adapters.anthropic_mapper import _build_record
+
+        raw = {
+            "record_type": "sales_tax_rate",
+            "jurisdiction": "US-AL",
+            "attribute_key": None,
+            "filing_status": None,
+            "taxpayer_class": None,
+            "tax_year": None,
+            "lifecycle_status": "active",
+            "lower_bound": None,
+            "upper_bound": None,
+            "rate": Decimal("0.0929"),
+            "amount": None,
+            "currency": None,
+            "confidence": Decimal("0.99"),
+            "source_table_label": "table_a",
+            "provenance": [{"kind": "cell", "table_id": "p1_t0", "row": 1, "col": 1, "page": 1}],
+        }
+        assert _build_record(raw, _document()).attrs["source_table_label"] == "table_a"

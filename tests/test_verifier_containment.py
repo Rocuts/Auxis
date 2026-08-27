@@ -171,3 +171,59 @@ class TestFindings:
 
     def test_no_records_means_no_findings(self) -> None:
         assert unverified_findings([], "verifier unavailable: x") == []
+
+
+class TestContainmentReportsHonestly:
+    """Two defects the document-04 adversarial pass found in this very path.
+
+    Containment kept 19 sound records that would otherwise have been lost —
+    and then reported them in two misleading ways: a paid verifier call shown
+    as $0, and `disputes 0` printed identically to a verifier that ran and
+    agreed. Both are fixed here; a containment that lies about what it
+    contained is only half a safety property.
+    """
+
+    def test_a_failed_call_that_returned_a_body_carries_its_cost(self) -> None:
+        """A body that arrived and broke the contract was paid for. The
+        adjudicator already worked this way; the verifier did not."""
+        from tax_tables.ports.mapper import MappingCost
+
+        spent = MappingCost(engine="alibaba/qwen-3-235b", api_calls=1, usd=Decimal("0.0031"))
+
+        class _PaidFailure:
+            def verify(self, extracted: Any, mapping: Any) -> VerificationResult:
+                raise VerificationError("lacks the verdicts envelope", cost=spent)
+
+        result = _run(_PaidFailure(), [_record(0)])
+        verification = result.verification
+        assert verification is not None
+        assert verification.cost is not None
+        assert verification.cost.usd == Decimal("0.0031")
+
+    def test_a_transport_failure_that_never_answered_stays_free(self) -> None:
+        result = _run(_BrokenVerifier(), [_record(0)])
+        verification = result.verification
+        assert verification is not None
+        assert verification.cost is None
+
+    def test_unavailable_does_not_render_as_zero_disputes(self) -> None:
+        """The reporting fix: "0" must mean judged-and-undisputed."""
+        from tax_tables.tools.pipeline_report import _disputes
+
+        unavailable = VerificationResult(
+            verdicts=[], notes=["verifier unavailable: lacks the verdicts envelope"]
+        )
+        assert _disputes(unavailable) == "unavail"
+
+    def test_a_verifier_that_agreed_still_renders_zero(self) -> None:
+        from tax_tables.tools.pipeline_report import _disputes
+
+        agreed = VerificationResult(
+            verdicts=[RecordVerdict(record_index=0, verdict=Verdict.CONFIRMED, reason=None)]
+        )
+        assert _disputes(agreed) == "0"
+
+    def test_no_verifier_at_all_renders_a_dash(self) -> None:
+        from tax_tables.tools.pipeline_report import _disputes
+
+        assert _disputes(None) == "-"

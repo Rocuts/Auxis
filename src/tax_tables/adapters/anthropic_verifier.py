@@ -519,10 +519,15 @@ class AnthropicRecordVerifier:
         ) as stream:
             message = stream.get_final_message()
 
+        # Cost is computed BEFORE the failure checks: a truncated or malformed
+        # response was still paid for, and the error must carry that spend
+        # (the same rule the adjudicator already followed).
+        cost = self._cost(message, started)
         if message.stop_reason != "end_turn":
             raise VerifierError(
                 f"verification call ended with stop_reason={message.stop_reason!r}; "
-                "refusing to parse a truncated or refused response"
+                "refusing to parse a truncated or refused response",
+                cost=cost,
             )
         text: str | None = None
         for block in message.content:
@@ -531,9 +536,16 @@ class AnthropicRecordVerifier:
                 text = candidate
                 break
         if text is None:
-            raise VerifierError("verification response contains no text block")
+            raise VerifierError("verification response contains no text block", cost=cost)
 
         verdicts, notes = parse_verification_payload(text, record_count=len(records))
+        return VerificationResult(verdicts=verdicts, notes=notes, cost=cost)
+
+    def _cost(self, message: Any, started: float) -> MappingCost:
+        """What this response cost, computed from its own usage block.
+
+        Called before the contract checks so a failed call can carry its
+        spend on the exception it raises."""
         usage = message.usage
         input_tokens = getattr(usage, "input_tokens", 0) or 0
         output_tokens = getattr(usage, "output_tokens", 0) or 0
@@ -545,7 +557,7 @@ class AnthropicRecordVerifier:
             + Decimal(cache_read) * self._config.usd_per_mtok_in * self._config.cache_read_factor
             + Decimal(output_tokens) * self._config.usd_per_mtok_out
         ) / _MTOK
-        cost = MappingCost(
+        return MappingCost(
             engine=self._config.model,
             api_calls=1,
             input_tokens=input_tokens,
@@ -555,4 +567,3 @@ class AnthropicRecordVerifier:
             usd=usd,
             wall_seconds=time.perf_counter() - started,
         )
-        return VerificationResult(verdicts=verdicts, notes=notes, cost=cost)

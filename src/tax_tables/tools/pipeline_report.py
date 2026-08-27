@@ -40,6 +40,7 @@ from tax_tables.extraction.router import ExtractionRouter
 from tax_tables.observability.conformance import format_conformance_report
 from tax_tables.pipeline import PipelineResult, run_document
 from tax_tables.ports.mapper import MappingCost
+from tax_tables.ports.verifier import VerificationResult
 
 
 def _dump(path: Path, payload: Any) -> None:
@@ -92,6 +93,21 @@ def _write_artifacts(directory: Path, stem: str, result: PipelineResult) -> None
             ],
         },
     )
+
+
+def _disputes(verification: VerificationResult | None) -> str:
+    """Three states, three renderings. "0" must mean "the verifier judged
+    every record and disputed none" — never "the verifier never answered",
+    which the containment path also produces as an empty verdict list. On
+    document 04 those two printed identically and a reader would have taken
+    an unverified document for a clean one."""
+    if verification is None:
+        return "-"
+    if not verification.verdicts and any(
+        note.startswith("verifier unavailable") for note in verification.notes
+    ):
+        return "unavail"
+    return str(len(verification.disputed))
 
 
 def _usd(cost: MappingCost | None) -> Decimal:
@@ -206,7 +222,7 @@ def run(paths: list[Path], dsn: str | None, artifacts: Path | None) -> int:
                     str(len(result.mapping.issues)),
                     str(len(result.triage.rejected)),
                     str(flagged),
-                    "-" if verification is None else str(len(verification.disputed)),
+                    _disputes(verification),
                     "-" if result.ingest is None else str(result.ingest.persisted),
                     "-" if result.ingest is None else str(result.ingest.cross_document_conflicts),
                     "-" if result.ingest is None else str(result.ingest.overlap_rejections),

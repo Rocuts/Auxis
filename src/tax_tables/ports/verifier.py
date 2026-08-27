@@ -86,7 +86,19 @@ class VerificationError(RuntimeError):
     than lose them or silently bless them (``pipeline.unverified_findings``).
     A domain module importing an adapter to name its exception would be the
     hexagon leaking.
+
+    ``cost`` carries the spend a failed call still incurred when a response
+    WAS received before the failure was detected — a body that arrived and
+    broke the contract was paid for. A transport failure that never got a
+    response leaves it None. This mirrors ``AdjudicationError`` exactly; the
+    asymmetry was found adversarially on document 04, where the verifier
+    returned a malformed body, was billed for it, and the report showed
+    ``ver_usd 0.0000``. Failed calls must not be free in the report.
     """
+
+    def __init__(self, message: str, *, cost: MappingCost | None = None) -> None:
+        super().__init__(message)
+        self.cost = cost
 
 
 class RecordVerifier(Protocol):
