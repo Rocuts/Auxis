@@ -166,8 +166,12 @@ and it is a README headline:
 1. **AWS** — designed in full, expressed as a CDK stack that synthesizes and
    validates offline. Never deployed; the README says so plainly.
 2. **Vercel** — the live URL. Fluid compute, Queues, Neon.
-3. **docker-compose** — the evaluator's one-command reproduction: API + Postgres +
-   worker + the five fixtures ingested. This must work from a fresh clone.
+3. **docker-compose** — the evaluator's local reproduction. Compose brings up
+   Postgres only; the API runs from the host (`make api`). There is no
+   background worker in the local target: jobs run on an explicit
+   authenticated `/internal/sweep` call, or with `JOB_RUNNER=vercel` so each
+   upload kicks its own sweep. `scripts/seed_remote.sh` ingests the five
+   fixtures against localhost. This must work from a fresh clone.
 
 ### Vercel constraints that shape the adapters
 
