@@ -9,15 +9,27 @@ targets, proven rather than asserted.** The same pipeline runs under
 `docker compose`, on Vercel, and in an AWS CDK stack, because every boundary
 that touches a platform is a port with three adapters behind it.
 
-> **Status at time of writing (2026-08-26).** One thing blocks everything that
-> is still open: **there is no funded model API key.** Consequently the
-> **Phase 2b accuracy run** has never executed, and while a **Vercel preview
-> deployment serves every endpoint** (with cold start and body cap measured
-> against it), no document has been extracted or mapped on it — so there is no
-> data-bearing live URL and nothing has been promoted to production. Every
-> number that depends on that key appears below as an explicit `TBD` with the
-> command that fills it. Nothing here is estimated and then presented as
-> measured; where something *was* measured, the raw figures are given.
+> **Status (2026-08-27, after production promotion).** The service is live at
+> **https://auxis-johan-rocuts-projects.vercel.app** and every `GET` serves.
+> Two results dominate this README and both are failures reported at full
+> weight:
+>
+> 1. **Accuracy is 81/128**, closed under a frozen specification after six
+>    measured gate runs. The best run scored 119/128; it is recorded *beside*
+>    the shipped number rather than replacing it, because two pre-registered
+>    repair attempts both made the score worse and suppressing that would
+>    turn a specification into a curve fit.
+> 2. **The production pipeline does not complete.** All five fixtures upload
+>    (`202`) and all five jobs are then killed at the function's 300 s
+>    `maxDuration`, persisting **zero** records. The cause is measured, not
+>    guessed — provider rate limits under a five-way fan-out — and the two
+>    defects it exposed are named in
+>    [Parallel processing and bottlenecks](#parallel-processing-and-bottlenecks).
+>    Neither is fixed here: the gate that found it is a measurement gate.
+>
+> So the live URL serves the API surface, and its database is empty. Nothing
+> in this document is estimated and then presented as measured; where
+> something was measured, the raw figures and the date are given.
 
 ---
 
@@ -82,12 +94,18 @@ number worse — all reported rather than smoothed. **A harness you cannot fail
 is a harness that proves nothing**, and the failures below are what the rigor
 bought.
 
-The one thing the harness does *not* speak to is the live URL's own data. When
-the production seed runs in 3.5-LIVE it is reported as **one more declared draw
-of the frozen specification** — the same prompts, the same models, the same
-`sha256`-pinned conventions — not as a fresh result and not as a better one.
-Whatever it returns is another sample of a distribution this README has already
-characterised.
+The one thing the harness does *not* speak to is the live URL's own data. The
+production seed was pre-declared as **one more declared draw of the frozen
+specification** — the same prompts, the same models, the same `sha256`-pinned
+conventions — not a fresh result and not a better one.
+
+**It never became a draw at all.** The seed ran on 2026-08-27 and produced no
+accuracy sample, because all five jobs were killed by the platform before any
+of them reached the comparison: an infrastructure failure, not a semantic one.
+The distinction matters and is kept throughout — 81/128 is what this pipeline
+scores, and `0 of 128 persisted` is what this *deployment* currently does with
+it. Details in
+[Parallel processing and bottlenecks](#parallel-processing-and-bottlenecks).
 
 ---
 
@@ -761,10 +779,23 @@ adjudicator's verbatim rationale, is in
 
 The semantic layer runs `zai/glm-5.3-flash` for the mapper and adjudicator and
 `alibaba/qwen-3-235b` for the verifier, both through the Vercel AI Gateway on
-the Anthropic Messages protocol. That choice was made on cost — a full
-five-document run maps for roughly `$0.02` against roughly `$0.83` on a
-frontier model — and **cost is not evidence of fitness.** A cheap model that
-maps tax brackets wrongly is not a saving.
+the Anthropic Messages protocol. That choice was made on cost — and **cost is
+not evidence of fitness.** A cheap model that maps tax brackets wrongly is not
+a saving.
+
+The gap is wide enough to survive the vendor moving its price. Taking the
+final gate's *actual* mapper token counts and repricing them three ways:
+
+| Mapper, gate 6 token mix | Cost | vs Opus 5 |
+|---|---|---|
+| `zai/glm-5.3-flash`, price as measured 2026-08-26 | `$0.0203` | `96x` cheaper |
+| `zai/glm-5.3-flash`, **promotion-day price** † | `$0.0405` | **`48x` cheaper** |
+| `claude-opus-5` at list (`$5` / `$25`) | `$1.9503` | — |
+
+The flash price doubled between the gate programme and promotion day (†, and
+[§8l](docs/decisions/014-semantic-layer-model-selection.md)). The decision
+does not turn on it: halving a `96x` advantage leaves `48x`, and the choice
+would have been the same at either number.
 
 So the rule that would overturn the choice was written **before the first
 number existed** ([ADR 014 §3](docs/decisions/014-semantic-layer-model-selection.md)):
@@ -893,11 +924,26 @@ document with nonzero extraction cost anywhere.
 
 The three per-token rows are the **Anthropic Messages protocol** billed at
 whichever endpoint configuration selects. Measured here, live and local, that
-is the **Vercel AI Gateway**: `zai/glm-5.3-flash` at `$0.075` / `$0.25` per
-Mtok for the mapper and adjudicator, `alibaba/qwen-3-235b` at `$0.22` /
-`$0.88` for the verifier. Direct Anthropic and Bedrock are the other two
-config-selected routes and would bill at their own list prices; neither is
-funded here, so no number in this section came from either.
+is the **Vercel AI Gateway**: `zai/glm-5.3-flash` for the mapper and
+adjudicator, `alibaba/qwen-3-235b` at `$0.22` / `$0.88` for the verifier.
+Direct Anthropic and Bedrock are the other two config-selected routes and
+would bill at their own list prices; neither is funded here, so no number in
+this section came from either.
+
+> **† Price footnote — flash moved mid-project.** Every measured cost line in
+> this README was computed at `zai/glm-5.3-flash` = **`$0.075` / `$0.25`** per
+> Mtok, the catalogue price read on 2026-08-26. On promotion day, 2026-08-27,
+> the same catalogue read **`$0.15` / `$0.50`** (cache read `$0.03`, still
+> `0.2x` input). `alibaba/qwen-3-235b` did not move. **Production is
+> configured at the promotion-day price**; the historical tables below stay as
+> they were measured, because a measurement is a record of what happened, not
+> a running estimate. Because only the flash roles moved, a full run rescales
+> by **`1.478x`**, not `2x`. Which of the two reads was wrong — or whether the
+> vendor simply repriced — is arbitrated as far as the evidence allows in
+> [ADR 014 §8l](docs/decisions/014-semantic-layer-model-selection.md), and the
+> lesson is generalised in
+> [Bottlenecks](#parallel-processing-and-bottlenecks): a cost line is a
+> measurement with an expiry date.
 
 Every price is configuration, not a hardcoded constant, and the accounting is
 arithmetic rather than estimation: the extractor counts API calls, and the
@@ -949,16 +995,89 @@ flat average — 60% of volume inside a four-hour window:
 Required concurrency is `0.42 × T`, where `T` is the wall-clock seconds of one
 document's pipeline. `T` is dominated by two model calls, not by extraction.
 
-> **TBD — gate open.** `T` is measured by the accuracy run's per-document
-> wall-clock column. Until then the concurrency figures below are presented as
-> the algebra, not as results.
-
 | `T` (seconds/document) | Concurrency needed at peak |
 |---|---|
 | 15 | ~7 |
 | 30 | ~13 |
 | 60 | ~25 |
 | 120 | ~50 |
+| **> 300 (measured on production, see below)** | **> 126** |
+
+### `T` was measured on production, and it broke the deployment
+
+**This is the sharpest result in this section, and it is a failure.** The
+Phase 3.5-LIVE seed pushed all five fixtures at the production URL. Every
+upload was accepted (`202`), every job was claimed within a second, and
+**all five then exceeded the function's 300 s `maxDuration` and were killed
+mid-pipeline.** Zero records persisted.
+
+| Document | `T` measured locally, sequential | `T` on production, 5-way concurrent |
+|---|---|---|
+| 01 | 157 s | **> 300 s (killed)** |
+| 02 | 173 s | **> 300 s (killed)** |
+| 03 | 346 s | **> 300 s (killed)** |
+| 04 | 268 s | **> 300 s (killed)** |
+| 05 | 46 s (Tesseract) | **> 300 s (killed)** — and on vision-OCR, a heavier path |
+
+Document 05 is not a like-for-like row: on Vercel it runs the vision-OCR
+extractor rather than Tesseract, so its production `T` includes work the local
+number never did. The other four are directly comparable, and three of them
+roughly doubled.
+
+**What that doubling is.** Not a slow function — a **rate limit, observed**.
+Five documents concurrent means ten model calls contending for one free-tier
+gateway allowance; the SDK absorbs `429`s by retrying with backoff, and
+backoff is wall-clock that counts against `maxDuration`. This is bottleneck #1
+below, reproducing exactly as predicted, at a fan-out of **five**. The
+prediction was that provider rate limits would bind before anything else. They
+did, three orders of magnitude below the design target.
+
+Corroborating evidence that the work was real and simply ran out of clock: the
+gateway billed **`$0.0222`** across the five killed runs — roughly a third of a
+complete run's `$0.0626` — and then stopped exactly when the functions died.
+
+**Two defects this exposed, stated plainly because neither is cosmetic:**
+
+1. **`maxDuration` is undersized against its own written rule.** The project's
+   own instruction is to size it to "the slowest single-document pipeline run
+   plus margin". The slowest local run was **346 s**; `maxDuration` was set to
+   **300 s**. That was already wrong before concurrency made it worse, and it
+   was wrong because the number was set once and never re-derived after the
+   wall-clock column existed.
+
+2. **A killed job is stranded, not retried.** `process_job` marks a job
+   `running` when it claims it, but `sweep_pending` selects
+   `WHERE status = 'queued'`. When the platform kills the invocation, nothing
+   rewrites the row — so the cron backstop, which exists precisely to make a
+   lost notification harmless, **cannot see the job it most needs to see**. The
+   five seeded jobs sat in `running` indefinitely, and because the SHA-256
+   idempotency key treats a `running` job as live, re-uploading the same PDF
+   returns the stranded job instead of starting a new one. The design note in
+   `vercel_runner.py` — "a lost notification delays work, it never loses it" —
+   holds for a *dropped kick* and does not hold for a *killed worker*.
+
+The fix for (2) is a visible-timeout lease: claim with a deadline, and have
+the sweep also select `running` jobs whose lease has expired, incrementing
+`attempt`. That is the standard shape and the schema already carries `attempt`
+and `started_at` to support it. **Neither fix is applied here** — the gate
+that found this is a measurement gate, and changing the runtime to make its
+own result look better is the one move this project has refused at every
+previous gate.
+
+### A cost line is a measurement with an expiry date
+
+One more live finding, smaller but transferable. `zai/glm-5.3-flash` was
+priced from the gateway catalogue at `$0.075` / `$0.25` per Mtok on
+2026-08-26 and at `$0.15` / `$0.50` on 2026-08-27, one day later
+([§8l](docs/decisions/014-semantic-layer-model-selection.md)). Nothing in this
+repository was wrong; the vendor's number moved underneath it.
+
+At 10,000 documents/day that is not a rounding error — it is the difference
+between roughly `$41/day` and `$81/day` of mapper spend at the measured token
+mix. Any capacity plan quoting per-token prices should therefore **record the
+date it read them** and treat them as an input to re-read, not a constant. The
+adapters already make this cheap: prices are configuration
+(`*_USD_PER_MTOK_*`), so repricing is an environment change, not a code change.
 
 ### What breaks first, in order
 
@@ -1120,12 +1239,37 @@ nowhere near deploy-correct. See [`docs/audit/`](docs/audit/) for the full
 > the production alias. Pass `--target=preview` explicitly on an empty
 > project. (Hit and recorded during Phase 3.5; see the dev-log.)
 
-> **3.5-structural CLOSED; 3.5-LIVE still open.** The Vercel adapters, the
-> vision-OCR extractor, `vercel.json`, and `scripts/seed_remote.sh` are built
-> and a **preview deployment serves every endpoint**. What is still open is
-> everything that needs a funded model key: no document has been extracted or
-> mapped on the platform, so there is **no data-bearing live URL** and no
-> production promotion. Measured against the preview:
+> **Promoted to production 2026-08-27:**
+> **https://auxis-johan-rocuts-projects.vercel.app**
+> — public, no SSO gate, every `GET` serving. The API works. **The pipeline
+> does not: the production seed put all five fixtures into a `maxDuration`
+> timeout and persisted zero records.** That result is measured, diagnosed,
+> and unfixed, in
+> [Parallel processing and bottlenecks](#parallel-processing-and-bottlenecks);
+> it is the headline finding of this phase and it is a failure, so it is
+> reported before the things that worked.
+>
+> | Production, measured 2026-08-27 | Result |
+> |---|---|
+> | `GET` endpoints (`/records`, `/documents`, `/reviews`, filtered) | **200**, correct shapes |
+> | Warm latency, data path, median of 3 | **272 ms** (`/documents` 278 ms, `/records/resolve` 283 ms) |
+> | `POST /documents`, no key / wrong key | **401 / 401** |
+> | `POST /internal/sweep`, no bearer / wrong bearer / cron bearer | **401 / 401 / 200** |
+> | Five-fixture seed: uploads accepted | **5 × 202**, distinct jobs, `duplicate=false` |
+> | Five-fixture seed: **records persisted** | **0 of 128 — all five jobs killed at `maxDuration`** |
+> | Model spend for the killed seed | **`$0.0222`** of the free allowance |
+> | Total project spend to date | **`$0.5205`** of a `$5.00` allowance |
+>
+> **The cold chain is no longer observable on production, by construction.**
+> `vercel.json` registers a one-minute cron on `/internal/sweep`; that request
+> touches the jobs table every 60 s, so Neon never reaches its 5-minute
+> autosuspend and the function never goes cold. An evaluator's first click is
+> therefore always a warm click — good for a demo URL, and the reason the
+> cold-chain numbers below come from the **preview**, which has no cron.
+> Preview and production share one Neon database, so the resume cost measured
+> there is the same resume cost production would pay if its cron were removed.
+>
+> Measured against the preview, where the cliff is observable:
 >
 > | Measurement | Result |
 > |---|---|
@@ -1267,10 +1411,17 @@ Consolidated, and deliberately specific. If something is unproven, it says so.
    ([ADR 010 addendum](docs/decisions/010-vision-ocr-vercel-extractor.md)).
    That closes the access question and **nothing more**: no full scanned page
    has been through the adapter, so extraction fidelity on document 05's merged
-   cells, its `to` range separator and its footnote-only rate is a 3.5-LIVE
-   measurement and is not asserted here. If it disappoints, document 05 lands
-   in the review queue with its provenance — anti-goal #8 working, not a
-   regression. Document 05 is extracted today by Tesseract in
+   cells, its `to` range separator and its footnote-only rate is still not
+   asserted here.
+
+   **The 3.5-LIVE seed was meant to settle this and did not.** Document 05 was
+   uploaded to production on the vision path and its job was killed at
+   `maxDuration` along with the other four, so the branch reality takes —
+   full vision extraction, or fail-closed into the review queue — **remains
+   unmeasured**. Both remain honest outcomes; neither has been observed. The
+   pre-registered fallback still stands: if extraction disappoints, document 05
+   lands in the review queue with its provenance, which is anti-goal #8 working
+   rather than a regression. Document 05 is extracted today by Tesseract in
    `docker compose`, or by Textract in the AWS design.
 
 ### The AWS stack
@@ -1431,4 +1582,41 @@ defect by decompiling `security-group.ts` *and* quoting the CloudFormation
 docs. Three promoted findings were **refuted** on that standard and are
 recorded as refuted. And where an agent-named finding was never verified, it
 is labelled unverified rather than quietly folded into a fix list.
+
+### Human-in-the-loop operations, by design
+
+Agents did the reversible work. **Every irreversible action passed through a
+human**, and that split is enforced by configuration rather than by good
+intentions. [`.claude/settings.json`](.claude/settings.json) puts every
+`vercel` invocation behind an approval prompt and **denies outright**:
+
+```
+vercel deploy --prod*    vercel promote*    vercel rollback*
+cdk deploy*              cdk bootstrap*
+```
+
+Those five lines are the whole mechanism, and they line up with the project's
+written anti-goals: promotion to production is always a human action, and
+nothing may mutate an AWS account that does not exist.
+
+The production promotion of 2026-08-27 is the worked example. The agent
+provisioned environment variables, resolved every adapter config, ran the
+checks, and prepared the deployment — then **stopped and reported READY TO
+PROMOTE**. A human typed `vercel deploy --prod`. The agent never held the
+ability to promote, and did not ask for it.
+
+The same boundary applies to spend and to secrets. Model escalation was
+designed, wired, tested and then **declined on cost by a human**
+([ADR 014 §8k](docs/decisions/014-semantic-layer-model-selection.md)) — the
+capability finished and deliberately unfunded. Secrets were minted inside a
+single subshell, piped straight into `vercel env add` and into a gitignored
+file, and **never rendered into a transcript, a log, or a commit**; the
+transcript of that session contains variable *names* only.
+
+Why this is worth stating in an engineering README rather than a process
+document: it is what makes the rest of the document's claims checkable. An
+agent that can promote to production, move money, and read its own secrets
+back has no meaningful separation between "reported a result" and "arranged a
+result". The gates in this project are only worth something because the agent
+running them could not also close them.
 

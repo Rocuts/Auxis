@@ -3,7 +3,9 @@
 **Status:** **CLOSED — 2026-08-27.** Accepted 2026-08-26; amended through §8j;
 closed by operator decision at §8k. Gate 2b's record is final at **81/128** on
 `zai/glm-5.3-flash`, and the escalation is **designed, wired, tested, and
-permanently unfunded.** · **Phase:** 2b
+permanently unfunded.** §8l is a dated **annotation** added at promotion day —
+a vendor price moved under §1 — and changes no decision on this page.
+· **Phase:** 2b
 
 ## Context
 
@@ -1173,6 +1175,91 @@ configuration ships. `zai/glm-5.3-flash` for the mapper and adjudicator,
 tier, with `CANONICAL_CONVENTIONS` frozen at `sha256:88b9ca03eaafcf05`
 (SPEC FREEZE v2). The 81/128 record is a measurement *of the thing that ships*,
 which is worth more than a better number measured on something else.
+
+
+### 8l. ANNOTATION (2026-08-27, promotion day) — the flash price moved
+
+**This is an annotation of fact, not an amendment of decision.** §8k closed
+this ADR and nothing below reopens it: no role changes, no threshold moves,
+no escalation is funded. What changed is a *number the world owns*, and the
+project's precedent for that is annotation, never a silent edit (§8f was
+superseded rather than deleted; the dev-log's own corrections are marked
+inline).
+
+#### The discrepancy
+
+| | Input / output, USD per Mtok | Cache read |
+|---|---|---|
+| §1 of this ADR, as written | `0.075` / `0.25` | `0.2x` = `0.015` |
+| Gateway catalogue, read 2026-08-27 at promotion | **`0.15` / `0.50`** | **`0.03`** |
+
+The promotion-day read is corroborated internally: the catalogue's own
+`input_cache_read` of `$0.03` is exactly `0.2x` of `$0.15`, and `0.2x` is the
+factor `adapters/pricing.py` already carries for this provider. The ratio was
+never in question; the absolute doubled.
+
+`alibaba/qwen-3-235b` was re-read at the same moment and is **unchanged** at
+`0.22` / `0.88`. This matters for every ratio below: a full run does **not**
+double, because only the flash roles move. Recomputing gate 6 from its
+recorded token counts:
+
+| | mapper | verifier | run total |
+|---|---|---|---|
+| at `0.075` / `0.25` | `$0.0203` | `$0.0221` | `$0.0423` (recorded: `$0.0424`) |
+| at `0.15` / `0.50` | `$0.0405` | `$0.0221` | `$0.0626` |
+
+**`1.478x`, not `2x`.** The recomputation at the low price reproduces the
+recorded figure to the fourth decimal, which establishes beyond doubt that
+every historical cost line on this project was *computed* at `0.075` / `0.25`.
+What it cannot establish is what was *billed*.
+
+#### Production runs promotion-day prices
+
+Ratified by operator decision. A cost line must match the invoice it will
+generate, so the live deployment carries `0.15` / `0.50` for the mapper,
+adjudicator and vision-OCR roles. Historical measured lines stay as measured.
+
+#### Empirical arbitration — and it is close
+
+The two hypotheses are (i) the original read was wrong, so historical lines
+understate by `1.478x`, or (ii) the provider's price changed between the gate
+programme and promotion day. They are separable against the gateway's billing
+counter, because **untracked calls can only ADD to billed spend, never
+subtract it** — probes, smoke tests and the vision probe were all real.
+
+- Billed all-time, `GET /v1/credits`, immediately before the production seed:
+  **`$0.49828655`**.
+- Recorded ledger lines, lower bound: the six gate runs are itemized in the
+  dev-log at `$0.2385` total; gate 4's entry states "three full fan-outs" had
+  also run by then, at roughly `$0.035` each. Lower bound **`~$0.3435`**.
+- Under hypothesis (i), that same work would have billed at
+  `$0.3435 x 1.478 =` **`~$0.5077`** — *more than the `$0.49829` actually
+  billed*, leaving negative room for probes that certainly happened.
+
+So hypothesis (i) is **disfavoured** and (ii) — a genuine mid-project price
+change — fits comfortably, leaving `$0.05-$0.16` of headroom for untracked
+calls.
+
+**The tolerance, stated plainly: the margin is 1.9%** (`$0.5077` vs
+`$0.49829`), and it rests on a fan-out count estimated from prose rather than
+counted from a ledger. At two fan-outs instead of three the contradiction
+dissolves. This is **evidence favouring a price change, not proof of one**,
+and it is recorded at that strength deliberately. The consequence for the
+README is a pricing-volatility note in the bottleneck section, not a
+restatement of historical cost tables.
+
+#### What this costs the exercise
+
+Nothing it measured. Cost was never a gate criterion, the model choice was
+settled on capability-per-dollar at a ratio that survives the doubling
+comfortably (the Opus comparison is recomputed at promotion-day prices in the
+README and still clears an order of magnitude), and the structural finding —
+four of five documents extract for `$0.00` on every target — is untouched by
+any per-token price.
+
+The transferable lesson is the one the bottleneck section now carries: **a
+cost line is a measurement with an expiry date.** Vendor prices are not
+constants, and a design that quotes them should say when it read them.
 
 
 ## Consequences

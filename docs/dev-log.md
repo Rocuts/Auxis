@@ -2976,3 +2976,197 @@ conventions — not a fresh result and not a better one.
 
 `CANONICAL_CONVENTIONS` still hashes `88b9ca03eaafcf05`. 667 passed, 1 skipped;
 diagrams 2/2.
+
+---
+
+## 2026-08-27 — Phase 3.5-LIVE: promoted, measured, and the pipeline failed
+
+Production is live. The API works. **The pipeline does not complete on it**,
+and that is the finding of this phase.
+
+**Live URL:** https://auxis-johan-rocuts-projects.vercel.app
+
+### What was provisioned
+
+Seventeen application environment variables on production, all through
+`vercel env add`, nothing hardcoded, no value ever rendered into a terminal.
+
+- **Fresh secrets at promotion, executed as a rule.** `API_KEY` and
+  `CRON_SECRET` were minted in-pipe — `python3 -c 'secrets.token_urlsafe(32)'`
+  piped straight into `vercel env add --sensitive` and appended to a
+  `chmod 600`, gitignored `.env.production.local` inside one subshell each.
+  The preview values were not reused and died with the preview.
+- **The gateway credential** was piped from `.env` into both
+  `SCHEMA_MAPPER_API_KEY` and `VISION_OCR_API_KEY`. The second is not
+  optional: the vision key chain falls back to `ANTHROPIC_API_KEY`, *not* to
+  `SCHEMA_MAPPER_API_KEY`, so a deployment whose only credential lives in the
+  mapper name fails closed on the scanned path (ADR 010 addendum). The key is
+  a `vck_`-prefixed gateway key, which is independent corroboration of ADR
+  014's claim that no direct-Anthropic credential exists on this project.
+- **Thirteen non-secrets** set readable, so they can be verified later rather
+  than trusted: both models, all six price variables, `EXTRACTION_OCR_ENGINE`,
+  `JOB_RUNNER`, and the two base URLs.
+- **Neon's `DATABASE_URL` / `DATABASE_URL_UNPOOLED` were left alone.** They
+  are integration-managed and were already present on Production.
+
+`.env.production.local` was confirmed gitignored **before** it was created,
+not after.
+
+**Preview stays fail-closed and that is now a documented decision.** Preview
+carries no `SCHEMA_MAPPER_*` or `VISION_OCR_*` at all, so both the semantic
+layer and the scanned path fail closed there. Ratified rather than fixed:
+production is the deliverable, and mirroring secrets to preview would spend
+credential surface for nothing.
+
+**A config trap caught before promotion, not after.** `.env` still held the
+*escalation arm* mapper (`anthropic/claude-haiku-4.5` at `$1`/`$5`) from the
+§8i/§8j wiring. Copying `.env` to production would have shipped an unmeasured
+model at 13x the price. Production was set from ADR 014 §8k's text — the
+measured flash configuration — not from the working file.
+
+Before promotion, all four role configs were resolved from the real
+production values and printed: mapper and adjudicator on `zai/glm-5.3-flash`,
+verifier cross-family on `alibaba/qwen-3-235b`, one endpoint, one credential,
+no §8i inheritance trap. `make check` green at 667 passed, 1 skipped.
+
+### The promotion itself
+
+The agent stopped at **READY TO PROMOTE** and the operator typed
+`vercel deploy --prod`. This is not a courtesy: `.claude/settings.json` denies
+`vercel deploy --prod*`, `vercel promote*` and `vercel rollback*` outright,
+so the capability was absent, not merely unused. See the new README section
+"Human-in-the-loop operations, by design".
+
+### Verification — everything except the pipeline passed
+
+| Check | Result |
+|---|---|
+| Production URL public, no SSO redirect | pass |
+| `GET /records`, `/documents`, `/reviews`, `?tax_year=2026` | 200 |
+| `POST /documents` with no key / wrong key | 401 / 401 |
+| `POST /internal/sweep` no bearer / wrong bearer / cron bearer | 401 / 401 / 200 |
+| Warm latency, data path, median of 3 | **272 ms** |
+
+### The seed failed, and how
+
+All five fixtures were accepted — `5 x 202`, distinct job ids,
+`duplicate=false` — and every job was claimed within a second of creation,
+with distinct `started_at` values. That confirms the fan-out worked exactly as
+designed: `KICK_LIMIT = 1`, so each upload kicked a sweep for its own single
+job and five independent invocations ran concurrently.
+
+Then all five were killed at the 300 s `maxDuration`. Zero records persisted.
+
+| Document | local `T`, sequential | production `T`, 5-way concurrent |
+|---|---|---|
+| 01 | 157 s | > 300 s, killed |
+| 02 | 173 s | > 300 s, killed |
+| 03 | 346 s | > 300 s, killed |
+| 04 | 268 s | > 300 s, killed |
+| 05 | 46 s (Tesseract) | > 300 s, killed (vision path, not comparable) |
+
+The gateway billed **`$0.0222`** across the five killed runs — about a third
+of a complete run's `$0.0626` — and `total_used` then stopped moving, exactly
+when the functions died. The work was real; it ran out of clock.
+
+**This is bottleneck #1 reproducing at a fan-out of five.** Ten concurrent
+model calls against one free-tier allowance, `429`s absorbed by SDK backoff,
+and backoff is wall-clock charged against `maxDuration`. The README predicted
+provider rate limits would bind first. They did — three orders of magnitude
+below the 10,000-documents/day design target.
+
+**Two defects, neither cosmetic, neither fixed:**
+
+1. **`maxDuration` violates the project's own sizing rule.** CLAUDE.md says to
+   size it to "the slowest single-document pipeline run plus margin". The
+   slowest local run was 346 s. It was set to 300 s. That was already wrong
+   before concurrency, and it was wrong because the number was chosen once and
+   never re-derived after the wall-clock column existed.
+2. **A killed job is stranded, not retried.** `process_job` sets `running` on
+   claim; `sweep_pending` selects `WHERE status = 'queued'`. A platform kill
+   rewrites nothing, so the cron backstop cannot see the job that most needs
+   it. Worse, SHA-256 idempotency treats a `running` job as live, so
+   re-uploading the same PDF returns the stranded job rather than starting a
+   new one — the corpus cannot be re-seeded without clearing those rows.
+   `vercel_runner.py`'s "a lost notification delays work, it never loses it"
+   is true of a *dropped kick* and false of a *killed worker*.
+
+The fix for (2) is a visible-timeout lease — claim with a deadline, let the
+sweep also take `running` jobs whose lease expired, increment `attempt`. The
+schema already carries `attempt` and `started_at`. **Not applied here.** The
+gate that found this is a measurement gate, and editing the runtime so its own
+result reads better is the move this project has refused at every prior gate.
+
+**Document 05's vision branch is still unmeasured.** It was uploaded on the
+vision path and killed with the rest, so neither outcome — clean vision
+extraction, or fail-closed into the review queue — has been observed. Both
+remain honest; neither is a result yet.
+
+### The cold chain is now unobservable on production, by construction
+
+`vercel.json` registers a one-minute cron on `/internal/sweep`. That query
+touches the jobs table every 60 s, so Neon never reaches its five-minute
+autosuspend and the function never goes cold. Idling past the autosuspend
+window is therefore impossible without removing the cron, which is a
+production config change and was not made.
+
+The preview's measured cold chain stands in: **6.76 s** true first click, of
+which ~3.9 s is Neon resuming. Preview and production share one Neon database,
+so that is the resume production would pay if the cron were removed. For a
+demo URL the cron is a feature — an evaluator's first click is always warm.
+
+### ADR 014 §8l — the flash price moved, and the arbitration is close
+
+`zai/glm-5.3-flash` read `$0.075` / `$0.25` per Mtok on 2026-08-26 and
+`$0.15` / `$0.50` on 2026-08-27. The promotion-day read is internally
+corroborated: catalogue `input_cache_read` of `$0.03` is exactly the `0.2x`
+factor `pricing.py` already carries. `alibaba/qwen-3-235b` did not move, so a
+full run rescales by **1.478x, not 2x**.
+
+Recomputing gate 6 from its recorded token counts reproduces `$0.0423` against
+the recorded `$0.0424` at the low price — proof that every historical line was
+*computed* at `$0.075`, though not proof of what was *billed*.
+
+The arbitration, per operator instruction, against `GET /v1/credits`:
+
+- billed all-time immediately pre-seed: **`$0.49828655`**
+- recorded ledger lower bound at `$0.075`: **`~$0.3435`** (six itemized gate
+  runs at `$0.2385`, plus the three fan-outs gate 4's entry mentions)
+- under "the original read was wrong", that same work bills at
+  `0.3435 x 1.478 = ~$0.5077` — **more than was actually billed**, and
+  untracked probe calls can only add to billed, never subtract
+
+So a genuine mid-project price change is **favoured**. **Tolerance, stated:
+the margin is 1.9%**, and it rests on a fan-out count read from prose rather
+than counted. At two fan-outs instead of three the contradiction dissolves.
+Evidence, not proof, and recorded at that strength.
+
+Production runs promotion-day prices (operator-ratified): a cost line must
+match the invoice it generates. Historical measured lines stay as measured,
+annotated rather than edited — the same treatment §8f got and the same
+treatment this log's own corrections get. The transferable lesson went into
+the bottleneck section: **a cost line is a measurement with an expiry date.**
+
+The Opus comparison was recomputed at promotion-day prices from gate 6's
+actual token mix: `$0.0405` on flash against `$1.9503` on Opus 5 list —
+**48x**, down from 96x. The decision does not turn on it.
+
+### Spend
+
+**`$0.0222`** this session. **`$0.5205`** total against the `$5.00` allowance.
+No purchase, no new provider, nothing escalated.
+
+### Human-in-the-loop operations, as method
+
+Recorded because this session is the clean worked example. Reversible work was
+delegated to the agent; every irreversible action passed through the operator,
+enforced by configuration rather than intention — `vercel *` behind an
+approval prompt, `vercel deploy --prod` / `promote` / `rollback` and
+`cdk deploy` / `bootstrap` denied outright. The agent provisioned, verified,
+and stopped at READY TO PROMOTE; a human promoted. Spend was declined by a
+human at §8k with the capability finished. Secrets moved through pipes and a
+gitignored file and never entered the transcript, which contains variable
+names only.
+
+The point is not process hygiene. It is that a gate is only worth something if
+the agent running it cannot also close it.
