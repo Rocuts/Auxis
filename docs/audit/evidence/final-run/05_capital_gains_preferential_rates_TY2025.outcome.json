@@ -1,0 +1,148 @@
+{
+  "document_id": "f95dbabc-cedc-43c7-bb87-6a9960840228",
+  "ingest": {
+    "persisted": 19,
+    "cross_document_conflicts": 0,
+    "overlap_rejections": 0
+  },
+  "review_entries": 3,
+  "adjudications": [
+    {
+      "item_id": "07972447-1ee4-4345-b30a-2ba78803fdfe",
+      "disposition": "proposal_stored",
+      "error": null,
+      "adjudication": {
+        "item_id": "07972447-1ee4-4345-b30a-2ba78803fdfe",
+        "resolution": "The item concerns the footnote's cross-reference rendered by OCR as 'Table |'. Page-1 prose index 3 (footnote) prints verbatim: 'This surtax is imposed in addition to the rates shown in Table | and is not reflected in those rates.' The pipe glyph sits where the document elsewhere uses Arabic table numbers: prose index 1 carries the line 'Table 1. Preferential rate bands by filing status, taxable income' and prose index 2 the heading 'Table 2. Special rate categories'. The document contains exactly these two tables. The sentence describes a surtax imposed IN ADDITION TO a set of pre-existing rates not already including it — the multi-band percentage schedule (0/15/20 percent rows visible in p1_t0, e.g. cells r1c0 and r2c0), which is Table 1, not the single-category maxima of Table 2. The contextual resolution of 'Table |' to 'Table 1' (p1_t0) is therefore correct as read, and the garble is non-material: no figure depends on it. The substantive footnote values read cleanly in prose index 3 — 3.8 percent Net Investment Income Tax, and thresholds of $200,000 (single and head of household), $250,000 (married filing jointly), $125,000 (married filing separately) — exactly as printed. Disposition: confirm the pipeline's contextual resolution; the item is dismissible either way, since whichever records draw their cross-reference note from this footnote carry a correctly interpreted reference, and a reviewer applying this proposal needs to do nothing beyond acknowledging the documented garble.",
+        "citations": [
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 3
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 1
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 2
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 1,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 2,
+            "col": 0
+          }
+        ],
+        "confidence": "0.95",
+        "citations_valid": true,
+        "cost": {
+          "engine": "zai/glm-5.3-flash",
+          "api_calls": 1,
+          "input_tokens": 6800,
+          "output_tokens": 2767,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 0,
+          "usd": "0.00120175",
+          "wall_seconds": 51.03305983298924
+        }
+      }
+    },
+    {
+      "item_id": "bd964d9b-b08d-43d2-a3c5-ff885aa6cc5e",
+      "disposition": "proposal_stored",
+      "error": null,
+      "adjudication": {
+        "item_id": "bd964d9b-b08d-43d2-a3c5-ff885aa6cc5e",
+        "resolution": "The item flags the Single 0-percent bracket cell of Table 1 (p1_t0, row 1, col 1) solely because the cell notes report OCR confidence 0.6 for it. The grid prints that cell as \"$0 to $48,350\" and the finding states the pipeline transcribed it as printed. Two independent checks on the same page settle the read and support that transcription. First, the Married Filing Separately column prints the identical string \"$0 to $48,350\" at row 1, col 3 with cell-note confidence 0.96, so a digit misread would have had to occur identically in two columns. Second, the next bracket in the Single column reads \"$48,351 to $533,400\" at row 2, col 1, opening exactly one dollar above $48,350; any other figure at row 1, col 1 would leave a gap or overlap against the printed 15-percent band. Under the bracket-bounds convention (\"$X to $Y\" -> lower_bound X, upper_bound Y), the page supports lower_bound 0, upper_bound 48350 at rate 0.0 for filing_status single (tax_year 2025, superseded document). Nothing in the page substantiates doubt in the figure, so the low-cell-confidence penalty noted in the finding is unwarranted by the evidence. Whether or not the proposed record ever reached the fact table, the proposed value as printed matches the page; a reviewer can close this item as confirmed with no correction.",
+        "citations": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 1,
+            "col": 1
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 1,
+            "col": 3
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 2,
+            "col": 1
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 0,
+            "col": 1
+          }
+        ],
+        "confidence": "0.92",
+        "citations_valid": true,
+        "cost": {
+          "engine": "zai/glm-5.3-flash",
+          "api_calls": 1,
+          "input_tokens": 1824,
+          "output_tokens": 2515,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 4992,
+          "usd": "0.00084043",
+          "wall_seconds": 46.81148279100307
+        }
+      }
+    },
+    {
+      "item_id": "c3f7c0ba-0d51-4ee7-879d-10e5fcc305ee",
+      "disposition": "proposal_stored",
+      "error": null,
+      "adjudication": {
+        "item_id": "c3f7c0ba-0d51-4ee7-879d-10e5fcc305ee",
+        "resolution": "The sentence named in the finding appears verbatim in the body paragraph preceding 'Table 1. Preferential rate bands by filing status, taxable income': 'Where taxable income spans more than one band, the gain is allocated across the bands in order and each portion is taxed at the corresponding rate.' It is a computation-methodology statement describing how the printed bands apply when income spans several of them, and unlike a prose-stated rate or threshold it attaches no figure to any Table 1 record. For preferential_gain_bracket the closed extra-attr dictionary defines only superseded_effective, so this sentence has no slot, and the governing convention directs exactly the pipeline's behavior: raise a visibility issue naming the gap rather than invent an unlisted key or silently absorb the sentence. That is what the finding reports. Nothing numeric was lost or altered by this handling, because every rate and every band bound the method governs prints directly in the Table 1 cell grid (for example '$0 to $48,350' at cell r1,c1 and '$48,351 to $533,400' at cell r2,c1 for Single); the flagged sentence adds method, not values. Disposition: the item is dismissible — a reviewer should acknowledge the flag and take no corrective action, leaving whatever bracket records were proposed from Table 1 unchanged either way.",
+        "citations": [
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 1
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 1,
+            "col": 1
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 2,
+            "col": 1
+          }
+        ],
+        "confidence": "0.96",
+        "citations_valid": true,
+        "cost": {
+          "engine": "zai/glm-5.3-flash",
+          "api_calls": 1,
+          "input_tokens": 1826,
+          "output_tokens": 3128,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 4992,
+          "usd": "0.00099383",
+          "wall_seconds": 65.8242705000157
+        }
+      }
+    }
+  ]
+}

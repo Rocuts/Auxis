@@ -1,0 +1,271 @@
+{
+  "filename": "02_standard_deduction_schedule_TY2026.pdf",
+  "sha256": "9695d3832aab69db97da2c8a7a3fe7e8fa758b999968ea014b96f798a20e6be2",
+  "pages": [
+    {
+      "page_number": 1,
+      "width": 612.0,
+      "height": 792.0,
+      "method": "deterministic_text",
+      "tables": [
+        {
+          "page_number": 1,
+          "table_id": "p1_t0",
+          "bbox": [
+            67.2,
+            227.79999999999995,
+            499.2,
+            347.8
+          ],
+          "grid_source": "word_gap_rebuild",
+          "rows": [
+            [
+              {
+                "text": "Single",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "15,400",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "15,000",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "+400",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Married filing jointly",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "30,800",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "30,000",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "+800",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Married filing separately",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "15,400",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "15,000",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "+400",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Head of household",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "23,100",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "22,500",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "+600",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Qualifying surviving spouse",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "30,800",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "30,000",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "+800",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ]
+          ],
+          "column_count": 4,
+          "irregular_row_indexes": []
+        },
+        {
+          "page_number": 1,
+          "table_id": "p1_t1",
+          "bbox": [
+            67.2,
+            403.8,
+            499.2,
+            451.8
+          ],
+          "grid_source": "word_gap_rebuild",
+          "rows": [
+            [
+              {
+                "text": "Unmarried (single or head of household)",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "2,050",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Married, per qualifying spouse",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "1,650",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ]
+          ],
+          "column_count": 2,
+          "irregular_row_indexes": []
+        }
+      ],
+      "prose": [
+        {
+          "page_number": 1,
+          "kind": "body",
+          "text": "TAXPAYER SERVICES DIVISION / TECHNICAL BULLETIN TB-2025-14\nStandard Deduction Schedule\nIssued 21 November 2025 (cid:127) effective for taxable years beginning on or after January 1, 2026",
+          "bbox": [
+            67.2,
+            65.1318,
+            478.52999999999986,
+            113.67000000000007
+          ],
+          "confidence": "1"
+        },
+        {
+          "page_number": 1,
+          "kind": "body",
+          "text": "This bulletin states the basic standard deduction amounts and the additional amounts allowed to taxpayers who have\nattained age 65 before the close of the taxable year or who are blind. All amounts in this bulletin are expressed in\nUnited States dollars.",
+          "bbox": [
+            67.2,
+            134.68369999999993,
+            537.6062999999999,
+            169.78369999999995
+          ],
+          "confidence": "1"
+        },
+        {
+          "page_number": 1,
+          "kind": "body",
+          "text": "Section 1 — Basic standard deduction\nFiling status Amount Prior year Change",
+          "bbox": [
+            67.2,
+            188.663,
+            493.2,
+            220.54230000000007
+          ],
+          "confidence": "1"
+        },
+        {
+          "page_number": 1,
+          "kind": "body",
+          "text": "Section 2 — Additional standard deduction (age 65 or older, or blind)\nCondition Per qualifying condition (a)",
+          "bbox": [
+            67.2,
+            364.663,
+            493.20000000000005,
+            396.5423
+          ],
+          "confidence": "1"
+        },
+        {
+          "page_number": 1,
+          "kind": "body",
+          "text": "Section 3 — Dependents\nThe standard deduction allowed to an individual with respect to whom a deduction for a personal exemption is\nallowable to another taxpayer is limited to the greater of 1,400, or the individual's earned income for the taxable year\nplus 450. In no event may the amount so determined exceed the basic standard deduction otherwise applicable to the\nindividual's filing status under Section 1 above. (b)",
+          "bbox": [
+            67.2,
+            468.663,
+            540.6547999999999,
+            533.7837
+          ],
+          "confidence": "1"
+        },
+        {
+          "page_number": 1,
+          "kind": "footnote",
+          "text": "(a) The additional amount is allowed once for age and once for blindness; a taxpayer meeting both conditions is allowed twice the stated\namount.\n(b) Amounts in Section 3 are indexed and are restated each year in the annual inflation adjustment bulletin.",
+          "bbox": [
+            67.2,
+            559.3525,
+            520.7550000000001,
+            587.8525
+          ],
+          "confidence": "1"
+        },
+        {
+          "page_number": 1,
+          "kind": "body",
+          "text": "SYNTHETIC SAMPLE DATA — prepared for systems evaluation. Not an authoritative tax publication. TB-2025-14 · 1",
+          "bbox": [
+            61.2,
+            763.409,
+            550.8000000000001,
+            770.409
+          ],
+          "confidence": "1"
+        }
+      ],
+      "ocr_stats": null
+    }
+  ],
+  "cost": {
+    "engine": "pdfplumber",
+    "api_calls": 0,
+    "usd": "0",
+    "wall_seconds": 0.08515887500834651
+  }
+}

@@ -1,0 +1,157 @@
+{
+  "document_id": "dc5c6372-5f54-434a-a5de-1f0688309e75",
+  "ingest": {
+    "persisted": 8,
+    "cross_document_conflicts": 0,
+    "overlap_rejections": 0
+  },
+  "review_entries": 3,
+  "adjudications": [
+    {
+      "item_id": "61f84f8d-a65c-4abc-8b18-a9f16651fbaa",
+      "disposition": "proposal_stored",
+      "error": null,
+      "adjudication": {
+        "item_id": "61f84f8d-a65c-4abc-8b18-a9f16651fbaa",
+        "resolution": "This item cannot be adjudicated as queued. The finding carries no provenance — table_id, row_index and col_index are all null — and raw_value is null, so the record the pipeline PROPOSED is not visible; the only stated reason is 'mapping: unspecified'. With neither the proposed value nor its location, there is nothing concrete to compare against the document, and the answer depends on information this queue item does not supply. What the document actually prints is coherent and self-consistent across the areas a mapping review would touch: p1_t0 gives the Section 1 basic standard deduction by filing status (Single 15,400 against prior 15,000, change +400; Married filing jointly 30,800 / 30,000 / +800; Married filing separately 15,400 / 15,000 / +400; Head of household 23,100 / 22,500 / +600; Qualifying surviving spouse 30,800 / 30,000 / +800); p1_t1 gives the Section 2 additional amount per qualifying condition (Unmarried (single or head of household) 2,050; Married, per qualifying spouse 1,650); and the prose states the Section 3 dependent limit — greater of 1,400 or earned income plus 450, capped at the basic deduction — together with the effective phrase 'taxable years beginning on or after January 1, 2026'. None of these can be checked against a proposal that is not shown. Disposition: hold for a human. The item should be reissued with the proposed record's record_type, attribute_key, mapped value and cell or prose coordinates before any confirmation or correction is possible; no automatic closure is defensible on the current item.",
+        "citations": [],
+        "confidence": "0.2",
+        "citations_valid": false,
+        "cost": {
+          "engine": "zai/glm-5.3-flash",
+          "api_calls": 1,
+          "input_tokens": 5841,
+          "output_tokens": 2925,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 64,
+          "usd": "0.001170285",
+          "wall_seconds": 61.74291445899871
+        }
+      }
+    },
+    {
+      "item_id": "ef079531-a3f6-45e6-85cf-0df3482ea439",
+      "disposition": "proposal_stored",
+      "error": null,
+      "adjudication": {
+        "item_id": "ef079531-a3f6-45e6-85cf-0df3482ea439",
+        "resolution": "This item cannot be adjudicated from the material supplied, and no candidate disposition (confirm, correct, or dismiss) can be supported by the document. The finding carries no provenance beyond source_page 1 — table_id, row and column are all null — and carries no proposed value (raw_value is null); its trigger reason is the generic string 'mapping: unspecified'. There is therefore no specific printed figure, bound, rate or label in this document that the item asks me to verify, and no citation anywhere on the page can settle or refute it. What the page actually prints, for the record of what was searched: Section 1 (prose index 2) heads a five-row basic standard-deduction matrix in table p1_t0 (Single 15,400, prior year 15,000, change +400; Married filing jointly 30,800/+800; Married filing separately 15,400/+400; Head of household 23,100/+600; Qualifying surviving spouse 30,800/+800); Section 2 (prose index 3) heads a two-condition additional-standard-deduction table in p1_t1 (unmarried 2,050; married per qualifying spouse 1,650); Section 3 (prose index 4) states the dependent rule as the greater of 1,400 or earned income plus 450, capped at the Section 1 basic amount; amounts are stated in United States dollars (prose index 1). Whether the pipeline's proposal behind this finding was right or wrong is indeterminable, since neither the proposal nor its location survived into the queue item. Correct handling: do NOT treat this as confirming or rejecting anything; route the item back so it can be re-raised with its original provenance coordinates and raw value, or discard it as a malformed artifact if no payload ever existed. A human with access to the upstream finding store must make that call.",
+        "citations": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 0,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 0,
+            "col": 1
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t1",
+            "row": 0,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t1",
+            "row": 0,
+            "col": 1
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 1
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 2
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 3
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 4
+          }
+        ],
+        "confidence": "0.4",
+        "citations_valid": true,
+        "cost": {
+          "engine": "zai/glm-5.3-flash",
+          "api_calls": 1,
+          "input_tokens": 5842,
+          "output_tokens": 4780,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 64,
+          "usd": "0.00163411",
+          "wall_seconds": 103.94059562499751
+        }
+      }
+    },
+    {
+      "item_id": "f20ce346-fb2f-4b89-befb-97d4e725fc3c",
+      "disposition": "proposal_stored",
+      "error": null,
+      "adjudication": {
+        "item_id": "f20ce346-fb2f-4b89-befb-97d4e725fc3c",
+        "resolution": "This item cannot be settled on the available evidence - and not because the document is unclear, but because the finding itself carries nothing to check: table_id, row_index, col_index and raw_value are all null and the reason is the generic 'mapping: unspecified'. It therefore names neither a specific cell nor a specific proposed record of TB-2025-14. Nor can the document disambiguate it, because page 1 offers several distinct mappable surfaces that would each be adjudicated differently: the five basic standard-deduction rows in p1_t0 ('Single' through 'Qualifying surviving spouse', with Amount, Prior year and Change columns), the two additional-standard-deduction condition rows in p1_t1 ('Unmarried (single or head of household)' 2,050; 'Married, per qualifying spouse' 1,650), and the Section 3 prose rule limiting a dependent's standard deduction to the greater of 1,400 or earned income plus 450, capped at the basic standard deduction. What the pipeline PROPOSED under this item cannot be identified from the entry, so no confirmation, correction or dismissal of the mapping can be justified. Disposition: return this item to a human reviewer rather than closing it; the reviewer must re-supply its provenance (cell coordinates or the fields of the proposed record) or re-queue the finding against a specific extraction before it can be adjudicated. Do not treat this empty entry as either confirming or refuting any value printed in the document.",
+        "citations": [
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 0
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 4
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 0,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 4,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t1",
+            "row": 0,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t1",
+            "row": 1,
+            "col": 0
+          }
+        ],
+        "confidence": "0.3",
+        "citations_valid": true,
+        "cost": {
+          "engine": "zai/glm-5.3-flash",
+          "api_calls": 1,
+          "input_tokens": 147,
+          "output_tokens": 4203,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 5760,
+          "usd": "0.001148175",
+          "wall_seconds": 89.70920029099216
+        }
+      }
+    }
+  ]
+}

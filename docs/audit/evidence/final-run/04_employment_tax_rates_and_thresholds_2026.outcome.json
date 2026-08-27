@@ -1,0 +1,102 @@
+{
+  "document_id": "9c8862cb-12f4-4907-ae8f-6cf1cf4d637d",
+  "ingest": {
+    "persisted": 18,
+    "cross_document_conflicts": 0,
+    "overlap_rejections": 0
+  },
+  "review_entries": 2,
+  "adjudications": [
+    {
+      "item_id": "4cd6158c-7fd6-4b5d-90ca-d91ed4b09631",
+      "disposition": "proposal_stored",
+      "error": null,
+      "adjudication": {
+        "item_id": "4cd6158c-7fd6-4b5d-90ca-d91ed4b09631",
+        "resolution": "The document genuinely prints the qualifier the queue flags: page 1 body prose (index 4) states, 'The withholding allowance amounts in Table 4 apply only to employees whose most recent withholding certificate was filed prior to 2020.' Prose index 3 identifies the table as 'Table 4. Withholding allowance by payroll period', i.e. grid p1_t3, whose rows run Weekly through Annually — so the restriction qualifies all six withholding_allowance records, not any single row. The pipeline's reading is therefore accurate: this is a real, table-wide document fact, not a misread. The closed extra-attr dictionary for withholding_allowance defines only payroll_period, periods_per_year and allowance; none carries an applicability/eligibility restriction, and under the closed-dictionary rule an invented key (e.g. some 'applies_only_if_certificate_pre_2020' spelling) may not be used, since nothing downstream would read it. The correct disposition is: leave the Table 4 cell mappings as read (each period row yields its periods_per_year figure and its allowance amount exactly as printed), do NOT force the restriction into an extra attr or drop it, and keep the open issue naming the vocabulary gap — withholding_allowance has no listed key for this applicability condition — so the limitation remains visible. Either way the records land (accepted or not), the facts stand: the allowance figures map correctly, and the pre-2020-certificate restriction exists in the document with no home in the current schema.",
+        "citations": [
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 4
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 3
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t3",
+            "row": 0,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t3",
+            "row": 0,
+            "col": 2
+          }
+        ],
+        "confidence": "0.95",
+        "citations_valid": true,
+        "cost": {
+          "engine": "zai/glm-5.3-flash",
+          "api_calls": 1,
+          "input_tokens": 6245,
+          "output_tokens": 2431,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 0,
+          "usd": "0.001076125",
+          "wall_seconds": 54.95187362501747
+        }
+      }
+    },
+    {
+      "item_id": "852850bf-5efc-4f1e-9946-40d1c07ecdf1",
+      "disposition": "proposal_stored",
+      "error": null,
+      "adjudication": {
+        "item_id": "852850bf-5efc-4f1e-9946-40d1c07ecdf1",
+        "resolution": "The document does print this rule verbatim: prose block 4 on page 1 reads 'Employers must begin withholding in the pay period in which cumulative wages for the calendar year exceed $200,000, without regard to the employee's filing status or to wages paid by another employer.' The flag is therefore a genuine coverage question, not a misread of the page. The printed trigger is factually distinct from the Table 3 surtax liability thresholds: Table 3 shows $250,000 for married filing jointly and $125,000 for married filing separately against the flat $200,000 withholding start, so the prose figure is not a restatement of any single table cell, and silently dropping it would lose information (an MFJ employee's employer begins withholding before that employee's stated liability threshold). Judged against the closed record-type list and the closed extra-attr dictionary, the document fact has no home: no record type covers a standalone employer withholding trigger, the additional_medicare surtax_threshold slots are already occupied by the per-filing-status Table 3 thresholds and the employer_match false statement from the same paragraph, and no listed extra attr exists for a withholding-start threshold. The correct disposition is to CLOSE this item as a confirmed schema gap, not as a data error: forcing the prose into an invented key, or duplicating a bare additional_medicare threshold of 200000 onto the surtax set without a filing status, would violate the closed-vocabulary and no-duplicate rules. The reviewer should (a) confirm no surrogate record was nevertheless produced for this fact — i.e., no additional_medicare surtax_threshold record lacking a filing-status column alongside the legitimate single/head-of-household $200,000 rows, and no repurposed wage_base or employment_tax_rate record carrying it — and (b) file an issue naming the missing vocabulary entry so the fact can be carried under a defined key once the dictionary is extended. Until then, the faithful state of the extraction is that this employer-trigger sentence is intentionally unmapped.",
+        "citations": [
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 4
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t1",
+            "row": 1,
+            "col": 1
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t1",
+            "row": 2,
+            "col": 1
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t1",
+            "row": 3,
+            "col": 1
+          }
+        ],
+        "confidence": "0.88",
+        "citations_valid": true,
+        "cost": {
+          "engine": "zai/glm-5.3-flash",
+          "api_calls": 1,
+          "input_tokens": 1288,
+          "output_tokens": 4286,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 4992,
+          "usd": "0.00124298",
+          "wall_seconds": 87.86820991701097
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,519 @@
+{
+  "filename": "04_employment_tax_rates_and_thresholds_2026.pdf",
+  "sha256": "877fc4dfa8f95309de0f14cd74efa1033b9262e63384f31ab4b717a1881be6f0",
+  "pages": [
+    {
+      "page_number": 1,
+      "width": 792.0,
+      "height": 612.0,
+      "method": "deterministic_text",
+      "tables": [
+        {
+          "page_number": 1,
+          "table_id": "p1_t0",
+          "bbox": [
+            56.5,
+            124.89999999999998,
+            380.4,
+            204.9
+          ],
+          "grid_source": "ruled_lines",
+          "rows": [
+            [
+              {
+                "text": "Component",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "Employee",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "Employer",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "Self-Employed",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Social Security (OASDI)",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "6.20%",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "6.20%",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "12.40%",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Medicare (HI)",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "1.45%",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "1.45%",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "2.90%",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Total",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "7.65%",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "7.65%",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "15.30%",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ]
+          ],
+          "column_count": 4,
+          "irregular_row_indexes": []
+        },
+        {
+          "page_number": 1,
+          "table_id": "p1_t1",
+          "bbox": [
+            394.79999999999995,
+            124.89999999999998,
+            628.8,
+            244.89999999999998
+          ],
+          "grid_source": "ruled_lines",
+          "rows": [
+            [
+              {
+                "text": "Filing status",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "Threshold",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Married filing jointly",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "$250,000",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Married filing separately",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "$125,000",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Single",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "$200,000",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Head of household",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "$200,000",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Qualifying surviving spouse",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "$200,000",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ]
+          ],
+          "column_count": 2,
+          "irregular_row_indexes": []
+        },
+        {
+          "page_number": 1,
+          "table_id": "p1_t2",
+          "bbox": [
+            56.5,
+            231.39999999999998,
+            348.0,
+            331.4
+          ],
+          "grid_source": "ruled_lines",
+          "rows": [
+            [
+              {
+                "text": "Item",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "2026",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "2025",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Social Security wage base",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "$181,800",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "$176,100",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Medicare wage base",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "No limit",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "No limit",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "FUTA wage base (federal)",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "$7,000",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "$7,000",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "FUTA effective rate",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "0.60%",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "0.60%",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ]
+          ],
+          "column_count": 3,
+          "irregular_row_indexes": []
+        },
+        {
+          "page_number": 1,
+          "table_id": "p1_t3",
+          "bbox": [
+            394.79999999999995,
+            271.4,
+            682.8,
+            411.4
+          ],
+          "grid_source": "ruled_lines",
+          "rows": [
+            [
+              {
+                "text": "Payroll period",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "Periods per year",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "Withholding allowance",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Weekly",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "52",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "$96.15",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Biweekly",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "26",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "$192.30",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Semimonthly",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "24",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "$208.33",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Monthly",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "12",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "$416.67",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Quarterly",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "4",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "$1,250.00",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Annually",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "1",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "$5,000.00",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ]
+          ],
+          "column_count": 3,
+          "irregular_row_indexes": []
+        }
+      ],
+      "prose": [
+        {
+          "page_number": 1,
+          "kind": "body",
+          "text": "Employment Tax Rates and Withholding Thresholds\nCalendar Year 2026 | Employer Compliance Circular EC-26/11 | Issued 13 November 2025",
+          "bbox": [
+            56.4,
+            59.298,
+            408.5124999999999,
+            85.65949999999998
+          ],
+          "confidence": "1"
+        },
+        {
+          "page_number": 1,
+          "kind": "heading",
+          "text": "Table 1. Employment tax rates Table 3. Additional Medicare Tax — 0.9% surtax thresholds",
+          "bbox": [
+            56.4,
+            112.13879999999995,
+            630.0756,
+            120.53879999999998
+          ],
+          "confidence": "1"
+        },
+        {
+          "page_number": 1,
+          "kind": "heading",
+          "text": "Table 2. Wage bases and limits",
+          "bbox": [
+            56.4,
+            218.63879999999995,
+            180.11520000000004,
+            227.03879999999998
+          ],
+          "confidence": "1"
+        },
+        {
+          "page_number": 1,
+          "kind": "heading",
+          "text": "Table 4. Withholding allowance by payroll period",
+          "bbox": [
+            394.79999999999995,
+            258.63879999999995,
+            589.4531999999999,
+            267.0388
+          ],
+          "confidence": "1"
+        },
+        {
+          "page_number": 1,
+          "kind": "body",
+          "text": "The Additional Medicare Tax of 0.9 percent applies to wages, compensation and self-employment income in excess of the threshold shown in Table 3 and is imposed on the employee only; there is no employer match.\nEmployers must begin withholding in the pay period in which cumulative wages for the calendar year exceed $200,000, without regard to the employee's filing status or to wages paid by another employer. The withholding\nallowance amounts in Table 4 apply only to employees whose most recent withholding certificate was filed prior to 2020.",
+          "bbox": [
+            56.4,
+            431.8283,
+            726.9420000000015,
+            457.12829999999997
+          ],
+          "confidence": "1"
+        },
+        {
+          "page_number": 1,
+          "kind": "body",
+          "text": "SYNTHETIC SAMPLE DATA — systems evaluation fixture. Not an authoritative tax publication. EC-26/11 PAGE 1",
+          "bbox": [
+            50.4,
+            598.3276,
+            741.6,
+            605.1276
+          ],
+          "confidence": "1"
+        }
+      ],
+      "ocr_stats": null
+    }
+  ],
+  "cost": {
+    "engine": "pdfplumber",
+    "api_calls": 0,
+    "usd": "0",
+    "wall_seconds": 0.0863599169824738
+  }
+}

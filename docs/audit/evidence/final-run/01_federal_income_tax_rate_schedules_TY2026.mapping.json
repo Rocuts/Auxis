@@ -1,0 +1,1500 @@
+{
+  "records": [
+    {
+      "source_page": 1,
+      "table_id": "p1_t0",
+      "record_type": "ordinary_income_bracket",
+      "jurisdiction": "US-FED",
+      "attribute_key": null,
+      "filing_status": "single",
+      "taxpayer_class": "individual",
+      "tax_year": 2026,
+      "effective_from": null,
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": 0,
+      "upper_bound": 12250,
+      "rate": "0.10",
+      "amount": null,
+      "currency": "USD",
+      "attrs": {
+        "source_table_label": "table_1",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 2,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 2,
+            "col": 1
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 1
+          }
+        ],
+        "convention_derived": [
+          "jurisdiction"
+        ]
+      },
+      "confidence": "1.0",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t0",
+      "record_type": "ordinary_income_bracket",
+      "jurisdiction": "US-FED",
+      "attribute_key": null,
+      "filing_status": "married_filing_jointly",
+      "taxpayer_class": "individual",
+      "tax_year": 2026,
+      "effective_from": null,
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": 0,
+      "upper_bound": 24500,
+      "rate": "0.10",
+      "amount": null,
+      "currency": "USD",
+      "attrs": {
+        "source_table_label": "table_1",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 2,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 2,
+            "col": 2
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 1
+          }
+        ],
+        "convention_derived": [
+          "jurisdiction"
+        ]
+      },
+      "confidence": "1.0",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t0",
+      "record_type": "ordinary_income_bracket",
+      "jurisdiction": "US-FED",
+      "attribute_key": null,
+      "filing_status": "married_filing_separately",
+      "taxpayer_class": "individual",
+      "tax_year": 2026,
+      "effective_from": null,
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": 0,
+      "upper_bound": 12250,
+      "rate": "0.10",
+      "amount": null,
+      "currency": "USD",
+      "attrs": {
+        "source_table_label": "table_1",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 2,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 2,
+            "col": 3
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 1
+          }
+        ],
+        "convention_derived": [
+          "jurisdiction"
+        ]
+      },
+      "confidence": "1.0",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t0",
+      "record_type": "ordinary_income_bracket",
+      "jurisdiction": "US-FED",
+      "attribute_key": null,
+      "filing_status": "head_of_household",
+      "taxpayer_class": "individual",
+      "tax_year": 2026,
+      "effective_from": null,
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": 0,
+      "upper_bound": 17450,
+      "rate": "0.10",
+      "amount": null,
+      "currency": "USD",
+      "attrs": {
+        "source_table_label": "table_1",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 2,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 2,
+            "col": 4
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 1
+          }
+        ],
+        "convention_derived": [
+          "jurisdiction"
+        ]
+      },
+      "confidence": "1.0",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t0",
+      "record_type": "ordinary_income_bracket",
+      "jurisdiction": "US-FED",
+      "attribute_key": null,
+      "filing_status": "single",
+      "taxpayer_class": "individual",
+      "tax_year": 2026,
+      "effective_from": null,
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": 12251,
+      "upper_bound": 49800,
+      "rate": "0.12",
+      "amount": null,
+      "currency": "USD",
+      "attrs": {
+        "source_table_label": "table_1",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 3,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 3,
+            "col": 1
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 1
+          }
+        ],
+        "convention_derived": [
+          "jurisdiction"
+        ]
+      },
+      "confidence": "1.0",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t0",
+      "record_type": "ordinary_income_bracket",
+      "jurisdiction": "US-FED",
+      "attribute_key": null,
+      "filing_status": "married_filing_jointly",
+      "taxpayer_class": "individual",
+      "tax_year": 2026,
+      "effective_from": null,
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": 24501,
+      "upper_bound": 99550,
+      "rate": "0.12",
+      "amount": null,
+      "currency": "USD",
+      "attrs": {
+        "source_table_label": "table_1",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 3,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 3,
+            "col": 2
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 1
+          }
+        ],
+        "convention_derived": [
+          "jurisdiction"
+        ]
+      },
+      "confidence": "1.0",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t0",
+      "record_type": "ordinary_income_bracket",
+      "jurisdiction": "US-FED",
+      "attribute_key": null,
+      "filing_status": "married_filing_separately",
+      "taxpayer_class": "individual",
+      "tax_year": 2026,
+      "effective_from": null,
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": 12251,
+      "upper_bound": 49800,
+      "rate": "0.12",
+      "amount": null,
+      "currency": "USD",
+      "attrs": {
+        "source_table_label": "table_1",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 3,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 3,
+            "col": 3
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 1
+          }
+        ],
+        "convention_derived": [
+          "jurisdiction"
+        ]
+      },
+      "confidence": "1.0",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t0",
+      "record_type": "ordinary_income_bracket",
+      "jurisdiction": "US-FED",
+      "attribute_key": null,
+      "filing_status": "head_of_household",
+      "taxpayer_class": "individual",
+      "tax_year": 2026,
+      "effective_from": null,
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": 17451,
+      "upper_bound": 66600,
+      "rate": "0.12",
+      "amount": null,
+      "currency": "USD",
+      "attrs": {
+        "source_table_label": "table_1",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 3,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 3,
+            "col": 4
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 1
+          }
+        ],
+        "convention_derived": [
+          "jurisdiction"
+        ]
+      },
+      "confidence": "1.0",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t0",
+      "record_type": "ordinary_income_bracket",
+      "jurisdiction": "US-FED",
+      "attribute_key": null,
+      "filing_status": "single",
+      "taxpayer_class": "individual",
+      "tax_year": 2026,
+      "effective_from": null,
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": 49801,
+      "upper_bound": 106150,
+      "rate": "0.22",
+      "amount": null,
+      "currency": "USD",
+      "attrs": {
+        "source_table_label": "table_1",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 4,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 4,
+            "col": 1
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 1
+          }
+        ],
+        "convention_derived": [
+          "jurisdiction"
+        ]
+      },
+      "confidence": "1.0",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t0",
+      "record_type": "ordinary_income_bracket",
+      "jurisdiction": "US-FED",
+      "attribute_key": null,
+      "filing_status": "married_filing_jointly",
+      "taxpayer_class": "individual",
+      "tax_year": 2026,
+      "effective_from": null,
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": 99551,
+      "upper_bound": 212300,
+      "rate": "0.22",
+      "amount": null,
+      "currency": "USD",
+      "attrs": {
+        "source_table_label": "table_1",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 4,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 4,
+            "col": 2
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 1
+          }
+        ],
+        "convention_derived": [
+          "jurisdiction"
+        ]
+      },
+      "confidence": "1.0",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t0",
+      "record_type": "ordinary_income_bracket",
+      "jurisdiction": "US-FED",
+      "attribute_key": null,
+      "filing_status": "married_filing_separately",
+      "taxpayer_class": "individual",
+      "tax_year": 2026,
+      "effective_from": null,
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": 49801,
+      "upper_bound": 106150,
+      "rate": "0.22",
+      "amount": null,
+      "currency": "USD",
+      "attrs": {
+        "source_table_label": "table_1",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 4,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 4,
+            "col": 3
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 1
+          }
+        ],
+        "convention_derived": [
+          "jurisdiction"
+        ]
+      },
+      "confidence": "1.0",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t0",
+      "record_type": "ordinary_income_bracket",
+      "jurisdiction": "US-FED",
+      "attribute_key": null,
+      "filing_status": "head_of_household",
+      "taxpayer_class": "individual",
+      "tax_year": 2026,
+      "effective_from": null,
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": 66601,
+      "upper_bound": 106150,
+      "rate": "0.22",
+      "amount": null,
+      "currency": "USD",
+      "attrs": {
+        "source_table_label": "table_1",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 4,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 4,
+            "col": 4
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 1
+          }
+        ],
+        "convention_derived": [
+          "jurisdiction"
+        ]
+      },
+      "confidence": "1.0",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t0",
+      "record_type": "ordinary_income_bracket",
+      "jurisdiction": "US-FED",
+      "attribute_key": null,
+      "filing_status": "single",
+      "taxpayer_class": "individual",
+      "tax_year": 2026,
+      "effective_from": null,
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": 106151,
+      "upper_bound": 202650,
+      "rate": "0.24",
+      "amount": null,
+      "currency": "USD",
+      "attrs": {
+        "source_table_label": "table_1",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 5,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 5,
+            "col": 1
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 1
+          }
+        ],
+        "convention_derived": [
+          "jurisdiction"
+        ]
+      },
+      "confidence": "1.0",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t0",
+      "record_type": "ordinary_income_bracket",
+      "jurisdiction": "US-FED",
+      "attribute_key": null,
+      "filing_status": "married_filing_jointly",
+      "taxpayer_class": "individual",
+      "tax_year": 2026,
+      "effective_from": null,
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": 212301,
+      "upper_bound": 405250,
+      "rate": "0.24",
+      "amount": null,
+      "currency": "USD",
+      "attrs": {
+        "source_table_label": "table_1",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 5,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 5,
+            "col": 2
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 1
+          }
+        ],
+        "convention_derived": [
+          "jurisdiction"
+        ]
+      },
+      "confidence": "1.0",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t0",
+      "record_type": "ordinary_income_bracket",
+      "jurisdiction": "US-FED",
+      "attribute_key": null,
+      "filing_status": "married_filing_separately",
+      "taxpayer_class": "individual",
+      "tax_year": 2026,
+      "effective_from": null,
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": 106151,
+      "upper_bound": 202650,
+      "rate": "0.24",
+      "amount": null,
+      "currency": "USD",
+      "attrs": {
+        "source_table_label": "table_1",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 5,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 5,
+            "col": 3
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 1
+          }
+        ],
+        "convention_derived": [
+          "jurisdiction"
+        ]
+      },
+      "confidence": "1.0",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t0",
+      "record_type": "ordinary_income_bracket",
+      "jurisdiction": "US-FED",
+      "attribute_key": null,
+      "filing_status": "head_of_household",
+      "taxpayer_class": "individual",
+      "tax_year": 2026,
+      "effective_from": null,
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": 106151,
+      "upper_bound": 202650,
+      "rate": "0.24",
+      "amount": null,
+      "currency": "USD",
+      "attrs": {
+        "source_table_label": "table_1",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 5,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 5,
+            "col": 4
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 1
+          }
+        ],
+        "convention_derived": [
+          "jurisdiction"
+        ]
+      },
+      "confidence": "1.0",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t0",
+      "record_type": "ordinary_income_bracket",
+      "jurisdiction": "US-FED",
+      "attribute_key": null,
+      "filing_status": "single",
+      "taxpayer_class": "individual",
+      "tax_year": 2026,
+      "effective_from": null,
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": 202651,
+      "upper_bound": 257300,
+      "rate": "0.32",
+      "amount": null,
+      "currency": "USD",
+      "attrs": {
+        "source_table_label": "table_1",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 6,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 6,
+            "col": 1
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 1
+          }
+        ],
+        "convention_derived": [
+          "jurisdiction"
+        ]
+      },
+      "confidence": "1.0",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t0",
+      "record_type": "ordinary_income_bracket",
+      "jurisdiction": "US-FED",
+      "attribute_key": null,
+      "filing_status": "married_filing_jointly",
+      "taxpayer_class": "individual",
+      "tax_year": 2026,
+      "effective_from": null,
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": 405251,
+      "upper_bound": 514600,
+      "rate": "0.32",
+      "amount": null,
+      "currency": "USD",
+      "attrs": {
+        "source_table_label": "table_1",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 6,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 6,
+            "col": 2
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 1
+          }
+        ],
+        "convention_derived": [
+          "jurisdiction"
+        ]
+      },
+      "confidence": "1.0",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t0",
+      "record_type": "ordinary_income_bracket",
+      "jurisdiction": "US-FED",
+      "attribute_key": null,
+      "filing_status": "married_filing_separately",
+      "taxpayer_class": "individual",
+      "tax_year": 2026,
+      "effective_from": null,
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": 202651,
+      "upper_bound": 257300,
+      "rate": "0.32",
+      "amount": null,
+      "currency": "USD",
+      "attrs": {
+        "source_table_label": "table_1",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 6,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 6,
+            "col": 3
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 1
+          }
+        ],
+        "convention_derived": [
+          "jurisdiction"
+        ]
+      },
+      "confidence": "1.0",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t0",
+      "record_type": "ordinary_income_bracket",
+      "jurisdiction": "US-FED",
+      "attribute_key": null,
+      "filing_status": "head_of_household",
+      "taxpayer_class": "individual",
+      "tax_year": 2026,
+      "effective_from": null,
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": 202651,
+      "upper_bound": 257250,
+      "rate": "0.32",
+      "amount": null,
+      "currency": "USD",
+      "attrs": {
+        "source_table_label": "table_1",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 6,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 6,
+            "col": 4
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 1
+          }
+        ],
+        "convention_derived": [
+          "jurisdiction"
+        ]
+      },
+      "confidence": "1.0",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t0",
+      "record_type": "ordinary_income_bracket",
+      "jurisdiction": "US-FED",
+      "attribute_key": null,
+      "filing_status": "single",
+      "taxpayer_class": "individual",
+      "tax_year": 2026,
+      "effective_from": null,
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": 257301,
+      "upper_bound": 643250,
+      "rate": "0.35",
+      "amount": null,
+      "currency": "USD",
+      "attrs": {
+        "source_table_label": "table_1",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 7,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 7,
+            "col": 1
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 1
+          }
+        ],
+        "convention_derived": [
+          "jurisdiction"
+        ]
+      },
+      "confidence": "1.0",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t0",
+      "record_type": "ordinary_income_bracket",
+      "jurisdiction": "US-FED",
+      "attribute_key": null,
+      "filing_status": "married_filing_jointly",
+      "taxpayer_class": "individual",
+      "tax_year": 2026,
+      "effective_from": null,
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": 514601,
+      "upper_bound": 771900,
+      "rate": "0.35",
+      "amount": null,
+      "currency": "USD",
+      "attrs": {
+        "source_table_label": "table_1",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 7,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 7,
+            "col": 2
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 1
+          }
+        ],
+        "convention_derived": [
+          "jurisdiction"
+        ]
+      },
+      "confidence": "1.0",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t0",
+      "record_type": "ordinary_income_bracket",
+      "jurisdiction": "US-FED",
+      "attribute_key": null,
+      "filing_status": "married_filing_separately",
+      "taxpayer_class": "individual",
+      "tax_year": 2026,
+      "effective_from": null,
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": 257301,
+      "upper_bound": 385950,
+      "rate": "0.35",
+      "amount": null,
+      "currency": "USD",
+      "attrs": {
+        "source_table_label": "table_1",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 7,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 7,
+            "col": 3
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 1
+          }
+        ],
+        "convention_derived": [
+          "jurisdiction"
+        ]
+      },
+      "confidence": "1.0",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t0",
+      "record_type": "ordinary_income_bracket",
+      "jurisdiction": "US-FED",
+      "attribute_key": null,
+      "filing_status": "head_of_household",
+      "taxpayer_class": "individual",
+      "tax_year": 2026,
+      "effective_from": null,
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": 257251,
+      "upper_bound": 643250,
+      "rate": "0.35",
+      "amount": null,
+      "currency": "USD",
+      "attrs": {
+        "source_table_label": "table_1",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 7,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 7,
+            "col": 4
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 1
+          }
+        ],
+        "convention_derived": [
+          "jurisdiction"
+        ]
+      },
+      "confidence": "1.0",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t0",
+      "record_type": "ordinary_income_bracket",
+      "jurisdiction": "US-FED",
+      "attribute_key": null,
+      "filing_status": "single",
+      "taxpayer_class": "individual",
+      "tax_year": 2026,
+      "effective_from": null,
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": 643251,
+      "upper_bound": null,
+      "rate": "0.37",
+      "amount": null,
+      "currency": "USD",
+      "attrs": {
+        "source_table_label": "table_1",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 8,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 8,
+            "col": 1
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 1
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 2
+          }
+        ],
+        "convention_derived": [
+          "jurisdiction"
+        ]
+      },
+      "confidence": "1.0",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t0",
+      "record_type": "ordinary_income_bracket",
+      "jurisdiction": "US-FED",
+      "attribute_key": null,
+      "filing_status": "married_filing_jointly",
+      "taxpayer_class": "individual",
+      "tax_year": 2026,
+      "effective_from": null,
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": 771901,
+      "upper_bound": null,
+      "rate": "0.37",
+      "amount": null,
+      "currency": "USD",
+      "attrs": {
+        "source_table_label": "table_1",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 8,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 8,
+            "col": 2
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 1
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 2
+          }
+        ],
+        "convention_derived": [
+          "jurisdiction"
+        ]
+      },
+      "confidence": "1.0",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t0",
+      "record_type": "ordinary_income_bracket",
+      "jurisdiction": "US-FED",
+      "attribute_key": null,
+      "filing_status": "married_filing_separately",
+      "taxpayer_class": "individual",
+      "tax_year": 2026,
+      "effective_from": null,
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": 385951,
+      "upper_bound": null,
+      "rate": "0.37",
+      "amount": null,
+      "currency": "USD",
+      "attrs": {
+        "source_table_label": "table_1",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 8,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 8,
+            "col": 3
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 1
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 2
+          }
+        ],
+        "convention_derived": [
+          "jurisdiction"
+        ]
+      },
+      "confidence": "1.0",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t0",
+      "record_type": "ordinary_income_bracket",
+      "jurisdiction": "US-FED",
+      "attribute_key": null,
+      "filing_status": "head_of_household",
+      "taxpayer_class": "individual",
+      "tax_year": 2026,
+      "effective_from": null,
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": 643251,
+      "upper_bound": null,
+      "rate": "0.37",
+      "amount": null,
+      "currency": "USD",
+      "attrs": {
+        "source_table_label": "table_1",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 8,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 8,
+            "col": 4
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 1
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 2
+          }
+        ],
+        "convention_derived": [
+          "jurisdiction"
+        ]
+      },
+      "confidence": "1.0",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t1",
+      "record_type": "ordinary_income_bracket",
+      "jurisdiction": "US-FED",
+      "attribute_key": null,
+      "filing_status": null,
+      "taxpayer_class": "estate_or_trust",
+      "tax_year": 2026,
+      "effective_from": null,
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": 0,
+      "upper_bound": 3250,
+      "rate": "0.10",
+      "amount": null,
+      "currency": "USD",
+      "attrs": {
+        "source_table_label": "table_2",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t1",
+            "row": 1,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t1",
+            "row": 1,
+            "col": 1
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 1
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 3
+          }
+        ],
+        "convention_derived": [
+          "jurisdiction"
+        ]
+      },
+      "confidence": "1.0",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t1",
+      "record_type": "ordinary_income_bracket",
+      "jurisdiction": "US-FED",
+      "attribute_key": null,
+      "filing_status": null,
+      "taxpayer_class": "estate_or_trust",
+      "tax_year": 2026,
+      "effective_from": null,
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": 3251,
+      "upper_bound": 11750,
+      "rate": "0.24",
+      "amount": null,
+      "currency": "USD",
+      "attrs": {
+        "source_table_label": "table_2",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t1",
+            "row": 2,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t1",
+            "row": 2,
+            "col": 1
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 1
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 3
+          }
+        ],
+        "convention_derived": [
+          "jurisdiction"
+        ]
+      },
+      "confidence": "1.0",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t1",
+      "record_type": "ordinary_income_bracket",
+      "jurisdiction": "US-FED",
+      "attribute_key": null,
+      "filing_status": null,
+      "taxpayer_class": "estate_or_trust",
+      "tax_year": 2026,
+      "effective_from": null,
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": 11751,
+      "upper_bound": 16050,
+      "rate": "0.35",
+      "amount": null,
+      "currency": "USD",
+      "attrs": {
+        "source_table_label": "table_2",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t1",
+            "row": 3,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t1",
+            "row": 3,
+            "col": 1
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 1
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 3
+          }
+        ],
+        "convention_derived": [
+          "jurisdiction"
+        ]
+      },
+      "confidence": "1.0",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t1",
+      "record_type": "ordinary_income_bracket",
+      "jurisdiction": "US-FED",
+      "attribute_key": null,
+      "filing_status": null,
+      "taxpayer_class": "estate_or_trust",
+      "tax_year": 2026,
+      "effective_from": null,
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": 16051,
+      "upper_bound": null,
+      "rate": "0.37",
+      "amount": null,
+      "currency": "USD",
+      "attrs": {
+        "source_table_label": "table_2",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t1",
+            "row": 4,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t1",
+            "row": 4,
+            "col": 1
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 1
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 2
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 3
+          }
+        ],
+        "convention_derived": [
+          "jurisdiction"
+        ]
+      },
+      "confidence": "1.0",
+      "review_status": "clean"
+    }
+  ],
+  "issues": [],
+  "cost": {
+    "engine": "zai/glm-5.3-flash",
+    "api_calls": 1,
+    "input_tokens": 5569,
+    "output_tokens": 12735,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 64,
+    "usd": "0.003602385",
+    "wall_seconds": 145.87727179197827
+  }
+}

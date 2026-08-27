@@ -1,0 +1,340 @@
+{
+  "document_id": "63d23604-3cbb-44c6-826c-901c94fb4d9d",
+  "ingest": {
+    "persisted": 51,
+    "cross_document_conflicts": 0,
+    "overlap_rejections": 0
+  },
+  "review_entries": 3,
+  "adjudications": [
+    {
+      "item_id": "194366f8-518d-4c43-b27f-7b8a80277483",
+      "disposition": "proposal_stored",
+      "error": null,
+      "adjudication": {
+        "item_id": "194366f8-518d-4c43-b27f-7b8a80277483",
+        "resolution": "The finding is CONFIRMED as a genuine closed-vocabulary gap, handled correctly. Table A (p1_t0) prints a fifth column headed 'Rank' (header at r0,c4) and every data row r1-r27 (Alabama through Montana) carries an integer there - 5, 47, 12, ..., 49 - a total of 27 rank cells, matching the item's '(rows 1 through 27)'. The same column recurs in the continuation table p2_t0 with the remaining ranks (e.g. Nebraska 28 at r1,c4; New Hampshire 50 at r3,c4; Oregon 51 at r11,c4), showing this is systematic, not extraction noise. The page-2 footnote defines the column ('Rank is assigned on the combined rate, highest to lowest; states imposing no sales tax are ranked last'), so these are real document data, not artifacts. Under the sales_tax_rate record shape the rank has no typed slot, and the closed extra-attribute dictionary for sales_tax_rate (jurisdiction_name, state_rate_pct, avg_local_rate_pct, combined_rate_pct, rate_unit, effective_date, imposes_state_sales_tax) contains no 'rank' key - the values cannot be given an invented key and must not be silently absorbed or dropped. The pipeline's proposal - surface the 27 unmapped rank cells in this item rather than map or discard them - is exactly what the conventions prescribe, whether or not any of this document's records went further downstream; these cells' only trace is this finding either way. Reviewer action: close the item as a confirmed, unresolved-by-design vocabulary gap. No record-level correction follows: the rank values belong to no existing field, and any future capture requires a human schema decision (e.g. authorizing a 'rank'-shaped attr), at which point the source values are simply the cells at p1_t0 rows 1-27, column 4, transcribed verbatim.",
+        "citations": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 0,
+            "col": 4
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 1,
+            "col": 4
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 2,
+            "col": 4
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 3,
+            "col": 4
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 4,
+            "col": 4
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 5,
+            "col": 4
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 6,
+            "col": 4
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 7,
+            "col": 4
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 8,
+            "col": 4
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 9,
+            "col": 4
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 10,
+            "col": 4
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 11,
+            "col": 4
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 12,
+            "col": 4
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 13,
+            "col": 4
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 14,
+            "col": 4
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 15,
+            "col": 4
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 16,
+            "col": 4
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 17,
+            "col": 4
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 18,
+            "col": 4
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 19,
+            "col": 4
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 20,
+            "col": 4
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 21,
+            "col": 4
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 22,
+            "col": 4
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 23,
+            "col": 4
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 24,
+            "col": 4
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 25,
+            "col": 4
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 26,
+            "col": 4
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 27,
+            "col": 4
+          },
+          {
+            "kind": "cell",
+            "table_id": "p2_t0",
+            "row": 0,
+            "col": 4
+          },
+          {
+            "kind": "cell",
+            "table_id": "p2_t0",
+            "row": 1,
+            "col": 4
+          },
+          {
+            "kind": "cell",
+            "table_id": "p2_t0",
+            "row": 3,
+            "col": 4
+          },
+          {
+            "kind": "cell",
+            "table_id": "p2_t0",
+            "row": 11,
+            "col": 4
+          },
+          {
+            "kind": "prose",
+            "page": 2,
+            "prose_index": 1
+          }
+        ],
+        "confidence": "0.95",
+        "citations_valid": true,
+        "cost": {
+          "engine": "zai/glm-5.3-flash",
+          "api_calls": 1,
+          "input_tokens": 7397,
+          "output_tokens": 7462,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 0,
+          "usd": "0.002420275",
+          "wall_seconds": 142.81132725000498
+        }
+      }
+    },
+    {
+      "item_id": "3227e386-8e72-4730-8614-bb1bf7c8e49d",
+      "disposition": "proposal_stored",
+      "error": null,
+      "adjudication": {
+        "item_id": "3227e386-8e72-4730-8614-bb1bf7c8e49d",
+        "resolution": "The finding flags New Jersey's Avg. Local Rate as a possible extraction artifact because it is negative; the evidence shows the transcription as printed is correct and the item is confirmable/dismissible. The document prints \"-0.030\" in the Avg. Local Rate column at cell p2_t0 row 4, col 2, alongside State Rate 6.625 (row 4, col 1) and Combined Rate 6.595 (row 4, col 3). The arithmetic checks out: 6.625 + (-0.030) = 6.595, matching the footnote's statement that the combined rate is the sum of the statewide rate and the average local rate — so the sign is real, not a stray character. The page-2 footnote (page 2, prose_index 1) settles interpretation outright: \"A negative average local rate reflects a statutory rebate applied in certain designated urban enterprise zones\", making this a documented feature of the data rather than noise, and page-1 body prose (page 1, prose_index 0) confirms all rate columns are expressed as percentages. Under the sales_tax_rate conventions the *_pct columns keep values exactly as printed and only long-dash cells map to null, so the correct value here is -0.030 (kept as printed), with null reserved for dashed cells such as Connecticut's local rate in the same table. The pipeline's proposal — transcribe as printed — reads the document correctly; a reviewer should confirm the record carries avg_local_rate_pct = -0.03 (with state_rate_pct 6.625, combined_rate_pct 6.595, and the typed rate slot carrying the combined rate as the decimal fraction 0.06595) and close this item as a confirmed read.",
+        "citations": [
+          {
+            "kind": "cell",
+            "table_id": "p2_t0",
+            "row": 4,
+            "col": 2
+          },
+          {
+            "kind": "cell",
+            "table_id": "p2_t0",
+            "row": 4,
+            "col": 1
+          },
+          {
+            "kind": "cell",
+            "table_id": "p2_t0",
+            "row": 4,
+            "col": 3
+          },
+          {
+            "kind": "prose",
+            "page": 2,
+            "prose_index": 1
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 0
+          }
+        ],
+        "confidence": "0.97",
+        "citations_valid": true,
+        "cost": {
+          "engine": "zai/glm-5.3-flash",
+          "api_calls": 1,
+          "input_tokens": 7326,
+          "output_tokens": 1814,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 64,
+          "usd": "0.00100391",
+          "wall_seconds": 32.61482270798297
+        }
+      }
+    },
+    {
+      "item_id": "8ca1c94f-5919-48c4-9d73-c8f120bbf358",
+      "disposition": "proposal_stored",
+      "error": null,
+      "adjudication": {
+        "item_id": "8ca1c94f-5919-48c4-9d73-c8f120bbf358",
+        "resolution": "The finding accurately documents genuinely unmapped printed data, and the pipeline handled it exactly as the conventions require. The continued schedule (Table A continued, extracted as p2_t0) prints a fifth column headed 'Rank' (cell r0,c4) holding whole-number ranks for every state row: e.g. Nebraska '28' at r1,c4, New Hampshire '50' at r3,c4, Oregon '51' at r11,c4, Wyoming '45' at r24,c4. The footnote on page 2 (prose index 1) settles the semantics: 'Rank is assigned on the combined rate, highest to lowest; states imposing no sales tax are ranked last,' which is consistent with the zero-tax states carrying the bottom ranks. However, the sales_tax_rate record shape offers no typed slot for a rank figure (rate carries the combined-rate decimal fraction; amount is not part of this type), and the closed extra-attribute dictionary lists no rank-shaped key for sales_tax_rate — its keys are jurisdiction_name, state_rate_pct, avg_local_rate_pct, combined_rate_pct, rate_unit, effective_date, imposes_state_sales_tax. Under the closed-dictionary rule the rank values must therefore be left unmapped and named in an issue rather than absorbed silently or emitted under an invented key such as 'rank_pct'. That is precisely what this queue item does. Disposition: CONFIRM and dismiss — no mapping error exists and nothing should be re-derived or force-fitted into existing slots. If the rank figures are ever wanted downstream, the fix is a schema change (a dedicated rank extra-attr key added to the dictionary for sales_tax_rate) applied uniformly across both Table A parts (p1_t0 and p2_t0), not a one-off edit to this item.",
+        "citations": [
+          {
+            "kind": "cell",
+            "table_id": "p2_t0",
+            "row": 0,
+            "col": 4
+          },
+          {
+            "kind": "cell",
+            "table_id": "p2_t0",
+            "row": 1,
+            "col": 4
+          },
+          {
+            "kind": "cell",
+            "table_id": "p2_t0",
+            "row": 3,
+            "col": 4
+          },
+          {
+            "kind": "cell",
+            "table_id": "p2_t0",
+            "row": 11,
+            "col": 4
+          },
+          {
+            "kind": "cell",
+            "table_id": "p2_t0",
+            "row": 24,
+            "col": 4
+          },
+          {
+            "kind": "prose",
+            "page": 2,
+            "prose_index": 1
+          }
+        ],
+        "confidence": "0.96",
+        "citations_valid": true,
+        "cost": {
+          "engine": "zai/glm-5.3-flash",
+          "api_calls": 1,
+          "input_tokens": 7310,
+          "output_tokens": 2007,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 64,
+          "usd": "0.00105096",
+          "wall_seconds": 42.57454370902269
+        }
+      }
+    }
+  ]
+}

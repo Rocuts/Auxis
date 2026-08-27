@@ -1,0 +1,508 @@
+{
+  "records": [
+    {
+      "source_page": 1,
+      "table_id": "p1_t0",
+      "record_type": "standard_deduction",
+      "jurisdiction": "US-FED",
+      "attribute_key": null,
+      "filing_status": "single",
+      "taxpayer_class": null,
+      "tax_year": 2026,
+      "effective_from": "2026-01-01",
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": null,
+      "upper_bound": null,
+      "rate": null,
+      "amount": "15400",
+      "currency": "USD",
+      "attrs": {
+        "prior_year_amount": 15000,
+        "change": 400,
+        "source_table_label": "section_1",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 0,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 0,
+            "col": 1
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 0,
+            "col": 2
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 0,
+            "col": 3
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 0
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 1
+          }
+        ],
+        "convention_derived": [
+          "jurisdiction"
+        ]
+      },
+      "confidence": "0.93",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t0",
+      "record_type": "standard_deduction",
+      "jurisdiction": "US-FED",
+      "attribute_key": null,
+      "filing_status": "married_filing_jointly",
+      "taxpayer_class": null,
+      "tax_year": 2026,
+      "effective_from": "2026-01-01",
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": null,
+      "upper_bound": null,
+      "rate": null,
+      "amount": "30800",
+      "currency": "USD",
+      "attrs": {
+        "prior_year_amount": 30000,
+        "change": 800,
+        "source_table_label": "section_1",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 1,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 1,
+            "col": 1
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 1,
+            "col": 2
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 1,
+            "col": 3
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 0
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 1
+          }
+        ],
+        "convention_derived": [
+          "jurisdiction"
+        ]
+      },
+      "confidence": "0.93",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t0",
+      "record_type": "standard_deduction",
+      "jurisdiction": "US-FED",
+      "attribute_key": null,
+      "filing_status": "married_filing_separately",
+      "taxpayer_class": null,
+      "tax_year": 2026,
+      "effective_from": "2026-01-01",
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": null,
+      "upper_bound": null,
+      "rate": null,
+      "amount": "15400",
+      "currency": "USD",
+      "attrs": {
+        "prior_year_amount": 15000,
+        "change": 400,
+        "source_table_label": "section_1",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 2,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 2,
+            "col": 1
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 2,
+            "col": 2
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 2,
+            "col": 3
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 0
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 1
+          }
+        ],
+        "convention_derived": [
+          "jurisdiction"
+        ]
+      },
+      "confidence": "0.93",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t0",
+      "record_type": "standard_deduction",
+      "jurisdiction": "US-FED",
+      "attribute_key": null,
+      "filing_status": "head_of_household",
+      "taxpayer_class": null,
+      "tax_year": 2026,
+      "effective_from": "2026-01-01",
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": null,
+      "upper_bound": null,
+      "rate": null,
+      "amount": "23100",
+      "currency": "USD",
+      "attrs": {
+        "prior_year_amount": 22500,
+        "change": 600,
+        "source_table_label": "section_1",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 3,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 3,
+            "col": 1
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 3,
+            "col": 2
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 3,
+            "col": 3
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 0
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 1
+          }
+        ],
+        "convention_derived": [
+          "jurisdiction"
+        ]
+      },
+      "confidence": "0.93",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t0",
+      "record_type": "standard_deduction",
+      "jurisdiction": "US-FED",
+      "attribute_key": null,
+      "filing_status": "qualifying_surviving_spouse",
+      "taxpayer_class": null,
+      "tax_year": 2026,
+      "effective_from": "2026-01-01",
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": null,
+      "upper_bound": null,
+      "rate": null,
+      "amount": "30800",
+      "currency": "USD",
+      "attrs": {
+        "prior_year_amount": 30000,
+        "change": 800,
+        "source_table_label": "section_1",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 4,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 4,
+            "col": 1
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 4,
+            "col": 2
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 4,
+            "col": 3
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 0
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 1
+          }
+        ],
+        "convention_derived": [
+          "jurisdiction"
+        ]
+      },
+      "confidence": "0.93",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t1",
+      "record_type": "additional_standard_deduction",
+      "jurisdiction": "US-FED",
+      "attribute_key": "unmarried",
+      "filing_status": null,
+      "taxpayer_class": null,
+      "tax_year": 2026,
+      "effective_from": "2026-01-01",
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": null,
+      "upper_bound": null,
+      "rate": null,
+      "amount": "2050",
+      "currency": "USD",
+      "attrs": {
+        "source_table_label": "section_2",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t1",
+            "row": 0,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t1",
+            "row": 0,
+            "col": 1
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 0
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 1
+          }
+        ],
+        "convention_derived": [
+          "jurisdiction"
+        ],
+        "condition": "unmarried"
+      },
+      "confidence": "0.93",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t1",
+      "record_type": "additional_standard_deduction",
+      "jurisdiction": "US-FED",
+      "attribute_key": "married_per_spouse",
+      "filing_status": null,
+      "taxpayer_class": null,
+      "tax_year": 2026,
+      "effective_from": "2026-01-01",
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": null,
+      "upper_bound": null,
+      "rate": null,
+      "amount": "1650",
+      "currency": "USD",
+      "attrs": {
+        "source_table_label": "section_2",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t1",
+            "row": 1,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t1",
+            "row": 1,
+            "col": 1
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 0
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 1
+          }
+        ],
+        "convention_derived": [
+          "jurisdiction"
+        ],
+        "condition": "married_per_spouse"
+      },
+      "confidence": "0.93",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_prose4",
+      "record_type": "dependent_deduction_rule",
+      "jurisdiction": "US-FED",
+      "attribute_key": null,
+      "filing_status": null,
+      "taxpayer_class": null,
+      "tax_year": 2026,
+      "effective_from": "2026-01-01",
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": null,
+      "upper_bound": null,
+      "rate": null,
+      "amount": "1400",
+      "currency": "USD",
+      "attrs": {
+        "rule": "max(1400, earned_income + 450), capped at basic standard deduction",
+        "floor_amount": 1400,
+        "earned_income_addition": 450,
+        "source_table_label": "section_3",
+        "provenance": [
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 4
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 0
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 1
+          }
+        ],
+        "convention_derived": [
+          "jurisdiction"
+        ]
+      },
+      "confidence": "0.93",
+      "review_status": "clean"
+    }
+  ],
+  "issues": [
+    {
+      "source_page": 1,
+      "table_id": null,
+      "row_index": null,
+      "col_index": null,
+      "raw_value": null,
+      "reason": "unspecified"
+    },
+    {
+      "source_page": 1,
+      "table_id": null,
+      "row_index": null,
+      "col_index": null,
+      "raw_value": null,
+      "reason": "unspecified"
+    },
+    {
+      "source_page": 1,
+      "table_id": null,
+      "row_index": null,
+      "col_index": null,
+      "raw_value": null,
+      "reason": "unspecified"
+    }
+  ],
+  "cost": {
+    "engine": "zai/glm-5.3-flash",
+    "api_calls": 1,
+    "input_tokens": 5360,
+    "output_tokens": 7738,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 64,
+    "usd": "0.00233746",
+    "wall_seconds": 125.23678916701465
+  }
+}

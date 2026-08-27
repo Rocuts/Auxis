@@ -1,0 +1,62 @@
+{
+  "document_id": "82545e1e-0d71-4c06-a3f2-c5feb61f0cd0",
+  "ingest": {
+    "persisted": 32,
+    "cross_document_conflicts": 0,
+    "overlap_rejections": 0
+  },
+  "review_entries": 1,
+  "adjudications": [
+    {
+      "item_id": "2e1c0b44-ed64-464e-9e32-cf7c52672acf",
+      "disposition": "proposal_stored",
+      "error": null,
+      "adjudication": {
+        "item_id": "2e1c0b44-ed64-464e-9e32-cf7c52672acf",
+        "resolution": "The disputed cell is settled by the page: at table p1_t0, row 6, col 4 (the 32% row, 'Head of Household' column) the document prints '$202,651 – $257,250'. The proposed record carries lower_bound 202651 and upper_bound 257250 with rate 0.32 ('32%' as printed at row 6, col 0) — exactly the values the cell prints, so the record as proposed already transcribes the source correctly and the verifier's claim that the record holds 257300 is not borne out. The Head of Household column legitimately differs from the neighbouring columns here: Single and Married Filing Separately print '$202,651 – $257,300' at row 6, cols 1 and 3, but HoH prints 257,250, and under the transcription-not-re-derivation rule the HoH figure must stand at 257250 exactly as printed. Internal consistency confirms this reading rather than contradicting it: the next HoH bracket up starts at '$257,251 – $643,250' (row 7, col 4), one dollar above the 257,250 boundary. The footnote (prose_index 2) confirms bounds are stated in whole dollars, so 257250 needs no adjustment, and prose_index 1 confirms this is Table 1, Tax Year 2026, matching the record's tax_year and source_table_label. Disposition: the proposed record is correct as read against the page; this dispute should be dismissed. If any earlier variant of the record held 257300, that variant is wrong and should be corrected to 257250 per the cell.",
+        "citations": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 6,
+            "col": 4
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 6,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 7,
+            "col": 4
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 1
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 2
+          }
+        ],
+        "confidence": "0.98",
+        "citations_valid": true,
+        "cost": {
+          "engine": "zai/glm-5.3-flash",
+          "api_calls": 1,
+          "input_tokens": 6354,
+          "output_tokens": 2558,
+          "cache_write_tokens": 0,
+          "cache_read_tokens": 0,
+          "usd": "0.00111605",
+          "wall_seconds": 41.02946116702515
+        }
+      }
+    }
+  ]
+}

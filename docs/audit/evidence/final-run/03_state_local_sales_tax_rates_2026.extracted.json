@@ -1,0 +1,1555 @@
+{
+  "filename": "03_state_local_sales_tax_rates_2026.pdf",
+  "sha256": "fbecc8928a3fb00c0a66a6f508eacaebdcf8605f104666ff576bc9c305472409",
+  "pages": [
+    {
+      "page_number": 1,
+      "width": 612.0,
+      "height": 792.0,
+      "method": "deterministic_text",
+      "tables": [
+        {
+          "page_number": 1,
+          "table_id": "p1_t0",
+          "bbox": [
+            67.2,
+            160.80000000000007,
+            531.6,
+            687.2
+          ],
+          "grid_source": "word_gap_rebuild",
+          "rows": [
+            [
+              {
+                "text": "State",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "State Rate",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "Avg. Local Rate",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "Combined Rate",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "Rank",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Alabama",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "4.000",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "5.290",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "9.290",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "5",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Alaska",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "—",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "1.821",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "1.821",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "47",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Arizona",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "5.600",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "2.777",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "8.377",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "12",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Arkansas",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "6.500",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "2.947",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "9.447",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "3",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "California",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "7.250",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "1.601",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "8.851",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "8",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Colorado",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "2.900",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "4.913",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "7.813",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "16",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Connecticut",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "6.350",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "—",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "6.350",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "33",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Delaware",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "—",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "—",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "—",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "48",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "District of Columbia",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "6.000",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "—",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "6.000",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "38",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Florida",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "6.000",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "1.002",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "7.002",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "24",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Georgia",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "4.000",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "3.384",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "7.384",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "19",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Hawaii",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "4.000",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "0.500",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "4.500",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "46",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Idaho",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "6.000",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "0.026",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "6.026",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "37",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Illinois",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "6.250",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "2.607",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "8.857",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "7",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Indiana",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "7.000",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "—",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "7.000",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "25",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Iowa",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "6.000",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "0.941",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "6.941",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "29",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Kansas",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "6.500",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "2.264",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "8.764",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "9",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Kentucky",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "6.000",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "—",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "6.000",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "39",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Louisiana",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "5.000",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "5.111",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "10.111",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "1",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Maine",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "5.500",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "—",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "5.500",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "44",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Maryland",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "6.000",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "—",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "6.000",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "40",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Massachusetts",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "6.250",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "—",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "6.250",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "35",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Michigan",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "6.000",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "—",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "6.000",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "41",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Minnesota",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "6.875",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "1.156",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "8.031",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "15",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Mississippi",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "7.000",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "0.062",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "7.062",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "22",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Missouri",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "4.225",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "4.166",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "8.391",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "11",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Montana",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "—",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "—",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "—",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "49",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ]
+          ],
+          "column_count": 5,
+          "irregular_row_indexes": []
+        }
+      ],
+      "prose": [
+        {
+          "page_number": 1,
+          "kind": "body",
+          "text": "State and Local Sales Tax Rates\nFiscal Year 2026 — Rates in effect as of January 1, 2026 | Fiscal Research Note No. 131\nThe table reports the general statewide sales tax rate together with a population-weighted average of local rates levied within each\nstate. All rates are expressed as percentages. A long dash indicates that no tax of the relevant type is imposed. Local rates are\nweighted by ZIP-code level population and may change more frequently than statewide rates.\nTable A. Statewide and average local rates, by state",
+          "bbox": [
+            67.2,
+            66.3945,
+            544.8000059999991,
+            155.1802
+          ],
+          "confidence": "1"
+        },
+        {
+          "page_number": 1,
+          "kind": "body",
+          "text": "Synthetic sample data for systems evaluation — not an authoritative source. FRN 131 | 1 of 2",
+          "bbox": [
+            61.2,
+            757.649,
+            550.8000000000001,
+            764.649
+          ],
+          "confidence": "1"
+        }
+      ],
+      "ocr_stats": null
+    },
+    {
+      "page_number": 2,
+      "width": 612.0,
+      "height": 792.0,
+      "method": "deterministic_text",
+      "tables": [
+        {
+          "page_number": 2,
+          "table_id": "p2_t0",
+          "bbox": [
+            67.2,
+            79.60000000000002,
+            531.6,
+            549.5999999999999
+          ],
+          "grid_source": "word_gap_rebuild",
+          "rows": [
+            [
+              {
+                "text": "State",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "State Rate",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "Avg. Local Rate",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "Combined Rate",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "Rank",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Nebraska",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "5.500",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "1.483",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "6.983",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "28",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Nevada",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "6.850",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "1.386",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "8.236",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "13",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "New Hampshire",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "—",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "—",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "—",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "50",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "New Jersey",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "6.625",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "-0.030",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "6.595",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "30",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "New Mexico",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "4.875",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "2.760",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "7.635",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "17",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "New York",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "4.000",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "4.532",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "8.532",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "10",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "North Carolina",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "4.750",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "2.246",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "6.996",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "27",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "North Dakota",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "5.000",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "2.041",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "7.041",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "23",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Ohio",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "5.750",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "1.488",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "7.238",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "21",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Oklahoma",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "4.500",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "4.489",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "8.989",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "6",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Oregon",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "—",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "—",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "—",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "51",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Pennsylvania",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "6.000",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "0.341",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "6.341",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "34",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Rhode Island",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "7.000",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "—",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "7.000",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "26",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "South Carolina",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "6.000",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "1.499",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "7.499",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "18",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "South Dakota",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "4.200",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "1.911",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "6.111",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "36",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Tennessee",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "7.000",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "2.548",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "9.548",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "2",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Texas",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "6.250",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "1.950",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "8.200",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "14",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Utah",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "6.100",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "1.153",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "7.253",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "20",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Vermont",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "6.000",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "0.359",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "6.359",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "32",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Virginia",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "5.300",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "0.471",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "5.771",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "42",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Washington",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "6.500",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "2.883",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "9.383",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "4",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "West Virginia",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "6.000",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "0.567",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "6.567",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "31",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Wisconsin",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "5.000",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "0.700",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "5.700",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "43",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Wyoming",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "4.000",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "1.441",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "5.441",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "45",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ]
+          ],
+          "column_count": 5,
+          "irregular_row_indexes": []
+        }
+      ],
+      "prose": [
+        {
+          "page_number": 2,
+          "kind": "heading",
+          "text": "Table A. Statewide and average local rates, by state (continued)",
+          "bbox": [
+            67.2,
+            65.38020000000006,
+            329.5860000000001,
+            73.98020000000008
+          ],
+          "confidence": "1"
+        },
+        {
+          "page_number": 2,
+          "kind": "footnote",
+          "text": "Notes: The combined rate is the arithmetic sum of the statewide rate and the population-weighted average local rate. Rank is assigned on the combined\nrate, highest to lowest; states imposing no sales tax are ranked last. A negative average local rate reflects a statutory rebate applied in certain designated\nurban enterprise zones. Rates applicable to groceries, prepared food, motor vehicles and lodging may differ from the general rate and are not reported\nhere.",
+          "bbox": [
+            67.2,
+            557.049,
+            541.8770000000002,
+            592.249
+          ],
+          "confidence": "1"
+        },
+        {
+          "page_number": 2,
+          "kind": "body",
+          "text": "Synthetic sample data for systems evaluation — not an authoritative source. FRN 131 | 2 of 2",
+          "bbox": [
+            61.2,
+            757.649,
+            550.8000000000001,
+            764.649
+          ],
+          "confidence": "1"
+        }
+      ],
+      "ocr_stats": null
+    }
+  ],
+  "cost": {
+    "engine": "pdfplumber",
+    "api_calls": 0,
+    "usd": "0",
+    "wall_seconds": 0.11670124999363907
+  }
+}

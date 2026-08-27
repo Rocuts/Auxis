@@ -1,0 +1,965 @@
+{
+  "records": [
+    {
+      "source_page": 1,
+      "table_id": "p1_t0",
+      "record_type": "employment_tax_rate",
+      "jurisdiction": "US-FED",
+      "attribute_key": "social_security_oasdi",
+      "filing_status": null,
+      "taxpayer_class": null,
+      "tax_year": 2026,
+      "effective_from": null,
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": null,
+      "upper_bound": null,
+      "rate": null,
+      "amount": null,
+      "currency": null,
+      "attrs": {
+        "employee_rate": "0.062",
+        "employer_rate": "0.062",
+        "self_employed_rate": "0.124",
+        "source_table_label": "table_1",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 1,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 1,
+            "col": 1
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 1,
+            "col": 2
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 1,
+            "col": 3
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 0
+          }
+        ],
+        "component": "social_security_oasdi"
+      },
+      "confidence": "0.99",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t0",
+      "record_type": "employment_tax_rate",
+      "jurisdiction": "US-FED",
+      "attribute_key": "medicare_hi",
+      "filing_status": null,
+      "taxpayer_class": null,
+      "tax_year": 2026,
+      "effective_from": null,
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": null,
+      "upper_bound": null,
+      "rate": null,
+      "amount": null,
+      "currency": null,
+      "attrs": {
+        "employee_rate": "0.0145",
+        "employer_rate": "0.0145",
+        "self_employed_rate": "0.029",
+        "source_table_label": "table_1",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 2,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 2,
+            "col": 1
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 2,
+            "col": 2
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 2,
+            "col": 3
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 0
+          }
+        ],
+        "component": "medicare_hi"
+      },
+      "confidence": "0.99",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t0",
+      "record_type": "employment_tax_rate",
+      "jurisdiction": "US-FED",
+      "attribute_key": "total",
+      "filing_status": null,
+      "taxpayer_class": null,
+      "tax_year": 2026,
+      "effective_from": null,
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": null,
+      "upper_bound": null,
+      "rate": null,
+      "amount": null,
+      "currency": null,
+      "attrs": {
+        "employee_rate": "0.0765",
+        "employer_rate": "0.0765",
+        "self_employed_rate": "0.153",
+        "source_table_label": "table_1",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 3,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 3,
+            "col": 1
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 3,
+            "col": 2
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t0",
+            "row": 3,
+            "col": 3
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 0
+          }
+        ],
+        "component": "total"
+      },
+      "confidence": "0.99",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t1",
+      "record_type": "surtax_threshold",
+      "jurisdiction": "US-FED",
+      "attribute_key": "additional_medicare",
+      "filing_status": "married_filing_jointly",
+      "taxpayer_class": null,
+      "tax_year": 2026,
+      "effective_from": null,
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": null,
+      "upper_bound": null,
+      "rate": "0.009",
+      "amount": "250000",
+      "currency": null,
+      "attrs": {
+        "threshold": 250000,
+        "employer_match": false,
+        "source_table_label": "table_3",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t1",
+            "row": 1,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t1",
+            "row": 1,
+            "col": 1
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 4
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 0
+          }
+        ],
+        "surtax": "additional_medicare"
+      },
+      "confidence": "0.97",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t1",
+      "record_type": "surtax_threshold",
+      "jurisdiction": "US-FED",
+      "attribute_key": "additional_medicare",
+      "filing_status": "married_filing_separately",
+      "taxpayer_class": null,
+      "tax_year": 2026,
+      "effective_from": null,
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": null,
+      "upper_bound": null,
+      "rate": "0.009",
+      "amount": "125000",
+      "currency": null,
+      "attrs": {
+        "threshold": 125000,
+        "employer_match": false,
+        "source_table_label": "table_3",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t1",
+            "row": 2,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t1",
+            "row": 2,
+            "col": 1
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 4
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 0
+          }
+        ],
+        "surtax": "additional_medicare"
+      },
+      "confidence": "0.97",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t1",
+      "record_type": "surtax_threshold",
+      "jurisdiction": "US-FED",
+      "attribute_key": "additional_medicare",
+      "filing_status": "single",
+      "taxpayer_class": null,
+      "tax_year": 2026,
+      "effective_from": null,
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": null,
+      "upper_bound": null,
+      "rate": "0.009",
+      "amount": "200000",
+      "currency": null,
+      "attrs": {
+        "threshold": 200000,
+        "employer_match": false,
+        "source_table_label": "table_3",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t1",
+            "row": 3,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t1",
+            "row": 3,
+            "col": 1
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 4
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 0
+          }
+        ],
+        "surtax": "additional_medicare"
+      },
+      "confidence": "0.97",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t1",
+      "record_type": "surtax_threshold",
+      "jurisdiction": "US-FED",
+      "attribute_key": "additional_medicare",
+      "filing_status": "head_of_household",
+      "taxpayer_class": null,
+      "tax_year": 2026,
+      "effective_from": null,
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": null,
+      "upper_bound": null,
+      "rate": "0.009",
+      "amount": "200000",
+      "currency": null,
+      "attrs": {
+        "threshold": 200000,
+        "employer_match": false,
+        "source_table_label": "table_3",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t1",
+            "row": 4,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t1",
+            "row": 4,
+            "col": 1
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 4
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 0
+          }
+        ],
+        "surtax": "additional_medicare"
+      },
+      "confidence": "0.97",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t1",
+      "record_type": "surtax_threshold",
+      "jurisdiction": "US-FED",
+      "attribute_key": "additional_medicare",
+      "filing_status": "qualifying_surviving_spouse",
+      "taxpayer_class": null,
+      "tax_year": 2026,
+      "effective_from": null,
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": null,
+      "upper_bound": null,
+      "rate": "0.009",
+      "amount": "200000",
+      "currency": null,
+      "attrs": {
+        "threshold": 200000,
+        "employer_match": false,
+        "source_table_label": "table_3",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t1",
+            "row": 5,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t1",
+            "row": 5,
+            "col": 1
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 4
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 0
+          }
+        ],
+        "surtax": "additional_medicare"
+      },
+      "confidence": "0.97",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t2",
+      "record_type": "wage_base",
+      "jurisdiction": "US-FED",
+      "attribute_key": "social_security_wage_base",
+      "filing_status": null,
+      "taxpayer_class": null,
+      "tax_year": 2026,
+      "effective_from": null,
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": null,
+      "upper_bound": null,
+      "rate": null,
+      "amount": "181800",
+      "currency": null,
+      "attrs": {
+        "prior_year_amount": 176100,
+        "unlimited": false,
+        "source_table_label": "table_2",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t2",
+            "row": 1,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t2",
+            "row": 1,
+            "col": 1
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t2",
+            "row": 1,
+            "col": 2
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 0
+          }
+        ],
+        "item": "social_security_wage_base"
+      },
+      "confidence": "0.99",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t2",
+      "record_type": "wage_base",
+      "jurisdiction": "US-FED",
+      "attribute_key": "medicare_wage_base",
+      "filing_status": null,
+      "taxpayer_class": null,
+      "tax_year": 2026,
+      "effective_from": null,
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": null,
+      "upper_bound": null,
+      "rate": null,
+      "amount": null,
+      "currency": null,
+      "attrs": {
+        "prior_year_amount": null,
+        "unlimited": true,
+        "source_table_label": "table_2",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t2",
+            "row": 2,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t2",
+            "row": 2,
+            "col": 1
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t2",
+            "row": 2,
+            "col": 2
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 0
+          }
+        ],
+        "item": "medicare_wage_base"
+      },
+      "confidence": "0.99",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t2",
+      "record_type": "wage_base",
+      "jurisdiction": "US-FED",
+      "attribute_key": "futa_wage_base",
+      "filing_status": null,
+      "taxpayer_class": null,
+      "tax_year": 2026,
+      "effective_from": null,
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": null,
+      "upper_bound": null,
+      "rate": null,
+      "amount": "7000",
+      "currency": null,
+      "attrs": {
+        "prior_year_amount": 7000,
+        "unlimited": false,
+        "source_table_label": "table_2",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t2",
+            "row": 3,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t2",
+            "row": 3,
+            "col": 1
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t2",
+            "row": 3,
+            "col": 2
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 0
+          }
+        ],
+        "item": "futa_wage_base"
+      },
+      "confidence": "0.99",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t2",
+      "record_type": "employment_tax_rate",
+      "jurisdiction": "US-FED",
+      "attribute_key": "futa_effective",
+      "filing_status": null,
+      "taxpayer_class": null,
+      "tax_year": 2026,
+      "effective_from": null,
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": null,
+      "upper_bound": null,
+      "rate": "0.006",
+      "amount": null,
+      "currency": null,
+      "attrs": {
+        "prior_year_rate": "0.006",
+        "source_table_label": "table_2",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t2",
+            "row": 4,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t2",
+            "row": 4,
+            "col": 1
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t2",
+            "row": 4,
+            "col": 2
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 0
+          }
+        ],
+        "component": "futa_effective"
+      },
+      "confidence": "0.98",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t3",
+      "record_type": "withholding_allowance",
+      "jurisdiction": "US-FED",
+      "attribute_key": "weekly",
+      "filing_status": null,
+      "taxpayer_class": null,
+      "tax_year": 2026,
+      "effective_from": null,
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": null,
+      "upper_bound": null,
+      "rate": null,
+      "amount": "96.15",
+      "currency": null,
+      "attrs": {
+        "periods_per_year": 52,
+        "allowance": "96.15",
+        "source_table_label": "table_4",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t3",
+            "row": 1,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t3",
+            "row": 1,
+            "col": 1
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t3",
+            "row": 1,
+            "col": 2
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 0
+          }
+        ],
+        "payroll_period": "weekly"
+      },
+      "confidence": "0.98",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t3",
+      "record_type": "withholding_allowance",
+      "jurisdiction": "US-FED",
+      "attribute_key": "biweekly",
+      "filing_status": null,
+      "taxpayer_class": null,
+      "tax_year": 2026,
+      "effective_from": null,
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": null,
+      "upper_bound": null,
+      "rate": null,
+      "amount": "192.30",
+      "currency": null,
+      "attrs": {
+        "periods_per_year": 26,
+        "allowance": "192.30",
+        "source_table_label": "table_4",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t3",
+            "row": 2,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t3",
+            "row": 2,
+            "col": 1
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t3",
+            "row": 2,
+            "col": 2
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 0
+          }
+        ],
+        "payroll_period": "biweekly"
+      },
+      "confidence": "0.98",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t3",
+      "record_type": "withholding_allowance",
+      "jurisdiction": "US-FED",
+      "attribute_key": "semimonthly",
+      "filing_status": null,
+      "taxpayer_class": null,
+      "tax_year": 2026,
+      "effective_from": null,
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": null,
+      "upper_bound": null,
+      "rate": null,
+      "amount": "208.33",
+      "currency": null,
+      "attrs": {
+        "periods_per_year": 24,
+        "allowance": "208.33",
+        "source_table_label": "table_4",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t3",
+            "row": 3,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t3",
+            "row": 3,
+            "col": 1
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t3",
+            "row": 3,
+            "col": 2
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 0
+          }
+        ],
+        "payroll_period": "semimonthly"
+      },
+      "confidence": "0.98",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t3",
+      "record_type": "withholding_allowance",
+      "jurisdiction": "US-FED",
+      "attribute_key": "monthly",
+      "filing_status": null,
+      "taxpayer_class": null,
+      "tax_year": 2026,
+      "effective_from": null,
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": null,
+      "upper_bound": null,
+      "rate": null,
+      "amount": "416.67",
+      "currency": null,
+      "attrs": {
+        "periods_per_year": 12,
+        "allowance": "416.67",
+        "source_table_label": "table_4",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t3",
+            "row": 4,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t3",
+            "row": 4,
+            "col": 1
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t3",
+            "row": 4,
+            "col": 2
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 0
+          }
+        ],
+        "payroll_period": "monthly"
+      },
+      "confidence": "0.98",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t3",
+      "record_type": "withholding_allowance",
+      "jurisdiction": "US-FED",
+      "attribute_key": "quarterly",
+      "filing_status": null,
+      "taxpayer_class": null,
+      "tax_year": 2026,
+      "effective_from": null,
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": null,
+      "upper_bound": null,
+      "rate": null,
+      "amount": "1250.00",
+      "currency": null,
+      "attrs": {
+        "periods_per_year": 4,
+        "allowance": "1250.00",
+        "source_table_label": "table_4",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t3",
+            "row": 5,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t3",
+            "row": 5,
+            "col": 1
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t3",
+            "row": 5,
+            "col": 2
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 0
+          }
+        ],
+        "payroll_period": "quarterly"
+      },
+      "confidence": "0.98",
+      "review_status": "clean"
+    },
+    {
+      "source_page": 1,
+      "table_id": "p1_t3",
+      "record_type": "withholding_allowance",
+      "jurisdiction": "US-FED",
+      "attribute_key": "annually",
+      "filing_status": null,
+      "taxpayer_class": null,
+      "tax_year": 2026,
+      "effective_from": null,
+      "effective_to": null,
+      "lifecycle_status": "active",
+      "lower_bound": null,
+      "upper_bound": null,
+      "rate": null,
+      "amount": "5000.00",
+      "currency": null,
+      "attrs": {
+        "periods_per_year": 1,
+        "allowance": "5000.00",
+        "source_table_label": "table_4",
+        "provenance": [
+          {
+            "kind": "cell",
+            "table_id": "p1_t3",
+            "row": 6,
+            "col": 0
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t3",
+            "row": 6,
+            "col": 1
+          },
+          {
+            "kind": "cell",
+            "table_id": "p1_t3",
+            "row": 6,
+            "col": 2
+          },
+          {
+            "kind": "prose",
+            "page": 1,
+            "prose_index": 0
+          }
+        ],
+        "payroll_period": "annually"
+      },
+      "confidence": "0.98",
+      "review_status": "clean"
+    }
+  ],
+  "issues": [
+    {
+      "source_page": 1,
+      "table_id": null,
+      "row_index": null,
+      "col_index": null,
+      "raw_value": null,
+      "reason": "Prose states an employer withholding-start rule with a flat $200,000 cumulative-wage trigger applied without regard to filing status ('Employers must begin withholding in the pay period in which cumulative wages for the calendar year exceed $200,000, without regard to the employee's filing status or to wages paid by another employer'). The closed schema has no record type or extra attr for this standalone employer-withholding trigger; the adjacent additional_medicare surtax_threshold records carry only the tax-side thresholds and rate."
+    },
+    {
+      "source_page": 1,
+      "table_id": null,
+      "row_index": null,
+      "col_index": null,
+      "raw_value": null,
+      "reason": "Prose qualifies the Table 4 allowances ('The withholding allowance amounts in Table 4 apply only to employees whose most recent withholding certificate was filed prior to 2020'), but the closed extra-attr dictionary defines no key (e.g. an applicability/eligibility qualifier) on withholding_allowance records to carry this restriction."
+    }
+  ],
+  "cost": {
+    "engine": "zai/glm-5.3-flash",
+    "api_calls": 1,
+    "input_tokens": 5697,
+    "output_tokens": 11903,
+    "cache_write_tokens": 0,
+    "cache_read_tokens": 0,
+    "usd": "0.003403025",
+    "wall_seconds": 173.47047929198015
+  }
+}

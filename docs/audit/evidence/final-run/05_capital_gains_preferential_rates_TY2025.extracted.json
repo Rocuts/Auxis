@@ -1,0 +1,274 @@
+{
+  "filename": "05_capital_gains_preferential_rates_TY2025.pdf",
+  "sha256": "badb300f2805b5ea13488c3ff45d700e13d8277dadc3ba8ded0ad96ca9544f50",
+  "pages": [
+    {
+      "page_number": 1,
+      "width": 612.0,
+      "height": 792.0,
+      "method": "ocr",
+      "tables": [
+        {
+          "page_number": 1,
+          "table_id": "p1_t0",
+          "bbox": [
+            52.08,
+            272.4,
+            559.68,
+            367.2
+          ],
+          "grid_source": "ruled_cell_ocr",
+          "rows": [
+            [
+              {
+                "text": "Rate",
+                "confidence": "0.96",
+                "ink_without_text": false
+              },
+              {
+                "text": "Single",
+                "confidence": "0.96",
+                "ink_without_text": false
+              },
+              {
+                "text": "Married Filing Jointly",
+                "confidence": "0.96",
+                "ink_without_text": false
+              },
+              {
+                "text": "Married Filing Separately",
+                "confidence": "0.96",
+                "ink_without_text": false
+              },
+              {
+                "text": "Head of Household",
+                "confidence": "0.95",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "0 percent",
+                "confidence": "0.96",
+                "ink_without_text": false
+              },
+              {
+                "text": "$0 to $48,350",
+                "confidence": "0.6",
+                "ink_without_text": false
+              },
+              {
+                "text": "$0 to $96,700",
+                "confidence": "0.96",
+                "ink_without_text": false
+              },
+              {
+                "text": "$0 to $48,350",
+                "confidence": "0.96",
+                "ink_without_text": false
+              },
+              {
+                "text": "$0 to $64,750",
+                "confidence": "0.96",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "15 percent",
+                "confidence": "0.96",
+                "ink_without_text": false
+              },
+              {
+                "text": "$48,351 to $533,400",
+                "confidence": "0.94",
+                "ink_without_text": false
+              },
+              {
+                "text": "$96,701 to $600,050",
+                "confidence": "0.94",
+                "ink_without_text": false
+              },
+              {
+                "text": "$48,351 to $300,000",
+                "confidence": "0.95",
+                "ink_without_text": false
+              },
+              {
+                "text": "$64,751 to $566,700",
+                "confidence": "0.94",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "20 percent",
+                "confidence": "0.96",
+                "ink_without_text": false
+              },
+              {
+                "text": "Over $533,400",
+                "confidence": "0.95",
+                "ink_without_text": false
+              },
+              {
+                "text": "Over $600,050",
+                "confidence": "0.95",
+                "ink_without_text": false
+              },
+              {
+                "text": "Over $300,000",
+                "confidence": "0.95",
+                "ink_without_text": false
+              },
+              {
+                "text": "Over $566,700",
+                "confidence": "0.96",
+                "ink_without_text": false
+              }
+            ]
+          ],
+          "column_count": 5,
+          "irregular_row_indexes": []
+        },
+        {
+          "page_number": 1,
+          "table_id": "p1_t1",
+          "bbox": [
+            118.56,
+            396.47999999999996,
+            492.96,
+            491.28
+          ],
+          "grid_source": "ruled_cell_ocr",
+          "rows": [
+            [
+              {
+                "text": "Category",
+                "confidence": "0.96",
+                "ink_without_text": false
+              },
+              {
+                "text": "Maximum rate",
+                "confidence": "0.95",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Unrecaptured section 1250 gain",
+                "confidence": "0.92",
+                "ink_without_text": false
+              },
+              {
+                "text": "25 percent",
+                "confidence": "0.96",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Collectibles and certain small business stock",
+                "confidence": "0.95",
+                "ink_without_text": false
+              },
+              {
+                "text": "28 percent",
+                "confidence": "0.96",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Short-term capital gain",
+                "confidence": "0.96",
+                "ink_without_text": false
+              },
+              {
+                "text": "Ordinary rates",
+                "confidence": "0.96",
+                "ink_without_text": false
+              }
+            ]
+          ],
+          "column_count": 2,
+          "irregular_row_indexes": []
+        }
+      ],
+      "prose": [
+        {
+          "page_number": 1,
+          "kind": "body",
+          "text": "INTERNAL CIRCULAR CAPITAL GAINS DIVISION\n—\nPreferential Rates on Long-Term Capital Gain and Qualified Dividend\nIncome\nTax Year 2025 Circular CG-2025/07\n—",
+          "bbox": [
+            94.32,
+            79.44,
+            517.68,
+            141.35999999999999
+          ],
+          "confidence": "0.88"
+        },
+        {
+          "page_number": 1,
+          "kind": "body",
+          "text": "SUPERSEDED. This circular states the rates applicable to taxable years beginning before January 1, 2026. It is retained\nfor reference in connection with amended returns and prior-period assessments. For taxable years beginning on or after\nJanuary 1, 2026, see Circular CG-2026/03.\nNet long-term capital gain and qualified dividend income are taxed at the preferential rates set out below. The applicable\nrate is determined by reference to the taxpayer's total taxable income, including the gain itself. Where taxable income spans\nmore than one band, the gain is allocated across the bands in order and each portion is taxed at the corresponding rate.\nTable 1. Preferential rate bands by filing status, taxable income",
+          "bbox": [
+            74.64,
+            160.32,
+            537.84,
+            265.2
+          ],
+          "confidence": "0.91"
+        },
+        {
+          "page_number": 1,
+          "kind": "heading",
+          "text": "Table 2. Special rate categories",
+          "bbox": [
+            74.39999999999999,
+            380.64,
+            200.16,
+            389.28
+          ],
+          "confidence": "0.95"
+        },
+        {
+          "page_number": 1,
+          "kind": "footnote",
+          "text": "NOTE. An additional Net Investment Income Tax of 3.8 percent applies to the lesser of net investment income or the excess of modified\nadjusted gross income over $200,000 (single and head of household), $250,000 (married filing jointly) or $125,000 (married filing separately).\nThis surtax is imposed in addition to the rates shown in Table | and is not reflected in those rates.",
+          "bbox": [
+            74.39999999999999,
+            502.32,
+            530.88,
+            531.84
+          ],
+          "confidence": "0.82"
+        },
+        {
+          "page_number": 1,
+          "kind": "body",
+          "text": "Synthetic sample data for systems evaluation. Not an authoritative tax publication. CG-2025/07 — 1",
+          "bbox": [
+            68.16,
+            751.1999999999999,
+            542.16,
+            757.68
+          ],
+          "confidence": "0.91"
+        }
+      ],
+      "ocr_stats": {
+        "word_count": 285,
+        "mean_confidence": "0.9546",
+        "p10_confidence": "0.95",
+        "low_confidence_fraction": "0.0035"
+      }
+    }
+  ],
+  "cost": {
+    "engine": "tesseract",
+    "api_calls": 0,
+    "usd": "0",
+    "wall_seconds": 2.6608739999937825
+  }
+}

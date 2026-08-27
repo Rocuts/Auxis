@@ -692,6 +692,20 @@ Return the JSON object and nothing else: no prose before it, no commentary
 after it, no explanation of your reasoning. Anything you would want to say
 about a value belongs in "issues", which is part of the object. Numbers are
 JSON numbers, never quoted strings.
+
+EVERY record object carries ALL FIFTEEN of these keys, every time:
+
+  record_type, jurisdiction, attribute_key, filing_status, taxpayer_class,
+  tax_year, lifecycle_status, lower_bound, upper_bound, rate, amount,
+  currency, confidence, source_table_label, provenance
+
+A key that does not apply to this record is present with the value null. A
+null is an answer; an ABSENT key is a broken record, and the whole record is
+refused rather than guessed at. This holds on the fifty-first record of a
+long table exactly as it holds on the first — the list does not shorten as
+the response gets longer, and "confidence" is the one most easily forgotten
+there. Repeating fifteen keys per record is the cost of the contract; a
+record missing one is worth nothing to anybody downstream.
 """
 
 SYSTEM_PROMPT = _MAPPER_ROLE + CANONICAL_CONVENTIONS + MAPPER_OUTPUT_DISCIPLINE

@@ -1,0 +1,416 @@
+{
+  "filename": "01_federal_income_tax_rate_schedules_TY2026.pdf",
+  "sha256": "d83b972a360284a924b967387a700a51283871113b7b9c93a67e1a954cb86c22",
+  "pages": [
+    {
+      "page_number": 1,
+      "width": 612.0,
+      "height": 792.0,
+      "method": "deterministic_text",
+      "tables": [
+        {
+          "page_number": 1,
+          "table_id": "p1_t0",
+          "bbox": [
+            57.599999999999994,
+            204.0,
+            554.4,
+            420.0
+          ],
+          "grid_source": "ruled_lines",
+          "rows": [
+            [
+              {
+                "text": "",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "Taxable Income Bracket",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": null,
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": null,
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": null,
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "Rate",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "Single",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "Married Filing Jointly",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "Married Filing Separately",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "Head of Household",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "10%",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "$0 – $12,250",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "$0 – $24,500",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "$0 – $12,250",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "$0 – $17,450",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "12%",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "$12,251 – $49,800",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "$24,501 – $99,550",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "$12,251 – $49,800",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "$17,451 – $66,600",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "22%",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "$49,801 – $106,150",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "$99,551 – $212,300",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "$49,801 – $106,150",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "$66,601 – $106,150",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "24%",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "$106,151 – $202,650",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "$212,301 – $405,250",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "$106,151 – $202,650",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "$106,151 – $202,650",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "32%",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "$202,651 – $257,300",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "$405,251 – $514,600",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "$202,651 – $257,300",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "$202,651 – $257,250",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "35%",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "$257,301 – $643,250",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "$514,601 – $771,900",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "$257,301 – $385,950",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "$257,251 – $643,250",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "37%",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "$643,251 and over",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "$771,901 and over",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "$385,951 and over",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "$643,251 and over",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ]
+          ],
+          "column_count": 5,
+          "irregular_row_indexes": []
+        },
+        {
+          "page_number": 1,
+          "table_id": "p1_t1",
+          "bbox": [
+            67.2,
+            497.0,
+            319.2,
+            602.0
+          ],
+          "grid_source": "ruled_lines",
+          "rows": [
+            [
+              {
+                "text": "Rate",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "Taxable Income Bracket",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "10%",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "$0 – $3,250",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "24%",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "$3,251 – $11,750",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "35%",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "$11,751 – $16,050",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ],
+            [
+              {
+                "text": "37%",
+                "confidence": "1",
+                "ink_without_text": false
+              },
+              {
+                "text": "$16,051 and over",
+                "confidence": "1",
+                "ink_without_text": false
+              }
+            ]
+          ],
+          "column_count": 2,
+          "irregular_row_indexes": []
+        }
+      ],
+      "prose": [
+        {
+          "page_number": 1,
+          "kind": "heading",
+          "text": "DEPARTMENT OF REVENUE ANALYSIS (cid:127) OFFICE OF TAX POLICY",
+          "bbox": [
+            168.0365,
+            65.44450000000006,
+            440.98850000000004,
+            73.94450000000006
+          ],
+          "confidence": "1"
+        },
+        {
+          "page_number": 1,
+          "kind": "body",
+          "text": "Individual Income Tax Rate Schedules\nTax Year 2026 — Taxable Income Brackets by Filing Status\nThe schedules below set out the marginal rates applicable to ordinary taxable income for the 2026 tax year. Amounts shown are\nthe bracket boundaries after the application of the standard deduction or itemized deductions, as applicable. Each rate applies only\nto the portion of taxable income falling within the stated bracket. Bracket boundaries are subject to annual inflation adjustment.\nTable 1. Ordinary Income Rate Schedules, Tax Year 2026",
+          "bbox": [
+            67.2,
+            92.45500000000004,
+            544.8000000000002,
+            198.56150000000002
+          ],
+          "confidence": "1"
+        },
+        {
+          "page_number": 1,
+          "kind": "footnote",
+          "text": "Source: Office of Tax Policy, rate schedule release 2026-A. Bracket boundaries are stated in whole dollars. The uppermost bracket in each column is\nopen-ended.",
+          "bbox": [
+            67.2,
+            429.6492,
+            520.3499999999998,
+            447.24920000000003
+          ],
+          "confidence": "1"
+        },
+        {
+          "page_number": 1,
+          "kind": "heading",
+          "text": "Table 2. Estates and Trusts — Ordinary Income",
+          "bbox": [
+            67.2,
+            482.0615,
+            265.389,
+            491.5615
+          ],
+          "confidence": "1"
+        },
+        {
+          "page_number": 1,
+          "kind": "body",
+          "text": "Synthetic sample data prepared for systems evaluation. Not an authoritative tax publication. Pub. 5001-A (Rev. 11-2025) | Page 1",
+          "bbox": [
+            61.2,
+            753.0075,
+            550.8,
+            760.5075
+          ],
+          "confidence": "1"
+        }
+      ],
+      "ocr_stats": null
+    }
+  ],
+  "cost": {
+    "engine": "pdfplumber",
+    "api_calls": 0,
+    "usd": "0",
+    "wall_seconds": 0.07706466701347381
+  }
+}
