@@ -452,49 +452,73 @@ CANONICAL_CONVENTIONS = """\
 
 ## Record shapes
 
-record_type and its attribute_key sub-discriminator (attribute_key is null
-unless listed; its value is the lowercase snake_case slug of the label the
-document prints):
+What each record_type COUNTS as one record, and which typed slots it fills.
+The attrs tail is NOT defined here: the extra-attribute dictionary below is
+the authoritative list of attr keys per record type, and where anything in
+this section appears to disagree with it, the dictionary wins. A typed slot
+and an attr are not alternatives — where both are listed, fill both.
+
+attribute_key is null unless a record_type is listed in the fixed vocabulary
+section below; its value is that section's slug, never a slug re-derived
+from the printed label.
 
 - ordinary_income_bracket: one record per (bracket row x filing-status or
   taxpayer-class column) of an income-tax rate schedule. A wide matrix with
   one rate column and several filing-status columns yields one record per
-  filing status per row: same rate, that column's bounds.
-- preferential_gain_bracket: same shape for preferential (e.g. capital
-  gain) rate schedules.
-- special_gain_rate: a flat rate for a special asset or gain category;
-  attribute_key = the category slug.
-- standard_deduction: amount per filing status.
+  filing status per row: same rate, that column's bounds. No attrs.
+- preferential_gain_bracket: same granularity and slots as
+  ordinary_income_bracket, for preferential (e.g. capital gain) schedules.
+  Carries superseded_effective when its document is superseded.
+- special_gain_rate: one record per special asset or gain category.
+  attribute_key = the category slug. The printed maximum rate goes in the
+  max_rate attr (dictionary); fill the typed "rate" slot with the same
+  fraction where a numeric rate is printed.
+- standard_deduction: amount per filing status, plus prior_year_amount.
 - additional_standard_deduction: attribute_key = the qualifying condition
-  slug (e.g. age or blindness conditions, as printed).
+  slug from the fixed vocabulary. amount = the per-condition amount.
 - dependent_deduction_rule: a rule stated in prose. amount = the base
-  amount if the sentence states one; put the sentence verbatim in an extra
-  attr "rule".
+  amount if the sentence states one. The "rule" attr is the FORMULA form
+  the dictionary specifies, not the sentence verbatim, and the two figures
+  the sentence prints also ride as floor_amount and earned_income_addition.
 - sales_tax_rate: one record per jurisdiction row. Column values go to
   extra attrs named from the printed headers in snake_case with "_pct" for
-  percentage columns (e.g. state_rate_pct, avg_local_rate_pct,
+  percentage columns (state_rate_pct, avg_local_rate_pct,
   combined_rate_pct), keeping percentages as printed and null for dashes.
   The typed "rate" slot carries the combined (total) rate converted to a
   decimal fraction, or null if the combined value is null. Map a derived
   or computed column like any other column — downstream validators check
-  its arithmetic; you do not. Every record carries the boolean extra attr
-  "imposes_state_sales_tax", BOTH halves of it: false where the state-rate
-  cell prints a long dash (cite the note that explains the dash), and true
-  wherever a state rate actually prints. It is a fact about every
-  jurisdiction, not a marker on the exceptions — emitting it only for the
-  dashed rows leaves the norm unstated, which is the majority of the table.
-- employment_tax_rate: attribute_key = the tax component slug (as printed,
-  e.g. social security / medicare variants). A single-rate row puts the
-  fraction in "rate"; parallel columns for different payer sides become
-  extra attrs named from the printed headers (snake_case, "_pct" if
-  printed as percentages; fractions in a plain "_rate" attr otherwise).
-- wage_base: attribute_key = the item slug; amount = the wage base. "No
-  limit" means amount null.
-- surtax_threshold: attribute_key = the surtax name slug; amount = the
-  threshold; rate = the surtax rate if the document states one at that row
-  or in a footnote (footnote provenance then).
-- withholding_allowance: attribute_key = the payroll period slug (weekly,
-  biweekly, ...); amount = the allowance.
+  its arithmetic; you do not. Every record also carries the four
+  non-column attrs the dictionary lists: jurisdiction_name, rate_unit,
+  effective_date, and the boolean imposes_state_sales_tax in BOTH halves —
+  false where the state-rate cell prints a long dash (cite the note that
+  explains the dash), and true wherever a state rate actually prints. It is
+  a fact about every jurisdiction, not a marker on the exceptions.
+- employment_tax_rate: one record per tax component row. attribute_key =
+  the component slug from the fixed vocabulary. EVERY such record carries
+  all three payer-side attrs — employee_rate, employer_rate,
+  self_employed_rate — as decimal fractions, with null in any side the row
+  does not charge. A row printing one rate is NOT exempt from this: decide
+  from the document which side that rate falls on and null the other two
+  (an employer-only levy is employer_rate set, the other two null). Put the
+  same fraction in the typed "rate" slot for a single-rate row.
+- wage_base: one record per item row. attribute_key = the item slug from
+  the fixed vocabulary. amount = the wage base, and "No limit" means amount
+  null. Both dictionary attrs are required on every record: unlimited
+  (true only where the cell prints "No limit", false where a figure
+  prints) and prior_year_amount (the comparison column, null where that
+  row prints no prior-year figure).
+- surtax_threshold: one record per (surtax x filing status). attribute_key
+  = the surtax slug from the fixed vocabulary. rate = the surtax rate the
+  document states at that row or in a footnote (footnote provenance then).
+  The threshold amount rides in the "threshold" attr, which is REQUIRED —
+  putting it only in the typed "amount" slot loses it. Fill "amount" too if
+  you wish; "threshold" is the field that is read. Where the document
+  states the surtax is imposed on one side only, also emit employer_match
+  false; where its document is superseded, superseded_effective.
+- withholding_allowance: one record per payroll period. attribute_key = the
+  period slug from the fixed vocabulary. amount = the allowance, and the
+  two data columns also ride as the dictionary attrs periods_per_year and
+  allowance (the allowance keeps its cents).
 
 ## Fixed attribute_key vocabulary
 
@@ -706,6 +730,16 @@ long table exactly as it holds on the first — the list does not shorten as
 the response gets longer, and "confidence" is the one most easily forgotten
 there. Repeating fifteen keys per record is the cost of the contract; a
 record missing one is worth nothing to anybody downstream.
+
+Every issue object carries all six of its keys the same way:
+
+  source_page, table_id, row_index, col_index, raw_value, reason
+
+row_index and col_index are the 0-based coordinates of the cell the issue is
+about, raw_value is that cell's text exactly as the input prints it, and
+reason is your prose. Any of the coordinates may be null for an issue about
+a whole table or a prose block — but the key is present with null, never
+missing.
 """
 
 SYSTEM_PROMPT = _MAPPER_ROLE + CANONICAL_CONVENTIONS + MAPPER_OUTPUT_DISCIPLINE

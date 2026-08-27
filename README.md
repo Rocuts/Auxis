@@ -402,22 +402,55 @@ identity vocabulary, then bound semantics and an unnamed attribute tail, and
 now one unreconciled paragraph. The harness drove specification completion in
 four steps, which is what an accuracy harness is for.
 
-**Across all four runs no mapped value was ever wrong.** The single value
-error in the entire exercise was document 05's `566751`, which no later run
-reproduced. Values were never copied from the oracle: what the conventions
-adopted from the target schema are *encodings* — `US-FED`, `estate_or_trust`,
-the `attribute_key` slugs, the attribute key names, and the inclusive-bounds
-reading of `Over $X` — none of which is printed in any PDF, while every value
-beneath them is read from the page. `src/` never opens `fixtures/ground_truth.json`.
+> **The closing fact of the progression: across all four runs, no mapped
+> value was ever wrong.** Every failure at every stage was a field the schema
+> asked for and did not describe well enough to get — a framing convention, an
+> identity vocabulary, a bound semantics, an attribute name, a contradiction
+> between two paragraphs. The single value error in the entire exercise was
+> document 05's `566751`, which no later run reproduced.
+>
+> That is the honest summary of what an LLM did well here and what it did not.
+> It read these documents correctly and consistently. What it could not do was
+> guess a specification nobody had written down — and the harness is what
+> turned each of those gaps from an opinion into a measurement.
 
-**What the verifier was worth.** It answered on all five documents (zero
-schema failures, zero records flagged unverified) and raised nine disputes.
-Five were true positives naming exactly the failing `additional_medicare`
-records and the right reason — found by independent re-derivation, before the
-oracle was consulted. Four were false positives: three object to `192.30`
-being stored as `192.3`, and one reproduces a known false claim that a record
-holds `257300` when it holds `257250`. No dispute was settled by the models
-talking; all nine became review-queue flags.
+Values were never copied from the oracle. What the conventions adopted from
+the target schema are *encodings* — `US-FED`, `estate_or_trust`, the
+`attribute_key` slugs, the attribute key names, and the inclusive-bounds
+reading of `Over $X` — none of which is printed in any PDF, while every value
+beneath them is read from the page. `src/` never opens
+`fixtures/ground_truth.json`; the packaging excludes it from the deployed
+bundle, and a test enforces both.
+
+### What the independent verifier was actually worth
+
+[ADR 012](docs/decisions/012-runtime-multi-agent-semantic-layer.md) argues
+that a second model reviewing its own family's output is an echo, and puts a
+*different* family (`alibaba/qwen-3-235b`) on the mapper's
+(`zai/glm-5.3-flash`) work in a fresh context under a skeptic prompt. That
+argument was theoretical until this run.
+
+**It named five of the failures before the oracle was ever consulted.** Of
+nine disputes, five landed on exactly the `additional_medicare` records that
+the harness later scored wrong, each with the correct reason — that the
+threshold belongs to the cited cell. A model that had never seen the mapper's
+reasoning, working only from the same grid, independently re-derived the
+records and found the defect. That is cross-family verification doing the one
+thing it exists to do, measured rather than asserted.
+
+Reported honestly, it also cried wolf four times. Three disputes object to
+`$192.30` being stored as `192.3` — presentation, not value; those records
+are correct and the conventions now state that numeric equality is decimal
+equality. The fourth reproduces a known misread, claiming a record holds
+`257300` when it holds `257250`; it is kept as a documented limitation rather
+than papered over. Its cost is one review-queue row on a correct record —
+which is a false positive behaving exactly as a review queue is designed to
+absorb. The failure worth fearing is the false *negative*, and that is what
+the second family buys protection against.
+
+No dispute was settled by the models talking to each other. All nine became
+review-queue flags for a human, which is the bound
+[ADR 012](docs/decisions/012-runtime-multi-agent-semantic-layer.md) sets.
 
 A per-record-type breakdown prints alongside the table. The **verifier
 disagreement** column is deliberately not folded into the accuracy number: it

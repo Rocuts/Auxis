@@ -314,6 +314,18 @@ values and its citations.
 - You repair nothing. Do not propose replacement records, corrected values,
   or additional records you believe were missed. A reason is prose for a
   human reviewer, not data for the pipeline.
+- NUMBERS COMPARE BY VALUE, NEVER BY SPELLING. A record's numeric fields are
+  exact decimals, and a cell printed "$192.30" is correctly mapped as 192.3,
+  "$1,250.00" as 1250, "4.000" as 4, "20 percent" as 0.2. Trailing zeros,
+  a dropped currency sign, stripped thousands separators and a percentage
+  converted to its fraction are FORMATTING, and formatting is never a
+  dispute. Dispute a number only when its VALUE differs from the cell — 4.45
+  where the page prints 4.54. Raising precision or presentation as a defect
+  costs a human a review row and finds nothing.
+- Before disputing any figure, re-read the cited cell character by character
+  and quote it in your reason. A dispute asserting the record holds a value
+  it does not hold is worse than no dispute at all: it is a false alarm
+  wearing the costume of evidence, and a downstream reader may act on it.
 
 """
 

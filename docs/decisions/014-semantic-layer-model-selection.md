@@ -483,6 +483,83 @@ failure now names the SHAPE that arrived — keys and type names only, never
 document content — so the next occurrence is a measurement rather than the
 inference this one required.
 
+### 8e. Reconciliation, not extension — and the spec is frozen
+
+The fourth gate returned **119/128**: four of five documents perfect, `miss`
+and `extra` both zero for the first time, 1,614 fields compared and 11
+differing. All nine failures sat in document 04 and every one was `actual
+<absent>` — a dictionary key not emitted, never a wrong value.
+
+**The cause was a contradiction, not a gap.** The per-type shape bullets and
+the §8c dictionary disagreed, and the model followed the older, more specific
+text: shapes said *"surtax_threshold: … amount = the threshold"* while the
+dictionary said `threshold` is an attribute. The proof that this was a
+conflict rather than a capability limit is arithmetic: `surtax_threshold`
+scored **4/9**, and the four that passed were document 05's, whose thresholds
+sit in a footnote with no `amount` column to divert them. Same key, same
+model, same run — the value went to the attr only when the page offered no
+alternative slot.
+
+**Ruling: the closed dictionary is the authoritative text; stale bullets
+lose.** The entire conventions document was reconciled against it in one
+exhaustive sweep — every per-type bullet checked, not only the three that
+failed — with contradicting text deleted or rewritten. The dictionary itself
+did not change by one key. This is **reconciliation, not extension**: §8c's
+"closed" holds, and nothing here reopens it.
+
+The sweep also removed two stale clauses that had survived the vocabulary fix
+of §8 — `additional_standard_deduction` and `employment_tax_rate` still said
+their `attribute_key` was the printed label *"as printed"*, contradicting the
+fixed vocabulary three sections below.
+
+**The mid-gate repair, ratified retroactively.** Enumerating all fifteen
+required record keys in the prompt was done mid-gate, under time pressure,
+without a ruling. It is ratified here as **§8d-class prompt completion**:
+schema-declared requirements the prompt never stated. It invented nothing,
+defaulted nothing and adapted nothing — a record still missing a key is still
+refused, because defaulting `confidence` would have fabricated the model's own
+certainty, the one value in the schema derivable from nowhere else. Recording
+it rather than absorbing it is the point: an undisclosed mid-gate change is
+indistinguishable from tuning against the oracle.
+
+**The class is now unrepresentable.** Three instances of "the pipeline knew
+something it never told the model" is a pattern, not a coincidence, so it is
+now a test: `tests/mapping/test_prompt_schema_parity.py` walks each role's
+response schema, collects every key named in any `required` list at any
+depth, and asserts each appears in that role's prompt text. It runs keyless
+and offline in milliseconds.
+
+It found a fourth instance immediately — the mapper's *issue* schema requires
+`row_index`, `col_index` and `raw_value`, and the prompt said only "with its
+coordinates and a reason". That one never reached a gate. **`required` in a
+JSON schema is a claim a non-enforcing gateway does not check; the prompt is
+the only channel that carries the contract, and now the two cannot drift.**
+
+**Verifier conventions, same sweep.** Numeric equality is Decimal equality:
+`$192.30` mapped as `192.3` and `$1,250.00` as `1250` are correct, and
+trailing zeros, dropped currency signs, stripped separators and
+percent-to-fraction conversions are formatting, never disputes. Three of the
+gate's nine disputes were exactly that, and each cost a human a review row
+and found nothing.
+
+The fourth false positive is **kept as a documented limitation, not fixed**:
+the verifier reproducibly claims document 01's record 19 holds `257300` when
+it holds `257250` — the same misread recorded against this model in the ADR
+012 diff review. It is a model-level defect this project cannot correct from
+the prompt, and its cost is bounded and visible: one review-queue row, on a
+record that scored correct. A false positive that produces one human review
+is the system working; the failure mode worth fearing is the false *negative*,
+and cross-family verification is what buys protection against it.
+
+**Against that cost, what the verifier bought.** Five of its nine disputes
+named exactly the failing `additional_medicare` records, with the right
+reason, by independent re-derivation — before any oracle contact. ADR 012's
+cross-family mitigation, vindicated empirically rather than argued.
+
+**The spec is FROZEN.** No further conventions passes. If the final run lands
+short of 128/128 it ships truthfully, with every failing record named as a
+known limitation, and the harness is never touched.
+
 ## Consequences
 
 - The model choice is now falsifiable: a rule, two thresholds, and two tables.
