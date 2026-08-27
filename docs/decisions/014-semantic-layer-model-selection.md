@@ -260,6 +260,58 @@ model by absorbing its deviations invisibly.
 If the hardened gate lands short of 128/128 it ships truthfully with every
 failing record named, and the budget conversation reopens with data.
 
+### 8. Outcome of the hardened run
+
+Run 2026-08-26, same models, after the §7 pass. Full tables in the dev-log
+entry of the same date.
+
+| Measure | Baseline | Hardened |
+|---|---|---|
+| Records delivered | 0 of 130 proposed | **128** (32/8/51/18/19 — the oracle's exact per-document counts) |
+| mapper `schema_fail` | 2 | **0** |
+| mapper `item_ok` | 27.1% | **100%** |
+| Closed-list adaptations needed | n/a | **0** |
+| Verifier | 1 hard failure, document lost | **answered on all five**, 0 flagged unavailable |
+| Throttling | 191 retryable | **0** |
+| Field-level accuracy | 0/128 (`miss 128, extra 0`) | 0/128 (**`miss 128, extra 128`**) |
+
+**The hardening closed what it targeted, completely.** The conformance layer is
+clean on every axis, and the two fence-framed responses were stripped and
+reported rather than absorbed silently.
+
+**The accuracy failure is now a different thing entirely.** `extra 128` means
+every record arrived; none matched a natural key. The cause is four string
+fields where this repository's `CANONICAL_CONVENTIONS` and the oracle's target
+schema disagree — `jurisdiction` (`US` / state names vs `US-FED` / `US-XX`
+codes), `taxpayer_class` (null vs explicit `individual`; `estates_and_trusts`
+vs `estate_or_trust`), and four abbreviated `attribute_key` slugs. Exactly one
+genuine data-level discrepancy survives that analysis.
+
+**Trigger re-evaluation.** A (mapping attribution): the misses are not semantic
+judgment but a naming-convention mismatch, so it does **not** fire on the
+pre-registered wording. B1: **0**. B2: **0**. So the hardened run fires no
+escalation trigger — which is the correct reading, because escalating the model
+would not move a single one of these records: the model followed the
+conventions it was given, and the conventions are wrong about four spellings.
+
+**The remaining fork, unresolved and not taken.** Correcting the conventions
+means knowing the target's spellings, and the only place they appear is the
+oracle. CLAUDE.md invites reading `ground_truth.json` "to understand the target
+… field conventions"; anti-goal #1 forbids any module under `src/` embedding
+values from it. Whether a naming convention is target-schema knowledge or an
+oracle value is a question this project stops and asks. Recorded for the
+operator.
+
+**A blind spot this run exposed.** Document 01 produced zero contract failures
+and two genuine semantic defects — a false-positive verifier dispute, and an
+adjudicator that auto-resolved at 0.98 while repeating the disputer's false
+premise about a record whose real value it had been given. Every response
+involved was perfectly conformant. **The conformance ledger is structurally
+blind to substantive wrongness**; it measures whether the model can emit the
+contract, never whether what it emitted is true. A cheap deterministic guard
+would have caught both — flag any dispute whose asserted "actual" value equals
+the value the record already holds — and is not implemented here.
+
 ## Consequences
 
 - The model choice is now falsifiable: a rule, two thresholds, and two tables.

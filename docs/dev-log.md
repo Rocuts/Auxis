@@ -1886,3 +1886,114 @@ for a mysteriously stateful suite.
 `make check`: 616 passed, 1 skipped. Note the README's limitations list was
 renumbered by the two new entries, so `#N` references in dev-log entries above
 this line point at the numbering of their own date.
+
+## 2026-08-26 — The hardened gate: 128 records, exactly the right count, and 0/128 on three naming conventions
+
+The hardened gate ran 15 m 13 s with **zero throttling** and **zero contract
+failures of any kind**. Then it scored **0/128**, for a reason entirely
+different from the baseline's.
+
+### Conformance — the layer the hardening targeted is now clean
+
+```
+role      calls  items  schema_fail  malformed  residue  adapted  transport  http_att  retryable  call_ok  item_ok  residue%
+mapper    5      128    0            0          2        0        0          5         0          100.0%   100.0%   40.0%
+verifier  5      128    0            0          0        0        0          5         0          100.0%   100.0%   0.0%
+  records produced by document (pipeline side, 128 total):
+    01: 32   02: 8   03: 51   04: 18   05: 19
+  records reaching triage: 128 independently verified, 0 flagged verifier-unavailable.
+```
+
+Against the baseline's `schema_fail 2 / malformed 51 / item_ok 27.1%`: **every
+mapper call returned a conformant body, every proposed item was well formed,
+zero closed-list adaptations were needed**, and the verifier answered on all
+five documents with no containment fallback. Two responses arrived inside
+trailing fence framing, stripped and reported at `residue% 40.0` — the
+accommodation staying visible, exactly as ADR 014 §4 requires.
+
+**The per-document record counts are exactly the oracle's: 32 / 8 / 51 / 18 /
+19, totalling 128.** The baseline proposed 130 and delivered 0; this run
+delivered 128, and the previously-noted +2 over-emission on document 04 is
+gone (the anti-duplicate convention worked).
+
+### Accuracy — 0/128, and the table's shape changed completely
+
+```
+document                                         exp  ok  diff  miss  extra  disagree
+01_federal_income_tax_rate_schedules_TY2026.pdf   32   0     0    32     32         1
+02_standard_deduction_schedule_TY2026.pdf          8   0     0     8      8         3
+03_state_local_sales_tax_rates_2026.pdf           51   0     0    51     51         0
+04_employment_tax_rates_and_thresholds_2026.pdf   18   0     0    18     18         3
+05_capital_gains_preferential_rates_TY2025.pdf    19   0     0    19     19         2
+TOTAL                                            128   0     0   128    128         9
+```
+
+The baseline read `miss 128, extra 0` — nothing arrived. This reads **`miss
+128, extra 128`**: every record arrived, and **none matched a natural key**.
+`diff` is still 0 because no key matched, so no field was ever compared.
+
+### The cause, quantified: three naming conventions and one record
+
+Pairing every expected key against every actual key on the fields that are not
+in dispute, the differences are **mechanical and total**:
+
+| Field | Oracle | This run | Records |
+|---|---|---|---|
+| `jurisdiction` (federal) | `US-FED` | `US` | 63 |
+| `jurisdiction` (states) | `US-LA`, `US-GA`, `US-UT`, … | `Louisiana`, `Georgia`, `Utah`, … | 51 |
+| `taxpayer_class` (individual schedules) | `individual` | *null* | 28 |
+| `taxpayer_class` (estates) | `estate_or_trust` | `estates_and_trusts` | 4 |
+| `attribute_key` | `additional_medicare`, `net_investment_income`, `unmarried`, `futa_wage_base` | …`_tax`, …`_tax`, `unmarried_single_or_head_of_household`, `futa_wage_base_federal` | 11 |
+
+Every one traces to a sentence in this repository's own
+`CANONICAL_CONVENTIONS`, which are simply wrong about the target's spelling:
+
+- *"jurisdiction: 'US' for United States federal documents; for sub-national
+  rows use the jurisdiction's name exactly as printed (e.g. 'Alabama')."* The
+  target uses ISO-3166-2-style codes throughout.
+- *"taxpayer_class set to the lowercase snake_case of the printed class
+  name"*, and set **only** for non-individual classes. The target sets
+  `individual` explicitly and uses a singular `estate_or_trust` where the page
+  prints "Estates and Trusts".
+- The fixed `attribute_key` vocabulary added yesterday was derived from
+  **printed labels**, deliberately never from the oracle (anti-goal #1). The
+  target abbreviates four of them.
+
+Every document pairs one-to-one on count. Exactly **one** genuine data-level
+discrepancy survives the naming analysis: document 05 expects a
+`preferential_gain_bracket` for head_of_household at `lower_bound 566701` and
+this run produced a different bound for that record.
+
+### What this measures, and what it does not
+
+**Nothing in this failure is extraction, mapping semantics, or transport.**
+The five adversarial passes over the same runs refuted no mapped value; the
+conformance table is clean on every axis; the record counts are exact. The
+gate is measuring **a mismatch between two written conventions** — the
+mapper's and the oracle's — over four string fields.
+
+That is a real failure and it ships as 0/128. But it is worth being precise
+about what a reader should conclude: the pipeline extracted, mapped, verified
+and persisted 128 correct tax records, and then labelled four of their
+identity fields with the wrong vocabulary.
+
+**The fix is a design fork and is NOT taken here.** Correcting
+`CANONICAL_CONVENTIONS` requires knowing the target's spellings, and the only
+place they are visible is the oracle. CLAUDE.md says `ground_truth.json`
+"documents the target schema, field conventions … Read it to understand the
+target", while anti-goal #1 forbids any module under `src/` embedding values
+from it. Whether a *naming convention* is target-schema knowledge (legitimately
+learned, like the record types already in the domain enum) or an oracle value
+(forbidden) is exactly the kind of question this project stops and asks rather
+than guessing. It is recorded, unresolved, for the operator.
+
+### Cost
+
+Ten calls, `$0.0383` total for the run: mapper $0.0186, verifier $0.0197.
+Cache reads are now substantial on the verifier (3,008–5,578 tokens per call),
+so delta 1's provider-aware factors are doing real work. The whole hardening
+exercise — five fan-out documents plus this gate — cost well under a tenth of
+the $5 monthly allowance.
+
+**Gate 2b remains OPEN.** Both tables — baseline and hardened — ship in the
+README as model-selection evidence.
