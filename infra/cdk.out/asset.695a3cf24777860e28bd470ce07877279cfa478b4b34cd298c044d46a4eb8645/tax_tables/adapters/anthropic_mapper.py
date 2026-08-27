@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import time
 from collections.abc import Mapping
 from dataclasses import dataclass, field
@@ -39,6 +40,14 @@ from typing import Any
 import anthropic
 from pydantic import ValidationError
 
+from tax_tables.adapters.envelope import adapt_extra_attrs, adapt_numeric, loads_fence_tolerant
+from tax_tables.adapters.pricing import ANTHROPIC_CACHE_FACTORS, cache_factors_for
+from tax_tables.adapters.retry import (
+    DEFAULT_CONTRACT_RETRIES,
+    DEFAULT_CONTRACT_RETRY_SECONDS,
+    DEFAULT_TRANSPORT_RETRY_SECONDS,
+    with_bounded_retries,
+)
 from tax_tables.domain.records import (
     ATTRIBUTE_KEY_FIELD,
     CanonicalRecord,
@@ -48,6 +57,7 @@ from tax_tables.domain.records import (
     ReviewStatus,
 )
 from tax_tables.extraction.model import ExtractedDocument
+from tax_tables.observability import conformance
 from tax_tables.ports.mapper import MappingCost, MappingIssue, MappingResult
 
 _DEFAULT_MODEL = "claude-opus-5"
@@ -55,9 +65,6 @@ _DEFAULT_MODEL = "claude-opus-5"
 #: any other model or a gateway with different billing.
 _DEFAULT_USD_PER_MTOK_IN = Decimal(5)
 _DEFAULT_USD_PER_MTOK_OUT = Decimal(25)
-#: Cache multipliers relative to the input price (Anthropic billing model).
-_CACHE_WRITE_FACTOR = Decimal("1.25")
-_CACHE_READ_FACTOR = Decimal("0.1")
 _MTOK = Decimal(1_000_000)
 
 _MAX_OUTPUT_TOKENS = 64_000
@@ -85,6 +92,18 @@ class MapperConfig:
     usd_per_mtok_in: Decimal = _DEFAULT_USD_PER_MTOK_IN
     usd_per_mtok_out: Decimal = _DEFAULT_USD_PER_MTOK_OUT
     max_output_tokens: int = _MAX_OUTPUT_TOKENS
+    #: Cache prices as multiples of the input price. Provider-aware rather
+    #: than Anthropic-shaped: see ``adapters.pricing``. Defaults follow the
+    #: configured model, so a gateway model id prices its own cache reads
+    #: correctly on the first run, with no extra environment.
+    cache_read_factor: Decimal = ANTHROPIC_CACHE_FACTORS.read
+    cache_write_factor: Decimal = ANTHROPIC_CACHE_FACTORS.write
+    #: Bounded retries on a contract failure (see ``adapters.retry``). Every
+    #: attempt is counted, so retries lower the measured rate rather than
+    #: hiding behind it.
+    contract_retries: int = DEFAULT_CONTRACT_RETRIES
+    contract_retry_seconds: float = DEFAULT_CONTRACT_RETRY_SECONDS
+    transport_retry_seconds: float = DEFAULT_TRANSPORT_RETRY_SECONDS
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> MapperConfig:
@@ -94,9 +113,11 @@ class MapperConfig:
             raise MapperConfigError(
                 "no mapping API key: set SCHEMA_MAPPER_API_KEY or ANTHROPIC_API_KEY"
             )
+        model = source.get("SCHEMA_MAPPER_MODEL") or _DEFAULT_MODEL
+        factors = cache_factors_for(model)
         return cls(
             api_key=api_key,
-            model=source.get("SCHEMA_MAPPER_MODEL") or _DEFAULT_MODEL,
+            model=model,
             base_url=source.get("SCHEMA_MAPPER_BASE_URL") or source.get("ANTHROPIC_BASE_URL"),
             usd_per_mtok_in=Decimal(
                 source.get("SCHEMA_MAPPER_USD_PER_MTOK_IN") or str(_DEFAULT_USD_PER_MTOK_IN)
@@ -106,6 +127,22 @@ class MapperConfig:
             ),
             max_output_tokens=int(
                 source.get("SCHEMA_MAPPER_MAX_OUTPUT_TOKENS") or _MAX_OUTPUT_TOKENS
+            ),
+            cache_read_factor=Decimal(
+                source.get("SCHEMA_MAPPER_CACHE_READ_FACTOR") or str(factors.read)
+            ),
+            cache_write_factor=Decimal(
+                source.get("SCHEMA_MAPPER_CACHE_WRITE_FACTOR") or str(factors.write)
+            ),
+            contract_retries=int(
+                source.get("SCHEMA_MAPPER_CONTRACT_RETRIES") or DEFAULT_CONTRACT_RETRIES
+            ),
+            contract_retry_seconds=float(
+                source.get("SCHEMA_MAPPER_CONTRACT_RETRY_SECONDS") or DEFAULT_CONTRACT_RETRY_SECONDS
+            ),
+            transport_retry_seconds=float(
+                source.get("SCHEMA_MAPPER_TRANSPORT_RETRY_SECONDS")
+                or DEFAULT_TRANSPORT_RETRY_SECONDS
             ),
         )
 
@@ -208,7 +245,10 @@ _ATTR_SCHEMA: dict[str, Any] = {
 _RECORD_SCHEMA: dict[str, Any] = {
     "type": "object",
     "properties": {
-        "source_page": {"type": "integer"},
+        # source_page is NOT here: the pipeline knows which page a table_id
+        # sits on and injects it. Asking the model for something the server
+        # already holds only creates a way for the run to fail (baseline run:
+        # this single key cost 18 of document 05's 19 records).
         "table_id": {"type": "string"},
         "record_type": {"type": "string", "enum": [member.value for member in RecordType]},
         "jurisdiction": {"type": "string"},
@@ -230,21 +270,28 @@ _RECORD_SCHEMA: dict[str, Any] = {
         "amount": _nullable({"type": "number"}),
         "currency": _nullable({"type": "string"}),
         "confidence": {"type": "number"},
-        "source_table_label": {"type": "string"},
+        # Nullable: a record read from a body paragraph has no printed
+        # designator, and a non-nullable field with no legal value is how the
+        # literal string "None" reached a provenance field on document 04 —
+        # a manufactured value, which is exactly what anti-goal #8 forbids.
+        "source_table_label": _nullable({"type": "string"}),
         "extra_attrs": {"type": "array", "items": _ATTR_SCHEMA},
+        "convention_derived": {"type": "array", "items": {"type": "string"}},
         "provenance": {"type": "array", "items": PROVENANCE_SCHEMA},
     },
+    # The true semantic core: what only a reader of THIS document can supply.
+    # Everything omitted below is either derived server-side (table_id, and
+    # source_page which is not asked for at all) or safely absent-as-null
+    # (effective_from/to, extra_attrs, convention_derived). Shrunk from 20
+    # keys after the baseline run, where required-but-derivable fields were
+    # the single largest cause of record loss.
     "required": [
-        "source_page",
-        "table_id",
         "record_type",
         "jurisdiction",
         "attribute_key",
         "filing_status",
         "taxpayer_class",
         "tax_year",
-        "effective_from",
-        "effective_to",
         "lifecycle_status",
         "lower_bound",
         "upper_bound",
@@ -253,7 +300,6 @@ _RECORD_SCHEMA: dict[str, Any] = {
         "currency",
         "confidence",
         "source_table_label",
-        "extra_attrs",
         "provenance",
     ],
     "additionalProperties": False,
@@ -348,17 +394,53 @@ CANONICAL_CONVENTIONS = """\
   mean lower_bound 0, upper_bound 9000. "and over", "or more", "No limit"
   as an upper end means upper_bound null (open-ended). A bracket printed
   "$9,001 – $38,000" has lower_bound 9001: transcribe, never re-derive.
+- Bound SEMANTICS are declared here, and they are the enumerated exception
+  to "transcribe, never re-derive". That rule binds FIGURES: never invent a
+  number and never adjust one to taste. It does not decide what the WORDS
+  printed beside a number mean — this schema decides that, and it decides
+  the two top-bracket forms as follows:
+    * "$X and over", "$X or more", "at least $X" are INCLUSIVE: the bracket
+      contains X, so lower_bound = X exactly. "$643,251 and over" ->
+      lower_bound 643251, upper_bound null.
+    * "Over $X", "More than $X", "Above $X", "In excess of $X" are
+      EXCLUSIVE: the bracket begins ABOVE X, so as an inclusive bound in
+      whole currency it is X + 1. "Over $566,700" -> lower_bound 566701,
+      upper_bound null.
+  The + 1 is not a re-derivation of the figure; it is this schema's
+  inclusive-bounds encoding of an exclusive phrase, exactly as null is its
+  encoding of an open top. Emitting lower_bound X for an "Over $X" row
+  asserts the bracket contains X, which the page denies — and it collides
+  with the row below, whose upper_bound IS X. Convert only the bound the
+  phrase governs; every other figure is transcribed as printed.
 - amount: whole integers unless the source prints cents. Amounts without a
   currency sign are still amounts.
 - currency: the ISO 4217 code of the document's denomination. A United
   States tax document denominates in USD even where signs are omitted.
-- jurisdiction: "US" for United States federal documents; for sub-national
-  rows use the jurisdiction's name exactly as printed (e.g. "Alabama").
+- jurisdiction: an ENCODING, never the printed string. United States
+  federal documents use "US-FED". A sub-national row uses "US-" plus that
+  state's ISO 3166-2 subdivision code, regardless of how the row is
+  spelled on the page: "Alabama" -> "US-AL", "Georgia" -> "US-GA",
+  "Louisiana" -> "US-LA", "Utah" -> "US-UT", "Iowa" -> "US-IA",
+  "District of Columbia" -> "US-DC". Never emit a bare "US" and never emit
+  a state's name.
 - filing_status: map the printed label to one of single,
   married_filing_jointly, married_filing_separately, head_of_household,
   qualifying_surviving_spouse. A schedule that applies to a non-individual
-  taxpayer class (e.g. estates and trusts) uses filing_status null and
-  taxpayer_class set to the lowercase snake_case of the printed class name.
+  taxpayer class uses filing_status null and taxpayer_class set instead.
+- taxpayer_class: a closed vocabulary — "individual" or "estate_or_trust"
+  (singular, however the page spells it: "Estates and Trusts" is still
+  "estate_or_trust") — and it is set on ORDINARY_INCOME_BRACKET RECORDS
+  ONLY. It exists to separate the two parallel ordinary-income chains a
+  jurisdiction can publish for the same year: one for individuals by filing
+  status, one for estates and trusts. No other record type has a second
+  parallel form, so no other record type uses the discriminator: on every
+  other record_type — including preferential_gain_bracket, which does carry
+  a filing_status — taxpayer_class is null.
+- tax_year: the year the schedule is assessed for, from document text
+  (rule 5). Leave it NULL for a record whose rates are in force from a date
+  rather than assessed against a tax year — a sales_tax_rate is levied at
+  the till, not returned for a year, so sales_tax_rate records carry
+  tax_year null even when the document is titled with a year.
 - lifecycle_status: "superseded" ONLY when the document itself states it
   has been superseded or replaced; otherwise "active". Every record of a
   superseded document is superseded.
@@ -370,66 +452,244 @@ CANONICAL_CONVENTIONS = """\
 
 ## Record shapes
 
-record_type and its attribute_key sub-discriminator (attribute_key is null
-unless listed; its value is the lowercase snake_case slug of the label the
-document prints):
+What each record_type COUNTS as one record, and which typed slots it fills.
+The attrs tail is NOT defined here: the extra-attribute dictionary below is
+the authoritative list of attr keys per record type, and where anything in
+this section appears to disagree with it, the dictionary wins. A typed slot
+and an attr are not alternatives — where both are listed, fill both.
+
+attribute_key is null unless a record_type is listed in the fixed vocabulary
+section below; its value is that section's slug, never a slug re-derived
+from the printed label.
 
 - ordinary_income_bracket: one record per (bracket row x filing-status or
   taxpayer-class column) of an income-tax rate schedule. A wide matrix with
   one rate column and several filing-status columns yields one record per
-  filing status per row: same rate, that column's bounds.
-- preferential_gain_bracket: same shape for preferential (e.g. capital
-  gain) rate schedules.
-- special_gain_rate: a flat rate for a special asset or gain category;
-  attribute_key = the category slug.
-- standard_deduction: amount per filing status.
+  filing status per row: same rate, that column's bounds. No extra attrs.
+- preferential_gain_bracket: same granularity and typed slots as
+  ordinary_income_bracket — one record per (bracket row x filing-status
+  column) — for preferential (e.g. capital gain) schedules, but by filing
+  status ONLY: taxpayer_class is null on this record type.
+  Carries superseded_effective when its document is superseded.
+- special_gain_rate: one record per special asset or gain category.
+  attribute_key = the category slug. The printed maximum rate goes in the
+  max_rate attr (dictionary); fill the typed "rate" slot with the same
+  fraction where a numeric rate is printed.
+- standard_deduction: amount per filing status, plus prior_year_amount.
 - additional_standard_deduction: attribute_key = the qualifying condition
-  slug (e.g. age or blindness conditions, as printed).
+  slug from the fixed vocabulary. amount = the per-condition amount.
 - dependent_deduction_rule: a rule stated in prose. amount = the base
-  amount if the sentence states one; put the sentence verbatim in an extra
-  attr "rule".
+  amount if the sentence states one. The "rule" attr is the FORMULA form
+  the dictionary specifies, not the sentence verbatim, and the two figures
+  the sentence prints also ride as floor_amount and earned_income_addition.
 - sales_tax_rate: one record per jurisdiction row. Column values go to
   extra attrs named from the printed headers in snake_case with "_pct" for
-  percentage columns (e.g. state_rate_pct, avg_local_rate_pct,
+  percentage columns (state_rate_pct, avg_local_rate_pct,
   combined_rate_pct), keeping percentages as printed and null for dashes.
   The typed "rate" slot carries the combined (total) rate converted to a
   decimal fraction, or null if the combined value is null. Map a derived
   or computed column like any other column — downstream validators check
-  its arithmetic; you do not. When the document marks a jurisdiction as
-  imposing no state sales tax (a dash plus an explanatory note), also emit
-  the boolean extra attr "imposes_state_sales_tax": false on that record,
-  with provenance to the note.
-- employment_tax_rate: attribute_key = the tax component slug (as printed,
-  e.g. social security / medicare variants). A single-rate row puts the
-  fraction in "rate"; parallel columns for different payer sides become
-  extra attrs named from the printed headers (snake_case, "_pct" if
-  printed as percentages; fractions in a plain "_rate" attr otherwise).
-- wage_base: attribute_key = the item slug; amount = the wage base. "No
-  limit" means amount null.
-- surtax_threshold: attribute_key = the surtax name slug; amount = the
-  threshold; rate = the surtax rate if the document states one at that row
-  or in a footnote (footnote provenance then).
-- withholding_allowance: attribute_key = the payroll period slug (weekly,
-  biweekly, ...); amount = the allowance.
+  its arithmetic; you do not. Every record also carries the four
+  non-column attrs the dictionary lists: jurisdiction_name, rate_unit,
+  effective_date, and the boolean imposes_state_sales_tax in BOTH halves —
+  false where the state-rate cell prints a long dash (cite the note that
+  explains the dash), and true wherever a state rate actually prints. It is
+  a fact about every jurisdiction, not a marker on the exceptions.
+- employment_tax_rate: one record per tax component row. attribute_key =
+  the component slug from the fixed vocabulary. EVERY such record carries
+  all three payer-side attrs — employee_rate, employer_rate,
+  self_employed_rate — as decimal fractions, with null in any side the row
+  does not charge. A row printing one rate is NOT exempt from this: decide
+  from the document which side that rate falls on and null the other two
+  (a levy charged to one side only sets that side's attr and nulls the
+  other two). Where a component row sits in a table whose OTHER columns are
+  YEARS rather than payer sides, those cells are that component's rate per
+  year, not per payer: one rate, one side. Put the
+  same fraction in the typed "rate" slot for a single-rate row.
+- wage_base: one record per wage-base or limit row; a RATE row printed in
+  the same table is an employment_tax_rate record, because the fixed
+  vocabulary decides a row's record_type, not the table the row sits in.
+  attribute_key = the item slug from
+  the fixed vocabulary. amount = the wage base, and "No limit" means amount
+  null. Both dictionary attrs are required on every record: unlimited
+  (true only where the cell prints "No limit", false where a figure
+  prints) and prior_year_amount (the comparison column, null where that
+  row prints no prior-year figure).
+- surtax_threshold: one record per (surtax x filing status). attribute_key
+  = the surtax slug from the fixed vocabulary. rate = the surtax rate the
+  document states at that row or in a footnote (footnote provenance then).
+  The threshold amount rides in the "threshold" attr, which is REQUIRED —
+  putting it only in the typed "amount" slot loses it. It fills the typed
+  "amount" slot as well: fill BOTH with the same figure; neither
+  substitutes for the other. Where the document
+  states the surtax is imposed on one side only, also emit employer_match
+  false; where its document is superseded, superseded_effective.
+- withholding_allowance: one record per payroll period. attribute_key = the
+  period slug from the fixed vocabulary. amount = the allowance, and the
+  two data columns also ride as the dictionary attrs periods_per_year and
+  allowance (the allowance keeps its cents).
 
-## Two tax years in one row
+## Fixed attribute_key vocabulary
+
+attribute_key is NEVER free-form and NEVER re-derived from the printed
+label. Where a record_type takes one, use exactly one of the keys listed
+below. (A free-form slug drifted between runs of the same document:
+"per_qualifying_condition_rule" one run, "age_and_blindness_rule" the next,
+which breaks natural-key matching and idempotency alike.)
+
+- additional_standard_deduction (condition):
+    unmarried, married_per_spouse
+- employment_tax_rate (component):
+    social_security_oasdi, medicare_hi, total, futa_effective
+- special_gain_rate (category):
+    unrecaptured_section_1250_gain, collectibles_and_qsbs, short_term_capital_gain
+- surtax_threshold (surtax):
+    additional_medicare, net_investment_income
+- wage_base (item):
+    social_security_wage_base, medicare_wage_base, futa_wage_base
+- withholding_allowance (payroll_period):
+    weekly, biweekly, semimonthly, monthly, quarterly, annually
+
+These are the canonical target vocabulary, NOT slugs to re-derive from the
+page: several are shorter than the printed label ("Additional Medicare Tax"
+-> additional_medicare, "FUTA wage base (federal)" -> futa_wage_base). Copy
+them exactly.
+
+Every other record_type uses attribute_key null. If a document presents a
+labelled row whose slug is not on this list, still emit the record with the
+slug you derive AND raise an issue naming it: an unlisted label is a gap in
+this vocabulary, and it must be visible rather than silently absorbed.
+
+## The extra-attribute dictionary — CLOSED
+
+Extra attrs are NOT free-form. Below is the complete set of attr keys this
+schema defines, per record_type. Emit EVERY key listed for a record type,
+every time. A key whose value the page states as ABSENT — a dash, "No
+limit", a payer side the row does not charge, a prior-year column that
+prints nothing for this row — is emitted with the value null: null is an
+answer, and an absent key is the one thing this dictionary cannot record.
+Omit a key only where this document has no column, row or sentence bearing
+on it at all, and never guess a value. Keys are fixed spellings, exactly as
+written here —
+a differently-spelled key is a key nobody downstream reads.
+
+Values are always read from the page under the rules above (percent columns
+keep "_pct" as printed; a plain "_rate" attr is a decimal fraction). The
+KEY NAMES are this schema's vocabulary; the VALUES beneath them are yours
+to extract and never to invent.
+
+- ordinary_income_bracket: no extra attrs. Everything it states has a typed
+  slot.
+- preferential_gain_bracket: superseded_effective.
+- standard_deduction: prior_year_amount.
+- additional_standard_deduction: condition.
+- dependent_deduction_rule: rule, floor_amount, earned_income_addition.
+- sales_tax_rate: jurisdiction_name, state_rate_pct, avg_local_rate_pct,
+  combined_rate_pct, rate_unit, effective_date, imposes_state_sales_tax.
+- employment_tax_rate: component, employee_rate, employer_rate,
+  self_employed_rate.
+- wage_base: item, prior_year_amount, unlimited.
+- surtax_threshold: surtax, threshold, employer_match,
+  superseded_effective.
+- special_gain_rate: category, max_rate, superseded_effective.
+- withholding_allowance: payroll_period, periods_per_year, allowance.
+
+How each is read:
+
+- condition, component, item, surtax, category, payroll_period are NOT
+  yours to supply. They are the attribute_key under its per-type name, and
+  the pipeline mirrors it into the tail for you from the attribute_key you
+  set. They are listed above so the dictionary is complete; supplying them
+  changes nothing, and omitting them costs nothing.
+- jurisdiction_name: the jurisdiction exactly as printed in the row's label
+  column ("Alabama"). The typed "jurisdiction" field is the ISO encoding of
+  the same fact; this attr preserves the printed string.
+- rate_unit: the unit the document states its rate columns are expressed
+  in, as a lowercase word ("All rates are expressed as percentages" ->
+  "percent"). Prose provenance — the unit is stated in the body, not in the
+  headers.
+- effective_date: the ISO date the document says its rates take effect
+  ("Rates in effect as of January 1, 2026" -> "2026-01-01").
+- superseded_effective: the ISO date FROM which a superseded document has
+  been replaced ("applicable to taxable years beginning before January 1,
+  2026 ... for taxable years beginning on or after January 1, 2026, see
+  ..." -> "2026-01-01"). Every record of a superseded document carries it.
+- employee_rate / employer_rate / self_employed_rate: the parallel
+  payer-side columns of an employment-tax row, as decimal fractions (the
+  page prints "6.20%" -> 0.062; these keys end in "_rate", not "_pct").
+- threshold: the amount a surtax begins to apply above, from its row.
+- employer_match: false where the document states the surtax is imposed on
+  one side only ("imposed on the employee only; there is no employer
+  match"). Emit it only where the document says so.
+- unlimited: true where the wage-base cell prints "No limit", false where
+  it prints a figure. The typed "amount" is null in the first case; this
+  attr is what distinguishes "no ceiling exists" from "we could not read
+  it".
+- max_rate: the maximum rate printed for a special gain category, as a
+  decimal fraction ("25 percent" -> 0.25). Null where the cell names
+  another schedule instead of a figure ("Ordinary rates") — that is a
+  cross-reference, not a number, and it never becomes a rate.
+- periods_per_year / allowance: the two data columns of a withholding
+  row, read as printed (allowance keeps its cents).
+- prior_year_amount: the comparison column, per the prior-year rule below.
+- rule / floor_amount / earned_income_addition: a prose-stated dependent
+  rule. floor_amount and earned_income_addition are the two figures the
+  sentence prints. "rule" is that sentence expressed as a FORMULA in
+  exactly this form:
+      max(<floor_amount>, earned_income + <earned_income_addition>), capped
+      at basic standard deduction
+  written on one line. The numbers come from the page; the shape is this
+  schema's, because a reviewer comparing two jurisdictions' dependent rules
+  needs them in one form, not in two paraphrases.
+
+This dictionary is CLOSED. A document fact with no key here has no home in
+extra attrs: raise an issue naming it rather than inventing a key. Carrying
+an unlisted attr is not an error — nothing downstream reads it — but a
+missing LISTED key is, because it is a fact this schema promised to record.
+
+## Two tax years in one row — settled, do not deviate
 
 Some tables print the current year next to the prior year for comparison.
-The current tax year (per rule 5) is the record's tax_year; a prior-year
-comparison value rides on the SAME record as an extra attr named
-"prior_year_amount" (amount-shaped values), "prior_year_rate" (rate
-fractions), or "prior_year_<header>_pct" (percentage columns). Do not emit
-separate records for the comparison year, and never drop that column.
+**One record per item, never one per (item, year).** The current tax year
+(per rule 5) is the record's tax_year; the prior-year value rides on the SAME
+record as an extra attr named "prior_year_amount" (amount-shaped values),
+"prior_year_rate" (rate fractions), or "prior_year_<header>_pct" (percentage
+columns), and a "change"/difference column rides as "change". Do not emit
+separate records for the comparison year, and never drop that column: both
+years must survive, in one record.
+
+## Do not emit the same fact twice
+
+A rate or threshold stated in prose that QUALIFIES the rows of a table
+belongs on those rows' records (with prose provenance alongside the cell
+citations). Do not additionally emit a standalone record for it. One printed
+fact is one record; a second record for the same fact is a duplicate that a
+reviewer has to reconcile.
+
+## Convention-derived fields
+
+A few fields come from these conventions rather than from anything the
+document prints — most often "jurisdiction" on a federal document that names
+no jurisdiction, and "currency" where no sign or code appears. When you
+assert such a field with no textual anchor anywhere in the document, list its
+name in "convention_derived" (e.g. ["jurisdiction"]). Never manufacture a
+provenance citation for it: a convention is a legitimate source, but it must
+not be dressed as a citation to a cell that does not say it.
 
 ## Table identity
 
 - table_id: copy the extraction table_id verbatim ("p1_t0"). A record read
-  purely from prose uses "p<page>_prose<index>" of its primary block.
+  purely from prose uses "p<page>_prose<index>" of its primary block. If you
+  omit it, it is taken from your own provenance citations; do not omit
+  provenance.
+- source_page is not yours to supply: the pipeline derives it from table_id.
 - source_table_label: the designator the DOCUMENT prints for the table or
   section the record came from, lowercased with non-alphanumeric runs
   collapsed to "_": "Table 1" -> "table_1", "Section 3." -> "section_3",
   "Table A. Rates (continued)" -> "table_a". Records read from a footnote
-  use "footnote". If a table has no printed designator, slug its caption.
+  use "footnote". If a table has no printed designator, slug its caption. A
+  record read from a body paragraph that carries no designator at all uses
+  null — never the string "None", and never an invented label.
 
 ## Extra attrs
 
@@ -437,11 +697,66 @@ Extra attrs carry everything type-specific the document states that has no
 typed slot: *_pct columns, payer-side rate columns, prior-year values,
 prose rules, boolean facts (e.g. whether a state imposes a tax). Keys are
 lowercase snake_case derived from the printed labels. Do not add
-commentary attrs; "provenance" and "source_table_label" are supplied in
-their own fields, not in extra_attrs.
+commentary attrs; "provenance", "source_table_label" and
+"convention_derived" are supplied in their own fields, not in extra_attrs.
+
+extra_attrs is an ARRAY of {"key": ..., "value": ...} objects, not an
+object. An empty set of extra attrs is [] or omitted.
 """
 
-SYSTEM_PROMPT = _MAPPER_ROLE + CANONICAL_CONVENTIONS
+#: Output discipline is per ROLE, and it is deliberately NOT part of the
+#: shared conventions above.
+#:
+#: The conventions are shared verbatim because they are the part that must
+#: not differ (ADR 012): all three roles must judge by one definition of the
+#: target. The response ENVELOPE is the opposite — each role returns a
+#: different one — and while this paragraph lived inside the conventions,
+#: every role inherited the mapper's. That told the verifier and the
+#: adjudicator to put commentary in "issues": a key only the mapper's schema
+#: has, and one both other schemas forbid under ``additionalProperties:
+#: False``.
+#:
+#: On a gateway that forwards ``output_config`` without enforcing it, the
+#: prompt is the ONLY channel that names the envelope — so this was a live
+#: defect, not a tidiness one. The verifier's envelope key was named nowhere
+#: in its prompt while its wrong key was named twice (ADR 014 §8d).
+#:
+#: The mapper's text below is byte-identical to what it was inside the
+#: conventions, so this split changes the mapper's prompt not at all.
+MAPPER_OUTPUT_DISCIPLINE = """\
+## Output discipline
+
+Return the JSON object and nothing else: no prose before it, no commentary
+after it, no explanation of your reasoning. Anything you would want to say
+about a value belongs in "issues", which is part of the object. Numbers are
+JSON numbers, never quoted strings.
+
+EVERY record object carries ALL FIFTEEN of these keys, every time:
+
+  record_type, jurisdiction, attribute_key, filing_status, taxpayer_class,
+  tax_year, lifecycle_status, lower_bound, upper_bound, rate, amount,
+  currency, confidence, source_table_label, provenance
+
+A key that does not apply to this record is present with the value null. A
+null is an answer; an ABSENT key is a broken record, and the whole record is
+refused rather than guessed at. This holds on the fifty-first record of a
+long table exactly as it holds on the first — the list does not shorten as
+the response gets longer, and "confidence" is the one most easily forgotten
+there. Repeating fifteen keys per record is the cost of the contract; a
+record missing one is worth nothing to anybody downstream.
+
+Every issue object carries all six of its keys the same way:
+
+  source_page, table_id, row_index, col_index, raw_value, reason
+
+row_index and col_index are the 0-based coordinates of the cell the issue is
+about, raw_value is that cell's text exactly as the input prints it, and
+reason is your prose. Any of the coordinates may be null for an issue about
+a whole table or a prose block — but the key is present with null, never
+missing.
+"""
+
+SYSTEM_PROMPT = _MAPPER_ROLE + CANONICAL_CONVENTIONS + MAPPER_OUTPUT_DISCIPLINE
 
 _USER_INSTRUCTION = (
     "Map the following extracted document to canonical records per the "
@@ -459,6 +774,7 @@ def _as_int(value: object, field: str) -> int | None:
         return None
     if isinstance(value, bool):
         raise ValueError(f"{field} is a boolean, expected an integer")
+    value = adapt_numeric(value, role=conformance.MAPPER)
     if isinstance(value, int):
         return value
     if isinstance(value, Decimal):
@@ -473,6 +789,10 @@ def _as_decimal(value: object, field: str) -> Decimal | None:
         return None
     if isinstance(value, bool):
         raise ValueError(f"{field} is a boolean, expected a number")
+    # Closed-list adaptation: a quoted number becomes a Decimal and is
+    # counted. A non-numeric string falls through unchanged and is rejected
+    # below, because "Ordinary rates" in a rate slot is a semantic error.
+    value = adapt_numeric(value, role=conformance.MAPPER)
     if isinstance(value, Decimal | int):
         return Decimal(value)
     raise ValueError(f"{field} has unexpected type {type(value).__name__}")
@@ -531,6 +851,45 @@ def _extraction_floor(table_id: str, extracted: ExtractedDocument) -> Decimal:
     return Decimal(1)
 
 
+def _table_id_from_provenance(refs: list[Any]) -> str | None:
+    """The table or prose block this record was read from, taken from its own
+    citations.
+
+    The model names the source inside every provenance entry; asking it to
+    repeat that at the top level was a second chance to omit it, and on the
+    baseline run it omitted it on all 32 records of document 01. Cell refs win
+    over prose refs: a record citing both was read from the table.
+    """
+    for ref in refs:
+        if isinstance(ref, Mapping) and ref.get("kind") == "cell":
+            table_id = ref.get("table_id")
+            if isinstance(table_id, str) and table_id:
+                return table_id
+    for ref in refs:
+        if isinstance(ref, Mapping) and ref.get("kind") == "prose":
+            page = ref.get("page")
+            index = ref.get("prose_index")
+            if isinstance(page, int) and isinstance(index, int):
+                return f"p{page}_prose{index}"
+    return None
+
+
+def _source_page_for(table_id: str, extracted: ExtractedDocument) -> int:
+    """The page a table_id sits on, from the extraction — never from the model.
+
+    Authoritative rather than asserted: the extractor assigned the id and
+    knows its page. The ``p<n>_`` prefix is a fallback for a prose id, and 1 a
+    final one, so this can degrade but never raise.
+    """
+    for table in extracted.tables:
+        if table.table_id == table_id:
+            return table.page_number
+    match = re.match(r"p(\d+)_", table_id)
+    if match is not None:
+        return int(match.group(1))
+    return 1
+
+
 def _build_record(raw: Mapping[str, Any], extracted: ExtractedDocument) -> CanonicalRecord:
     provenance = list(raw.get("provenance") or [])
     check_provenance(provenance, extracted)
@@ -539,10 +898,17 @@ def _build_record(raw: Mapping[str, Any], extracted: ExtractedDocument) -> Canon
     attribute_key = None if raw.get("attribute_key") is None else str(raw["attribute_key"])
 
     attrs: dict[str, Any] = {}
-    for pair in raw.get("extra_attrs") or []:
+    for pair in adapt_extra_attrs(raw.get("extra_attrs"), role=conformance.MAPPER):
         attrs[str(pair["key"])] = pair["value"]
-    attrs["source_table_label"] = str(raw["source_table_label"])
+    label = raw.get("source_table_label")
+    attrs["source_table_label"] = None if label is None else str(label)
     attrs["provenance"] = provenance
+    # Fields asserted from the conventions rather than from anything printed
+    # (most often `jurisdiction` on a document that names none). Declared, so
+    # a reader can tell an inference from a citation (ADR 015).
+    declared = raw.get("convention_derived")
+    if isinstance(declared, list) and declared:
+        attrs["convention_derived"] = sorted({str(name) for name in declared})
     # Mirror the sub-discriminator into the attrs tail under its per-type
     # field name, overriding any model-supplied spelling: identity and tail
     # must agree, and both derive from the same source cell.
@@ -550,7 +916,14 @@ def _build_record(raw: Mapping[str, Any], extracted: ExtractedDocument) -> Canon
     if mirror_name is not None and attribute_key is not None:
         attrs[mirror_name] = attribute_key
 
-    table_id = str(raw["table_id"])
+    supplied = raw.get("table_id")
+    table_id = (
+        str(supplied)
+        if isinstance(supplied, str) and supplied
+        else _table_id_from_provenance(provenance)
+    )
+    if table_id is None:
+        raise ValueError("record names no table_id and its provenance identifies no source")
     confidence = _as_decimal(raw["confidence"], "confidence")
     if confidence is None:
         raise ValueError("confidence is required")
@@ -558,7 +931,8 @@ def _build_record(raw: Mapping[str, Any], extracted: ExtractedDocument) -> Canon
 
     filing_status = raw.get("filing_status")
     return CanonicalRecord(
-        source_page=_as_int(raw["source_page"], "source_page") or 0,
+        # Injected server-side from the extraction, never asked of the model.
+        source_page=_source_page_for(table_id, extracted),
         table_id=table_id,
         record_type=record_type,
         jurisdiction=str(raw["jurisdiction"]),
@@ -601,7 +975,7 @@ def parse_mapping_payload(text: str, *, extracted: ExtractedDocument) -> Mapping
     the model's raw proposal as ``raw_value`` — reviewable, never dropped.
     """
     try:
-        payload = json.loads(text, parse_float=Decimal)
+        payload = loads_fence_tolerant(text, role=conformance.MAPPER, parse_float=Decimal)
     except json.JSONDecodeError as exc:
         raise MapperError(f"mapping response is not valid JSON: {exc}") from exc
     if not isinstance(payload, dict) or "records" not in payload or "issues" not in payload:
@@ -609,6 +983,7 @@ def parse_mapping_payload(text: str, *, extracted: ExtractedDocument) -> Mapping
 
     records: list[CanonicalRecord] = []
     issues: list[MappingIssue] = []
+    conformance.LEDGER.record_items(conformance.MAPPER, len(payload["records"]))
     for raw in payload["records"]:
         try:
             records.append(_build_record(raw, extracted))
@@ -620,6 +995,11 @@ def parse_mapping_payload(text: str, *, extracted: ExtractedDocument) -> Mapping
             AttributeError,
             InvalidOperation,
         ) as exc:
+            # The envelope held and this item did not: a contract miss at the
+            # item level, which is exactly what the conformance rate measures.
+            conformance.LEDGER.record_malformed_item(
+                conformance.MAPPER, f"unmappable record: {type(exc).__name__}"
+            )
             issues.append(_issue_from_failure(raw, f"unmappable record: {exc}"))
     issues.extend(_sanitize_issue(raw_issue) for raw_issue in payload["issues"])
     return MappingResult(records=records, issues=issues)
@@ -651,6 +1031,9 @@ def _sanitize_issue(raw: Any) -> MappingIssue:
             reason=reason if isinstance(reason, str) and reason else "unspecified",
         )
     except (ValidationError, ValueError, TypeError, AttributeError) as exc:
+        conformance.LEDGER.record_malformed_item(
+            conformance.MAPPER, f"malformed issue object: {type(exc).__name__}"
+        )
         return MappingIssue(
             source_page=1,
             raw_value=json.dumps(raw, default=str, ensure_ascii=False)[:2000],
@@ -681,9 +1064,24 @@ class AnthropicSchemaMapper:
             base_url=config.base_url,
             timeout=_REQUEST_TIMEOUT_SECONDS,
             max_retries=3,
+            # Every retry the SDK absorbs is one more request through this
+            # transport, which is the only place they are visible.
+            http_client=conformance.instrumented_http_client(
+                conformance.MAPPER, timeout=_REQUEST_TIMEOUT_SECONDS
+            ),
         )
 
     def map_document(self, extracted: ExtractedDocument) -> MappingResult:
+        return with_bounded_retries(
+            lambda: self._map_document(extracted),
+            role=conformance.MAPPER,
+            contract_error=MapperError,
+            retries=self._config.contract_retries,
+            contract_backoff=self._config.contract_retry_seconds,
+            transport_backoff=self._config.transport_retry_seconds,
+        )
+
+    def _map_document(self, extracted: ExtractedDocument) -> MappingResult:
         started = time.perf_counter()
         # Streaming keeps long generations (document 03 maps 50+ records)
         # clear of HTTP timeouts; the shared system prompt carries a cache
@@ -730,8 +1128,8 @@ class AnthropicSchemaMapper:
         cache_read = getattr(usage, "cache_read_input_tokens", 0) or 0
         usd = (
             Decimal(input_tokens) * self._config.usd_per_mtok_in
-            + Decimal(cache_write) * self._config.usd_per_mtok_in * _CACHE_WRITE_FACTOR
-            + Decimal(cache_read) * self._config.usd_per_mtok_in * _CACHE_READ_FACTOR
+            + Decimal(cache_write) * self._config.usd_per_mtok_in * self._config.cache_write_factor
+            + Decimal(cache_read) * self._config.usd_per_mtok_in * self._config.cache_read_factor
             + Decimal(output_tokens) * self._config.usd_per_mtok_out
         ) / _MTOK
         cost = MappingCost(

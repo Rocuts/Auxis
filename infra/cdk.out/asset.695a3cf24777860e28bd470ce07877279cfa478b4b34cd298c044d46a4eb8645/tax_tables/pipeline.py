@@ -21,12 +21,14 @@ The semantic-layer amendment (ADR 012) adds two bounded roles:
   verifier never corrects anything, and a mapper/verifier disagreement is
   never settled by the models talking.
 - The adjudicator runs once per open queue item, after persistence. At or
-  above ``auto_resolve_threshold`` (with valid citations) the item resolves
-  with its audit trail — but only when the item's record actually persisted
-  (a FLAG finding): a queue row born from a triage REJECT, an ingest-side
-  refusal, or a mapping issue is the only live signal that data is absent
-  from the fact table, and the adjudicator cannot restore a record, so such
-  items only ever receive a stored proposal. A failed adjudication — the
+  above ``auto_resolve_threshold`` (with valid, mechanically supported
+  citations) the item resolves with its audit trail — but only when the
+  record the item carries is actually IN the fact table, asked of the fact
+  table per item rather than inferred from the item's reason. A queue row
+  standing for data the database refused — a triage REJECT, an ingest-side
+  refusal, a mapping issue — is the only live signal of that absence, and
+  the adjudicator cannot restore a record, so such items only ever receive
+  a stored proposal. A failed adjudication — the
   model call, or the write racing a human — leaves its item open and is
   reported, never raised past the pass. Without a repository (dry run)
   there is no queue, so the adjudicator is not consulted.
@@ -34,25 +36,32 @@ The semantic-layer amendment (ADR 012) adds two bounded roles:
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Literal, Protocol
 from uuid import UUID
 
+from pydantic import ValidationError
+
+from tax_tables.domain.records import CanonicalRecord
 from tax_tables.extraction.model import ExtractedDocument, ExtractionMethod
+from tax_tables.observability import conformance
 from tax_tables.ports.adjudicator import (
     DEFAULT_AUTO_RESOLVE_THRESHOLD,
     Adjudication,
     Adjudicator,
     ReviewItem,
+    resolution_is_supported,
 )
 from tax_tables.ports.mapper import MappingCost, MappingIssue, MappingResult, SchemaMapper
 from tax_tables.ports.repository import IngestOutcome, RecordRepository
-from tax_tables.ports.verifier import RecordVerifier, VerificationResult
+from tax_tables.ports.verifier import RecordVerifier, VerificationError, VerificationResult
 from tax_tables.validation.validators import (
+    AUTO_RESOLVABLE_RULES,
     DEFAULT_CONFIDENCE_FLOOR,
-    FLAG_RULES,
     RULE_VERIFIER_DISPUTE,
+    RULE_VERIFIER_UNAVAILABLE,
     Finding,
     Severity,
     TriageResult,
@@ -72,10 +81,12 @@ class DocumentExtractor(Protocol):
 class AdjudicationOutcome:
     """What the adjudicator pass did with one queued item.
 
-    ``auto_resolved``: threshold met, citations valid, and the item's record
-    persisted — resolved with its audit trail. ``proposal_stored``: below
-    threshold, citations invalid, or the item stands for absent data — the
-    proposal awaits a human, item still open. ``error``: the adjudication
+    ``auto_resolved``: threshold met, citations valid, the resolution's
+    figures mechanically supported by those citations, and the item's record
+    confirmed present in the fact table — resolved with its audit trail.
+    ``proposal_stored``: any one of those unmet, including an item whose
+    record the database never accepted — the proposal awaits a human, item
+    still open. ``error``: the adjudication
     call failed, or the write found the item no longer open (a human or a
     concurrent run got there first); this pass left the item untouched.
     """
@@ -138,21 +149,82 @@ def dispute_findings(verification: VerificationResult) -> list[Finding]:
     ]
 
 
-def _may_auto_resolve(item: ReviewItem) -> bool:
-    """Only an item whose record actually persisted may auto-close.
+def unverified_findings(records: Sequence[object], reason: str) -> list[Finding]:
+    """Every mapper-validated record of a document the verifier could not
+    judge, flagged rather than trusted.
 
-    FLAG findings queue under ``"<rule>: <detail>"`` with the record in the
-    fact table as ``needs_review`` — closing such an item loses nothing.
-    Every other reason (the ``bracket_overlap`` REJECT in either spelling,
-    ``cross_document_natural_key_conflict``, ``"mapping: ..."`` issues, or
-    anything a future writer invents) stands for data ABSENT from the fact
-    table, and the open row is the only live signal of that absence. The
-    adjudicator cannot restore a record, so those items never auto-resolve;
-    the proposal is stored for the human instead. Default-deny: an
-    unrecognized reason is treated as absent data.
+    The baseline run made the cost of the alternatives concrete. Document 04
+    produced the run's only fully conformant mapper response — 19 records,
+    zero mapping issues — and then the verifier returned a body with no
+    verdicts envelope. Raising discarded all 19; persisting them clean would
+    have asserted an independent confirmation that never happened. Neither is
+    acceptable, so the records persist as ``needs_review`` under their own
+    rule, and the review queue carries the reason.
+
+    Silence is still never assent (ADR 012): "the verifier was unavailable" is
+    a different claim from "the verifier agreed", and the two must never print
+    the same.
+    """
+    return [
+        Finding(
+            rule=RULE_VERIFIER_UNAVAILABLE,
+            severity=Severity.FLAG,
+            detail=reason,
+            record_index=index,
+        )
+        for index in range(len(records))
+    ]
+
+
+def _may_auto_resolve(item: ReviewItem, repository: RecordRepository) -> bool:
+    """Only an item whose record is IN THE FACT TABLE may auto-close.
+
+    Two independent gates, both of which must pass.
+
+    **Presence.** Closing a queue row whose record is in the table loses
+    nothing: the record is still there to be re-examined. Closing a row
+    whose record is ABSENT destroys the only live signal of the loss, and
+    the adjudicator cannot restore a record (anti-goal #8). So the question
+    is asked of the fact table itself, per item, via
+    ``RecordRepository.record_present``.
+
+    It used to be inferred from the reason prefix — FLAG rules eligible,
+    everything else denied — and that proxy was false in two reachable
+    ways, both of which the fixture-05 run exhibited:
+
+    1. **A record can collect a REJECT and a FLAG at once.** Triage runs
+       every rule over every record, so a bracket-overlap REJECT and a
+       ``confidence_floor`` FLAG on one record queue one row each. Triage
+       persisted nothing, yet the FLAG row passed the old gate. No
+       enumeration of *reasons* can be sound, because the reasons are
+       per-finding and persistence is per-record.
+    2. **Triage's ``persistable`` is a proposal, not an outcome.** A
+       FLAG-only record still meets the exclusion constraint and the
+       natural key at ``ingest``, and can be refused there — which is
+       precisely what happened to document 05's four "Over $X" brackets.
+       Their FLAG rows described a record the database had rejected.
+
+    **Rule name.** ADR 014 §8's gate 1 is retained on top: verifier-born
+    items stay human-only whether or not their record persisted, because a
+    third model agreeing with the second is correlation, not corroboration.
+
+    Default-deny throughout: an unrecognized reason, a row carrying no
+    record at all (a ``"mapping: ..."`` issue, whose ``raw_value`` is a cell
+    string), or a ``raw_value`` that will not parse are all treated as
+    absent data.
     """
     rule, sep, _ = item.reason.partition(": ")
-    return bool(sep) and rule in FLAG_RULES
+    if not sep or rule not in AUTO_RESOLVABLE_RULES:
+        return False
+    if item.raw_value is None:
+        return False
+    try:
+        record = CanonicalRecord.model_validate_json(item.raw_value)
+    except ValidationError:
+        # A mapping issue's raw_value is the offending CELL, not a record.
+        # Nothing to look up, so nothing to close.
+        return False
+    return repository.record_present(item.document_id, record)
 
 
 def adjudicate_open_items(
@@ -188,7 +260,14 @@ def adjudicate_open_items(
             if (
                 adjudication.citations_valid
                 and adjudication.confidence >= threshold
-                and _may_auto_resolve(item)
+                and _may_auto_resolve(item, repository)
+                # citations_valid proves the cited cells EXIST; this proves
+                # they carry the figures the resolution asserts. Fail-closed:
+                # a resolution the evidence does not mechanically support goes
+                # to a human, however confident the model was.
+                and resolution_is_supported(
+                    adjudication.resolution, adjudication.citations, extracted
+                )
             ):
                 repository.resolve_review(
                     item.id,
@@ -232,12 +311,35 @@ def run_document(
 ) -> PipelineResult:
     extracted = router.extract(pdf_bytes, filename=filename)
     mapping = mapper.map_document(extracted)
+    conformance.LEDGER.record_document_records(filename, len(mapping.records))
 
     verification: VerificationResult | None = None
     disputes: list[Finding] = []
     if verifier is not None:
-        verification = verifier.verify(extracted, mapping)
-        disputes = dispute_findings(verification)
+        try:
+            verification = verifier.verify(extracted, mapping)
+        except VerificationError as exc:
+            # Contained, not fatal, and not silent: the verifier's own
+            # contract failure (after its bounded retries) flags this
+            # document's records instead of losing them or blessing them.
+            reason = "verifier unavailable: " + " ".join(str(exc).split())[:160]
+            # A body that arrived and broke the contract was paid for; only a
+            # transport failure that never answered is free.
+            spent = getattr(exc, "cost", None)
+            verification = VerificationResult(
+                verdicts=[],
+                notes=[reason],
+                cost=spent if isinstance(spent, MappingCost) else None,
+            )
+            disputes = unverified_findings(mapping.records, reason)
+            conformance.LEDGER.record_verification_outcome(
+                verified=0, unverified=len(mapping.records)
+            )
+        else:
+            disputes = dispute_findings(verification)
+            conformance.LEDGER.record_verification_outcome(
+                verified=len(mapping.records), unverified=0
+            )
 
     triaged = triage(mapping.records, confidence_floor=confidence_floor, extra_findings=disputes)
 

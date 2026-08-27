@@ -38,19 +38,30 @@ from typing import Any
 import anthropic
 
 from tax_tables.adapters.anthropic_mapper import CANONICAL_CONVENTIONS, serialize_document
+from tax_tables.adapters.envelope import loads_fence_tolerant
+from tax_tables.adapters.pricing import ANTHROPIC_CACHE_FACTORS, cache_factors_for
+from tax_tables.adapters.retry import (
+    DEFAULT_CONTRACT_RETRIES,
+    DEFAULT_CONTRACT_RETRY_SECONDS,
+    DEFAULT_TRANSPORT_RETRY_SECONDS,
+    with_bounded_retries,
+)
 from tax_tables.domain.records import CanonicalRecord
 from tax_tables.extraction.model import ExtractedDocument
+from tax_tables.observability import conformance
 from tax_tables.ports.mapper import MappingCost, MappingResult
-from tax_tables.ports.verifier import RecordVerdict, Verdict, VerificationResult
+from tax_tables.ports.verifier import (
+    RecordVerdict,
+    Verdict,
+    VerificationError,
+    VerificationResult,
+)
 
 _DEFAULT_MODEL = "claude-opus-5"
 #: Claude Opus 5 list prices, USD per million tokens; override via env for a
 #: cheaper verifier model or a gateway with different billing.
 _DEFAULT_USD_PER_MTOK_IN = Decimal(5)
 _DEFAULT_USD_PER_MTOK_OUT = Decimal(25)
-#: Cache multipliers relative to the input price (Anthropic billing model).
-_CACHE_WRITE_FACTOR = Decimal("1.25")
-_CACHE_READ_FACTOR = Decimal("0.1")
 _MTOK = Decimal(1_000_000)
 
 #: Verdicts are small — one line of prose per record at worst — so the
@@ -64,7 +75,7 @@ class VerifierConfigError(RuntimeError):
     """The environment does not describe a usable verification endpoint."""
 
 
-class VerifierError(RuntimeError):
+class VerifierError(VerificationError):
     """The verification call failed in a way that must abort verification for
     this document — a truncated or refused response, or a body that is not
     the contracted JSON. Never swallowed into a partial result: a half-judged
@@ -82,6 +93,17 @@ class VerifierConfig:
     usd_per_mtok_in: Decimal = _DEFAULT_USD_PER_MTOK_IN
     usd_per_mtok_out: Decimal = _DEFAULT_USD_PER_MTOK_OUT
     max_output_tokens: int = _MAX_OUTPUT_TOKENS
+    #: Cache prices as multiples of the input price, defaulted from THIS
+    #: role's model rather than Anthropic's ratios (see ``adapters.pricing``).
+    #: A role pointed at another family prices its own cache tokens.
+    cache_read_factor: Decimal = ANTHROPIC_CACHE_FACTORS.read
+    cache_write_factor: Decimal = ANTHROPIC_CACHE_FACTORS.write
+    #: Bounded retries on a contract failure (see ``adapters.retry``). Every
+    #: attempt is counted, so retries lower the measured rate rather than
+    #: hiding behind it.
+    contract_retries: int = DEFAULT_CONTRACT_RETRIES
+    contract_retry_seconds: float = DEFAULT_CONTRACT_RETRY_SECONDS
+    transport_retry_seconds: float = DEFAULT_TRANSPORT_RETRY_SECONDS
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> VerifierConfig:
@@ -117,6 +139,7 @@ class VerifierConfig:
         # is never silently billed at another model's rate (adversarial-
         # review minor, promoted).
         same_engine = model == mapper_model
+        factors = cache_factors_for(model)
         return cls(
             api_key=api_key,
             model=model,
@@ -137,6 +160,27 @@ class VerifierConfig:
             ),
             max_output_tokens=int(
                 source.get("RECORD_VERIFIER_MAX_OUTPUT_TOKENS") or _MAX_OUTPUT_TOKENS
+            ),
+            cache_read_factor=Decimal(
+                source.get("RECORD_VERIFIER_CACHE_READ_FACTOR")
+                or (source.get("SCHEMA_MAPPER_CACHE_READ_FACTOR") if same_engine else None)
+                or str(factors.read)
+            ),
+            cache_write_factor=Decimal(
+                source.get("RECORD_VERIFIER_CACHE_WRITE_FACTOR")
+                or (source.get("SCHEMA_MAPPER_CACHE_WRITE_FACTOR") if same_engine else None)
+                or str(factors.write)
+            ),
+            contract_retries=int(
+                source.get("RECORD_VERIFIER_CONTRACT_RETRIES") or DEFAULT_CONTRACT_RETRIES
+            ),
+            contract_retry_seconds=float(
+                source.get("RECORD_VERIFIER_CONTRACT_RETRY_SECONDS")
+                or DEFAULT_CONTRACT_RETRY_SECONDS
+            ),
+            transport_retry_seconds=float(
+                source.get("RECORD_VERIFIER_TRANSPORT_RETRY_SECONDS")
+                or DEFAULT_TRANSPORT_RETRY_SECONDS
             ),
         )
 
@@ -189,7 +233,15 @@ RESPONSE_SCHEMA: dict[str, Any] = {
                     "verdict": {"type": "string", "enum": ["confirmed", "disputed"]},
                     "reason": {"anyOf": [{"type": "string"}, {"type": "null"}]},
                 },
-                "required": ["record_index", "verdict", "reason"],
+                # "reason" is deliberately NOT required: absent, null and
+                # blank already mean the same thing to ``_reason_text``, so
+                # requiring it asked the model for something the parser
+                # derives — the one required-but-derivable key this contract
+                # had, and the exact shape the mapper's minimization removed.
+                # record_index and verdict stay: neither is derivable, and
+                # defaulting a verdict would be silent assent, which the port
+                # forbids.
+                "required": ["record_index", "verdict"],
                 "additionalProperties": False,
             },
         }
@@ -262,6 +314,28 @@ values and its citations.
 - You repair nothing. Do not propose replacement records, corrected values,
   or additional records you believe were missed. A reason is prose for a
   human reviewer, not data for the pipeline.
+- NUMBERS COMPARE BY VALUE, NEVER BY SPELLING. A record's numeric fields are
+  exact decimals, and a cell printed "$192.30" is correctly mapped as 192.3,
+  "$1,250.00" as 1250, "4.000" as 4, "20 percent" as 0.2. Trailing zeros, a
+  dropped currency sign and stripped thousands separators are FORMATTING,
+  and formatting is never a dispute. Raising precision or presentation as a
+  defect costs a human a review row and finds nothing.
+  Check the ARITHMETIC, not the spelling. A percentage belongs in its
+  fraction form (printed / 100) in the typed "rate" slot and in any attr
+  whose name ends "_rate", and in its printed form in any attr whose name
+  ends "_pct" — that is the conventions' own rule, and a figure in the WRONG
+  one of those two forms is off by a factor of a hundred. A scale error is a
+  VALUE difference and IS a dispute, as is any transposition (4.45 where the
+  page prints 4.54). Formatting never changes what a number is worth; these
+  do.
+  These conventions also MANDATE three conversions, and a record that
+  performed one correctly is right, not wrong: an exclusive "Over $X" lower
+  bound stored as X + 1, a printed percentage stored as its fraction, and a
+  lone dash stored as null. Verify the conversion, never the spelling.
+- Before disputing any figure, re-read the cited cell character by character
+  and quote it in your reason. A dispute asserting the record holds a value
+  it does not hold is worse than no dispute at all: it is a false alarm
+  wearing the costume of evidence, and a downstream reader may act on it.
 
 """
 
@@ -270,7 +344,55 @@ values and its citations.
 #: dispute is a disagreement about the document, never a prompt divergence
 #: about the target schema. What stays independent is each role's reading of
 #: the document.
-VERIFIER_SYSTEM_PROMPT = _VERIFIER_ROLE + CANONICAL_CONVENTIONS
+#: The verifier's own envelope, named in prose.
+#:
+#: Document 05 lost verification three times consecutively — through both
+#: bounded retries — to "verification response JSON lacks the verdicts
+#: envelope". Three consecutive failures is not the per-call coin flip the
+#: mapper's prose-after-JSON was; it is the signature of a systematic
+#: prompt/contract mismatch, which is exactly what this was.
+#:
+#: The token "verdicts" appeared NOWHERE in this role's prompt — not in
+#: ``_VERIFIER_ROLE``, not in the user instruction. Every leaf was named
+#: ("record_index", "reason", "confirmed", "disputed") and the container was
+#: not. Meanwhile the shared conventions ended by instructing the model to
+#: put commentary in "issues", a key this schema forbids. Through a gateway
+#: that does not enforce ``output_config``, the prompt is the only channel
+#: carrying the envelope — so the model was told the wrong key and never the
+#: right one.
+#:
+#: This is the mapper's minimization at the altitude that transfers: stop
+#: letting a non-semantic detail the pipeline already holds cost the whole
+#: document. For the mapper that detail was ``source_page`` (18 of document
+#: 05's 19 records); here it is the envelope's name, hard-coded in
+#: ``RESPONSE_SCHEMA`` and never spoken. Nothing is adapted at the parse
+#: layer and nothing is guessed: a body that still misses the envelope is
+#: still a hard failure (ADR 014 §8d).
+VERIFIER_OUTPUT_DISCIPLINE = """\
+## Output discipline
+
+Return the JSON object and nothing else: no prose before it, no commentary
+after it, no explanation of your reasoning. Numbers are JSON numbers, never
+quoted strings.
+
+The object has EXACTLY ONE key, spelled "verdicts", whose value is the array
+of per-record verdicts:
+
+  {"verdicts": [
+     {"record_index": 0, "verdict": "confirmed", "reason": null},
+     {"record_index": 1, "verdict": "disputed",
+      "reason": "cell p1_t0 r2,c1 reads 4.45, not the 4.54 the record claims"}
+  ]}
+
+Not "results", not "verifications", not "issues", and never a bare array at
+the top level: there is no "issues" key in YOUR contract, whatever the
+conventions above say about the mapper's. "verdict" is exactly one of the
+two lowercase tokens "confirmed" or "disputed" — no other spelling, casing,
+or wording is read as a confirmation. "reason" may be omitted or null on a
+confirmed verdict; on a disputed verdict it is required prose.
+"""
+
+VERIFIER_SYSTEM_PROMPT = _VERIFIER_ROLE + CANONICAL_CONVENTIONS + VERIFIER_OUTPUT_DISCIPLINE
 
 _USER_INSTRUCTION = (
     "Verify the mapped records below against the extracted document. Emit "
@@ -341,6 +463,26 @@ def _reconcile(existing: RecordVerdict, proposed: RecordVerdict, notes: list[str
     )
 
 
+def _describe_envelope(payload: object) -> str:
+    """The top-level SHAPE of a non-conforming body — keys and types only.
+
+    Deliberately value-free: this string reaches an exception message, a
+    review-queue reason and a log line, so it must never carry document
+    content (anti-goal #10's discipline, applied to data rather than to
+    secrets). An object reports its key names; anything else reports only
+    its type.
+    """
+    if isinstance(payload, dict):
+        keys = sorted(str(key) for key in payload)
+        shown = ", ".join(keys[:8]) or "no keys"
+        if len(keys) > 8:
+            shown += f", +{len(keys) - 8} more"
+        return f"an object with keys [{shown}]"
+    if isinstance(payload, list):
+        return f"a bare array of {len(payload)} items"
+    return f"a bare {type(payload).__name__}"
+
+
 def parse_verification_payload(
     text: str, *, record_count: int
 ) -> tuple[list[RecordVerdict], list[str]]:
@@ -353,20 +495,36 @@ def parse_verification_payload(
     than guessed at — nothing the model said disappears silently.
     """
     try:
-        payload = json.loads(text)
+        payload = loads_fence_tolerant(text, role=conformance.VERIFIER)
     except json.JSONDecodeError as exc:
         raise VerifierError(f"verification response is not valid JSON: {exc}") from exc
     if not isinstance(payload, dict) or not isinstance(payload.get("verdicts"), list):
-        raise VerifierError("verification response JSON lacks the verdicts envelope")
+        # Name the SHAPE that arrived, never its contents. Document 05 lost
+        # verification to this check three times and left no record of what
+        # the model actually sent, so the remedy had to be inferred; the
+        # next occurrence is a measurement instead. Keys and type names only
+        # — no cell values, no prose, nothing that could carry document data
+        # into a log line.
+        raise VerifierError(
+            "verification response JSON lacks the verdicts envelope "
+            f"(top level was {_describe_envelope(payload)})"
+        )
 
     assigned: dict[int, RecordVerdict] = {}
     notes: list[str] = []
+    conformance.LEDGER.record_items(conformance.VERIFIER, record_count)
     for raw in payload["verdicts"]:
         if not isinstance(raw, Mapping):
+            conformance.LEDGER.record_malformed_item(
+                conformance.VERIFIER, "verdict that is not an object"
+            )
             notes.append(f"ignored a verdict that is not an object: {_clip(raw)}")
             continue
         index = raw.get("record_index")
         if not isinstance(index, int) or isinstance(index, bool) or not 0 <= index < record_count:
+            conformance.LEDGER.record_malformed_item(
+                conformance.VERIFIER, "verdict naming a record outside the batch"
+            )
             notes.append(
                 f"ignored a verdict naming record_index {index!r}, which is not one "
                 f"of the {record_count} records under review"
@@ -378,7 +536,12 @@ def parse_verification_payload(
 
     for index in range(record_count):
         if index not in assigned:
-            # Silence is not assent (port docstring).
+            # Silence is not assent (port docstring) — and a record the model
+            # was asked to judge and did not is a contract miss, not merely a
+            # dispute.
+            conformance.LEDGER.record_malformed_item(
+                conformance.VERIFIER, "no verdict returned for a record under review"
+            )
             assigned[index] = RecordVerdict(
                 record_index=index,
                 verdict=Verdict.DISPUTED,
@@ -410,9 +573,26 @@ class AnthropicRecordVerifier:
             base_url=config.base_url,
             timeout=_REQUEST_TIMEOUT_SECONDS,
             max_retries=3,
+            http_client=conformance.instrumented_http_client(
+                conformance.VERIFIER, timeout=_REQUEST_TIMEOUT_SECONDS
+            ),
         )
 
     def verify(self, extracted: ExtractedDocument, mapping: MappingResult) -> VerificationResult:
+        if not mapping.records:
+            # Recorded before any call counter: a document that mapped nothing
+            # makes no verification call, so it must not enter the denominator.
+            return VerificationResult(verdicts=[], cost=None)
+        return with_bounded_retries(
+            lambda: self._verify(extracted, mapping),
+            role=conformance.VERIFIER,
+            contract_error=VerifierError,
+            retries=self._config.contract_retries,
+            contract_backoff=self._config.contract_retry_seconds,
+            transport_backoff=self._config.transport_retry_seconds,
+        )
+
+    def _verify(self, extracted: ExtractedDocument, mapping: MappingResult) -> VerificationResult:
         records = mapping.records
         if not records:
             # Nothing to refute: a document that mapped no records spends no
@@ -446,10 +626,15 @@ class AnthropicRecordVerifier:
         ) as stream:
             message = stream.get_final_message()
 
+        # Cost is computed BEFORE the failure checks: a truncated or malformed
+        # response was still paid for, and the error must carry that spend
+        # (the same rule the adjudicator already followed).
+        cost = self._cost(message, started)
         if message.stop_reason != "end_turn":
             raise VerifierError(
                 f"verification call ended with stop_reason={message.stop_reason!r}; "
-                "refusing to parse a truncated or refused response"
+                "refusing to parse a truncated or refused response",
+                cost=cost,
             )
         text: str | None = None
         for block in message.content:
@@ -458,9 +643,16 @@ class AnthropicRecordVerifier:
                 text = candidate
                 break
         if text is None:
-            raise VerifierError("verification response contains no text block")
+            raise VerifierError("verification response contains no text block", cost=cost)
 
         verdicts, notes = parse_verification_payload(text, record_count=len(records))
+        return VerificationResult(verdicts=verdicts, notes=notes, cost=cost)
+
+    def _cost(self, message: Any, started: float) -> MappingCost:
+        """What this response cost, computed from its own usage block.
+
+        Called before the contract checks so a failed call can carry its
+        spend on the exception it raises."""
         usage = message.usage
         input_tokens = getattr(usage, "input_tokens", 0) or 0
         output_tokens = getattr(usage, "output_tokens", 0) or 0
@@ -468,11 +660,11 @@ class AnthropicRecordVerifier:
         cache_read = getattr(usage, "cache_read_input_tokens", 0) or 0
         usd = (
             Decimal(input_tokens) * self._config.usd_per_mtok_in
-            + Decimal(cache_write) * self._config.usd_per_mtok_in * _CACHE_WRITE_FACTOR
-            + Decimal(cache_read) * self._config.usd_per_mtok_in * _CACHE_READ_FACTOR
+            + Decimal(cache_write) * self._config.usd_per_mtok_in * self._config.cache_write_factor
+            + Decimal(cache_read) * self._config.usd_per_mtok_in * self._config.cache_read_factor
             + Decimal(output_tokens) * self._config.usd_per_mtok_out
         ) / _MTOK
-        cost = MappingCost(
+        return MappingCost(
             engine=self._config.model,
             api_calls=1,
             input_tokens=input_tokens,
@@ -482,4 +674,3 @@ class AnthropicRecordVerifier:
             usd=usd,
             wall_seconds=time.perf_counter() - started,
         )
-        return VerificationResult(verdicts=verdicts, notes=notes, cost=cost)

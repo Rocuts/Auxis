@@ -66,15 +66,27 @@ RULE_DERIVED_SUM = "derived_sum"
 #: triage as extra findings under this name (ADR 012), so a disputed record
 #: rides the same FLAG machinery — persisted as needs_review, reason queued.
 RULE_VERIFIER_DISPUTE = "verifier_dispute"
+#: Also not a rule of this module. When the verifier cannot return a usable
+#: verdict set for a whole document — its own contract failure, after its
+#: retries — every mapper-validated record of that document is flagged under
+#: this name rather than persisted as though verified. Silence is never
+#: assent (ADR 012), and the alternative behaviours are both worse: losing
+#: the document discards sound records, and persisting it clean asserts an
+#: independent confirmation that never happened.
+RULE_VERIFIER_UNAVAILABLE = "verifier_unavailable"
 
-#: Rules whose findings are always FLAG severity: the record they indict IS
-#: in the fact table, marked needs_review. Only review-queue items born from
-#: these rules are eligible for adjudicator auto-resolution — every other
-#: queue entry (the bracket_overlap REJECT, ingest-side refusals, mapping
-#: issues) stands for data ABSENT from the fact table, and its open row is
-#: the only live signal of that absence. The adjudicator cannot restore a
-#: record, so auto-closing such an item would silence the loss (anti-goal
-#: #8; found by the adversarial review of the ADR 012 diff).
+#: Rules whose findings are always FLAG severity: triage sends the record
+#: they indict ON to the fact table, marked needs_review, rather than
+#: refusing it.
+#:
+#: Note what that does NOT establish. "Triage did not refuse it" is not "the
+#: database accepted it": ingest can still refuse a FLAG-only record on the
+#: exclusion constraint or the natural key, and a record carrying BOTH a
+#: REJECT and a FLAG queues a row under each while persisting nothing. So
+#: membership here is not evidence of presence, and auto-resolve eligibility
+#: does not rest on it — ``pipeline._may_auto_resolve`` asks the fact table
+#: itself (anti-goal #8; the proxy's two failure modes were found on
+#: document 05, ADR 014 §8a).
 FLAG_RULES = frozenset(
     {
         RULE_BRACKET_GAP,
@@ -84,8 +96,28 @@ FLAG_RULES = frozenset(
         RULE_CONFIDENCE_FLOOR,
         RULE_DERIVED_SUM,
         RULE_VERIFIER_DISPUTE,
+        RULE_VERIFIER_UNAVAILABLE,
     }
 )
+
+
+#: Rules whose review-queue items an adjudicator may auto-close, given that
+#: the record is also confirmed present in the fact table. Strictly narrower
+#: than FLAG_RULES: presence licenses a close only where the FINDING is also
+#: one a model may settle unattended, and the two verifier-born rules are
+#: not, however certainly the record persisted.
+#:
+#: The two verifier-born rules are excluded deliberately, and the exclusion was
+#: earned. On document 01 the verifier raised a dispute whose asserted "actual"
+#: value was simply wrong — it claimed a record held 257300 when the record
+#: held 257250 — and the adjudicator then auto-resolved at 0.98 confidence
+#: while repeating that false premise, in a rationale that also said the record
+#: was "correct as persisted". It had the true value in front of it: the queue
+#: entry carries the full record. So a dispute-born item is now default-deny
+#: like a REJECT-born one: it stands for a SECOND opinion that something is
+#: wrong, and a THIRD model agreeing with the second is not evidence, it is
+#: correlation (the conformity risk ADR 012 names). A human closes those.
+AUTO_RESOLVABLE_RULES = frozenset(FLAG_RULES - {RULE_VERIFIER_DISPUTE, RULE_VERIFIER_UNAVAILABLE})
 
 
 class Severity(StrEnum):

@@ -50,6 +50,22 @@ class RecordRepository(Protocol):
 
     def ingest(self, document_id: UUID, records: Sequence[CanonicalRecord]) -> IngestOutcome: ...
 
+    def record_present(self, document_id: UUID, record: CanonicalRecord) -> bool:
+        """Is this exact record in the fact table, under THIS document?
+
+        The question the adjudicator's auto-resolve gate actually needs to
+        ask. Matching is on the ``records_natural_key`` columns with the
+        constraint's own NULLS-NOT-DISTINCT semantics, so a scalar record
+        (bracket NULL) matches another scalar record rather than nothing.
+
+        Scoped to ``document_id`` deliberately. A
+        ``cross_document_natural_key_conflict`` means the key IS present —
+        held by a DIFFERENT document, which is precisely why this document's
+        record was refused. An unscoped lookup would answer "present" and
+        licence closing the row that stands for the loss.
+        """
+        ...
+
     def queue_review(self, document_id: UUID, entries: Sequence[Mapping[str, Any]]) -> int:
         """Insert review-queue entries (mapping issues, triage rejections).
 
